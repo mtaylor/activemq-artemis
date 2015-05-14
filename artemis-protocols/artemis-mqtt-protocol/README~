@@ -1,0 +1,28 @@
+MQTT Statements Not Implemented / Tested
+
+*** Expected Behaviour of Codec ***
+[MQTT-1.5.3-1] The character data in a UTF-8 encoded string MUST be well-formed UTF-8 as defined by the Unicode specification [Unicode] and restated in RFC 3629 [RFC3629]. In particular this data MUST NOT include encodings of code points between U+D800 and U+DFFF. If a Server or Client receives a Control Packet containing ill-formed UTF-8 it MUST close the Network Connection.
+[MQTT-1.5.3-2] A UTF-8 encoded string MUST NOT include an encoding of the null character U+0000. If a receiver (Server or Client) receives a Control Packet containing U+0000 it MUST close the Network Connection 
+[MQTT-1.5.3-3] A UTF-8 encoded sequence 0xEF 0xBB 0xBF is always to be interpreted to mean U+FEFF ("ZERO WIDTH NO-BREAK SPACE") wherever it appears in a string and MUST NOT be skipped over or stripped off by a packet receiver.
+[MQTT-3.1.3-1] These fields, if present, MUST appear in the order Client Identifier, Will Topic, Will Message, User Name, Password
+[MQTT-3.1.3-4] The ClientId MUST be a UTF-8 encoded string as defined in Section 1.5.3 . 
+[MQTT-3.1.3-3] The Client Identifier (ClientId) MUST be present and MUST be the first field in the CONNECT packet payload
+[MQTT-3.1.3-10] The Will Topic MUST be a UTF-8 encoded string as defined in Section 1.5.3
+[MQTT-3.1.3-11] The User Name MUST be a UTF-8 encoded string as defined in Section 1.5.3 
+[MQTT-2.3.1-1] SUBSCRIBE, UNSUBSCRIBE, and PUBLISH (in cases where QoS > 0) Control Packets MUST contain a non-zero 16-bit Packet Identifier 
+[MQTT-2.3.1-5] A PUBLISH Packet MUST NOT contain a Packet Identifier if its QoS value is set to 0
+[MQTT-3.1.2-9] If the Will Flag is set to 1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, and the Will Topic and Will Message fields MUST be present in the payload 
+[MQTT-3.1.2-11] If the Will Flag is set to 0 the Will QoS and Will Retain fields in the Connect Flags MUST be set to zero and the Will Topic and Will Message fields MUST NOT be present in the payload 
+*** Needed by Server - NO SUPPORT IN NETTY CODEC.
+[MQTT-2.2.2-2] Where a flag bit is marked as “Reserved” in Table 2.2 - Flag Bits, it is reserved for future use and MUST be set to the value listed in that table[MQTT-2.3.1-6]
+[MQTT-2.2.2-1] If invalid flags are received, the receiver MUST close the Network Connection 
+[MQTT-3.1.2-13] If the Will Flag is set to 0, then the Will QoS MUST be set to 0 (0x00) .
+[MQTT-3.1.2-14]If the Will Flag is set to 1, the value of Will QoS can be 0 (0x00), 1 (0x01), or 2 (0x02). It MUST NOT be 3 (0x03).
+[MQTT-3.1.2-15] If the Will Flag is set to 0, then the Will Retain Flag MUST be set to 0 .
+
+
+*** CLIENT BEHAVIOUR ***
+[MQTT-2.3.1-2] Each time a Client sends a new packet of one of these types it MUST assign it a currently unused Packet Identifier.
+[MQTT-2.3.1-3] If a Client re-sends a particular Control Packet, then it MUST use the same Packet Identifier in subsequent re-sends of that packet. The Packet Identifier becomes available for reuse after the Client has processed the corresponding acknowledgement packet. In the case of a QoS 1 PUBLISH this is the corresponding PUBACK; in the case of QoS 2 it is PUBCOMP. For SUBSCRIBE or UNSUBSCRIBE it is the corresponding SUBACK or UNSUBACK . 
+[MQTT-2.3.1-4] The same conditions apply to a Server when it sends a PUBLISH with QoS > 0 .
+[MQTT-2.3.1-6] 

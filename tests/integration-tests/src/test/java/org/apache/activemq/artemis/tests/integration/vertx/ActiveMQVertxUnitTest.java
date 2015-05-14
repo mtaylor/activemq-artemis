@@ -65,7 +65,7 @@ public class ActiveMQVertxUnitTest extends ActiveMQTestBase
    protected String incomingVertxAddress2 = "org.apache.activemq.test.incoming2";
    protected String outgoingVertxAddress1 = "org.apache.activemq.test.outgoing1";
 
-   //outgoing using publish
+   //outgoing using handleMessage
    protected String inOutQueue2 = "vertxTestInOutQueue2";
    protected String incomingVertxAddress3 = "org.apache.activemq.test.incoming3";
    protected String outgoingVertxAddress2 = "org.apache.activemq.test.outgoing2";
@@ -129,7 +129,7 @@ public class ActiveMQVertxUnitTest extends ActiveMQTestBase
          .setParams(config3)
          .setName("test-vertx-outgoing-connector1");
 
-      //outgoing publish style
+      //outgoing handleMessage style
       HashMap<String, Object> config4 = new HashMap<String, Object>();
       config4.put(VertxConstants.HOST, host);
       config4.put(VertxConstants.PORT, port);
