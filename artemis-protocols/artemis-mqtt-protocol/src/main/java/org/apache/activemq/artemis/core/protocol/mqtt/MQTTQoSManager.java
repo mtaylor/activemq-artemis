@@ -21,7 +21,7 @@ public class MQTTQoSManager
 
    private MQTTSession session;
 
-   private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;
+   private MQTTLogger log = MQTTLogger.LOGGER;
 
    private Object sendLock = new Object();
 
@@ -77,46 +77,43 @@ public class MQTTQoSManager
 
    protected synchronized void sendMessage(ServerMessage message, ServerConsumer consumer, int deliveryCount) throws Exception
    {
-      // Allows reconnects to use the same message id.
-
-      String consumerAddress = consumer.getQueue().getAddress().toString();
-
-      log.info("Address: " + consumerAddress);
-
-      Integer mqttId = session.getSessionState().getMessageRefFromAddress(consumerAddress, message.getMessageID());
-
-      if (mqttId == null)
-      {
-         mqttId = (int) session.getServer().getStorageManager().generateID();
-      }
-
-
       if (isExactlyOnceManagementConsumer(consumer))
       {
          sendPubRelMessage(message);
+         return;
+      }
+
+      /* Since MQTT Subscriptions can over lap; a client may receive the same message twice.  When this happens the client
+      returns a PubRec or PubAck with ID.  But we need to know which consumer to ack, since we only have the ID to go on we
+      are not able to decide which consumer to ack.  Instead we send MQTT messages with different IDs and store a reference
+      to original ID and consumer in the Session state.  This way we can look up the consumer Id and the message Id from
+      the PubAck or PubRec message id.
+       */
+
+      // Allows reconnects to use the same message id but different consumer ids (we ID the consumer by address).
+
+      int qos = decideQoS(message, consumer);
+
+      if (qos == 0)
+      {
+         sendServerMessage((int) message.getMessageID(), message, consumer, deliveryCount, qos);
+         session.getServerSession().acknowledge(consumer.getID(), message.getMessageID());
       }
       else
       {
-         int qos = decideQoS(message, consumer);
-         if (qos == 0)
-         {
-            log.info("Send: " + mqttId);
-            session.getServerSession().acknowledge(consumer.getID(), message.getMessageID());
-         }
-         else
-         {
-            MQTTMessageInfo messageInfo = new MQTTMessageInfo(mqttId, message.getMessageID(), consumer.getID(), consumerAddress);
-            if (mqttId == 35)
-            {
-               Thread.sleep(10000);
-            }
-            session.getSessionState().storeMessageRef(mqttId, messageInfo);
+         String consumerAddress = consumer.getQueue().getAddress().toString();
+         Integer mqttId = session.getSessionState().getMessageRefFromAddress(consumerAddress, message.getMessageID());
 
-            log.info(this.toString());
-            log.info("X Send: " + mqttId + " QoS: " + qos);
+         if (mqttId == null)
+         {
+            mqttId = (int) session.getServer().getStorageManager().generateID();
+            MQTTMessageInfo messageInfo = new MQTTMessageInfo(mqttId, message.getMessageID(), consumer.getID(), consumerAddress);
+            session.getSessionState().storeMessageRef(mqttId, messageInfo, true);
          }
          sendServerMessage(mqttId, message, consumer, deliveryCount, qos);
       }
+
+
    }
 
    protected void sendPubRelMessage(ServerMessage message)
@@ -125,26 +122,24 @@ public class MQTTQoSManager
       {
          int messageId = message.getIntProperty(MQTTUtil.MQTT_MESSAGE_ID_KEY);
          MQTTMessageInfo messageInfo = new MQTTMessageInfo(messageId, message.getMessageID(), managementConsumer.getID(), message.getAddress().toString());
-         log.info("S2: " + messageInfo);
-         session.getSessionState().storeMessageRef(messageId, messageInfo);
+         session.getSessionState().storeMessageRef(messageId, messageInfo, false);
          session.getProtocolHandler().sendPubRel(messageId);
       }
    }
 
    protected void handleMessage(int messageId, String topic, int qos, ByteBuf payload, boolean retain) throws Exception
    {
-      log.info("Received Message: " + messageId);
       synchronized (sendLock)
       {
          ServerMessage serverMessage = MQTTUtil.createServerMessage(session.getConnection(), topic, retain, qos, payload);
 
          if (qos == MqttQoS.EXACTLY_ONCE.value())
          {
-            handleExactlyOnceProtocolMessage(serverMessage, messageId);
+            handlePubQoS2(serverMessage, messageId);
          }
          else if (qos == MqttQoS.AT_LEAST_ONCE.value())
          {
-            handleAtLeastOnceProtocolMessage(serverMessage, messageId);
+            handlePubQoS1(serverMessage, messageId);
          }
          else
          {
@@ -159,31 +154,36 @@ public class MQTTQoSManager
       }
    }
 
-   private void handleAtLeastOnceProtocolMessage(ServerMessage message, int messageId) throws Exception
+   private void handlePubQoS1(ServerMessage message, int messageId) throws Exception
    {
-      session.getServerSession().send(message, true);
-      session.getProtocolHandler().sendPubAck(messageId);
-   }
-
-   public void handleExactlyOnceProtocolMessage(ServerMessage message, int messageId) throws Exception
-   {
-      if (!session.getSessionState().messageRefExists(messageId))
+      if (!session.getSessionState().getPub().contains(messageId))
       {
          session.getServerSession().send(message, true);
-         session.getSessionState().storeMessageRef(messageId, new MQTTMessageInfo(messageId, message.getMessageID(), 0L,message.getAddress().toString()));
+      }
+      session.getProtocolHandler().sendPubAck(messageId);
+      session.getSessionState().getPub().add(messageId);
+   }
+
+   public void handlePubQoS2(ServerMessage message, int messageId) throws Exception
+   {
+      if (!session.getSessionState().getPub().contains(messageId))
+      {
+         session.getServerSession().send(message, true);
+         //session.getSessionState().storeMessageRef(messageId, new MQTTMessageInfo(messageId, message.getMessageID(), 0L,message.getAddress().toString()), false);
       }
       session.getProtocolHandler().sendPubRec(messageId);
+      session.getSessionState().getPub().add(messageId);
    }
 
    protected void handlePubRec(int messageId) throws Exception
    {
-      log.info("PubRec: " + messageId);
       MQTTMessageInfo messageRef = session.getSessionState().getMessageInfo(messageId);
       if (messageRef != null)
       {
-         ServerMessage pubRel = createPubRelMessage(messageId);
-         session.getServerSession().send(pubRel, true);
+         //ServerMessage pubRel = createPubRelMessage(messageId);
+         //session.getServerSession().send(pubRel, true);
          session.getServerSession().acknowledge(messageRef.getConsumerId(), messageRef.getServerMessageId());
+         session.getProtocolHandler().sendPubRel(messageId);
       }
    }
 
@@ -191,7 +191,6 @@ public class MQTTQoSManager
    {
       try
       {
-         log.info("PubComp: " + messageId);
          MQTTMessageInfo messageInfo = session.getSessionState().getMessageInfo(messageId);
          if (messageInfo != null)
          {
@@ -199,12 +198,12 @@ public class MQTTQoSManager
          }
          else
          {
-            log.warn("PubComp received but no message to Ack");
+            log.warn("No message to Ack -> PubComp(" + messageId + ")");
          }
       }
       catch(Exception e)
       {
-         log.warn("Failed to ack pub comp for message id: " + messageId);
+         log.error("Failed to ack pub comp for message id: " + messageId);
       }
    }
 
@@ -212,22 +211,21 @@ public class MQTTQoSManager
    {
       session.getProtocolHandler().sendPubComp(messageId);
       // We don't check to see if a PubRel existed for this message.  We assume it did and so send PubComp.
-      //session.getSessionState().removeMessageRef(messageId);
+      session.getSessionState().removeMessageRef(messageId);
    }
 
 
    protected void handlePubAck(int messageId) throws Exception
    {
-      log.info("PubAck: " + messageId);
       MQTTMessageInfo messageInfo = session.getSessionState().getMessageInfo(messageId);
       if (messageInfo != null)
       {
-         log.info("L: " + messageInfo);
          session.getServerSession().acknowledge(messageInfo.getConsumerId(), messageInfo.getServerMessageId());
+         session.getSessionState().removeMessageRef(messageId);
       }
       else
       {
-         log.warn("PubAck received but no message to Ack");
+         log.warn("No message to Ack -> PubAck(" + messageId + ")");
       }
    }
 

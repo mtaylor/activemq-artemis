@@ -57,10 +57,11 @@ public class MQTTConnection implements RemotingConnection
       this.creationTime = System.currentTimeMillis();
       this.dataReceived = new AtomicBoolean();
       this.destroyed = false;
-      this.session = new MQTTSession(this);
       this.server = server;
       this.failureListeners = Collections.synchronizedList(new ArrayList<FailureListener>());
       this.closeListeners = Collections.synchronizedList(new ArrayList<CloseListener>());
+      this.session = new MQTTSession(this);
+
    }
 
    protected ActiveMQServer getServer()
@@ -167,7 +168,6 @@ public class MQTTConnection implements RemotingConnection
       {
          for (FailureListener listener : failureListeners)
          {
-            //FIXME(mtaylor) How do we check if the node has failed over?
             listener.connectionFailed(me, false);
          }
       }

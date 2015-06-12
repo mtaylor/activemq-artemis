@@ -11,7 +11,7 @@ public class MQTTSessionCallback implements SessionCallback
 {
    private MQTTSession session;
 
-   private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;
+   private MQTTLogger log = MQTTLogger.LOGGER;
 
    public MQTTSessionCallback(MQTTSession session) throws Exception
    {
@@ -27,6 +27,7 @@ public class MQTTSessionCallback implements SessionCallback
       }
       catch (Exception e)
       {
+         e.printStackTrace();
          log.warn("Unable to send message: " + message.getMessageID() + " Cause: " + e.getMessage());
       }
       return 1;

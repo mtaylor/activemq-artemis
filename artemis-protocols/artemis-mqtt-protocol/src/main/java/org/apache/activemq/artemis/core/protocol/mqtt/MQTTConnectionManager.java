@@ -19,17 +19,21 @@ public class MQTTConnectionManager
    private MQTTSession session;
 
    //TODO We should read in a list of existing client IDs from stored Sessions.
-   public static Set<String> clientIds = new ConcurrentHashSet<String>();
+   public static Set<String> CONNECTED_CLIENTS = new ConcurrentHashSet<String>();
+
+   private MQTTLogger logger = MQTTLogger.LOGGER;
 
    public MQTTConnectionManager(MQTTSession session)
    {
       this.session = session;
+      MQTTFailureListener failureListener = new MQTTFailureListener(this);
+      session.getConnection().addFailureListener(failureListener);
    }
 
    private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;
 
    void connect(String cId, String username, String password, boolean will, String willMessage, String willTopic,
-                boolean willRetain, int willQosLevel, boolean cleanSession) throws Exception
+                boolean willRetain, int willQosLevel, boolean cleanSession, int keepAlive) throws Exception
    {
       String clientId = validateClientId(cId, cleanSession);
       if (clientId == null)
@@ -82,16 +86,17 @@ public class MQTTConnectionManager
    {
       try
       {
-         if (session != null)
+         if (session != null && session.getSessionState() != null)
          {
-            session.stop();
             String clientId = session.getSessionState().getClientId();
-            if (clientId != null) clientIds.remove(clientId);
+            if (clientId != null) CONNECTED_CLIENTS.remove(clientId);
+
             if (session.getState().isWill())
             {
                session.getConnectionManager().sendWill();
             }
          }
+         session.stop();
          session.getConnection().disconnect(false);
          session.getConnection().destroy();
       }
@@ -163,7 +168,7 @@ public class MQTTConnectionManager
          }
       }
       // If the client ID is not unique (i.e. it has already registered) then do not accept it.
-      else if(!clientIds.add(clientId))
+      else if(!CONNECTED_CLIENTS.add(clientId))
       {
          // [MQTT-3.1.3-9] Return ID Rejected if server rejects the client ID
          return null;

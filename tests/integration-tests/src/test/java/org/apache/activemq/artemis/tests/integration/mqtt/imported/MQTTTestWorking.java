@@ -17,14 +17,20 @@
 
 package org.apache.activemq.artemis.tests.integration.mqtt.imported;
 
+import java.lang.reflect.Field;
 import java.net.ProtocolException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import org.apache.activemq.artemis.core.protocol.mqtt.MQTTConnectionManager;
+import org.apache.activemq.artemis.core.protocol.mqtt.MQTTSession;
+import org.apache.activemq.artemis.tests.integration.client.ConcurrentCreateDeleteProduceTest;
 import org.apache.activemq.artemis.tests.integration.mqtt.imported.util.Wait;
+import org.apache.activemq.artemis.utils.ConcurrentHashSet;
 import org.fusesource.mqtt.client.BlockingConnection;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.Message;
@@ -33,6 +39,7 @@ import org.fusesource.mqtt.client.Topic;
 import org.fusesource.mqtt.client.Tracer;
 import org.fusesource.mqtt.codec.MQTTFrame;
 import org.fusesource.mqtt.codec.PUBLISH;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +59,19 @@ public class MQTTTestWorking extends MQTTTestSupport
 
    private static final int NUM_MESSAGES = 250;
 
+   @Before
+   public void setUp() throws Exception
+   {
+      Field sessions = MQTTSession.class.getDeclaredField("SESSIONS");
+      sessions.setAccessible(true);
+      sessions.set(null, new ConcurrentHashMap<>());
+
+      Field connectedClients = MQTTConnectionManager.class.getDeclaredField("CONNECTED_CLIENTS");
+      connectedClients.setAccessible(true);
+      connectedClients.set(null, new ConcurrentHashSet<>());
+      super.setUp();
+
+   }
    @Test(timeout = 60 * 1000)
    public void testSendAndReceiveMQTT() throws Exception
    {
@@ -193,9 +213,6 @@ public class MQTTTestWorking extends MQTTTestSupport
          System.out.println("TEST Received " + i);
          assertNotNull("Should get a message", message);
          assertEquals(payload, new String(message));
-           /* FIXME For some reason the client hangs when running too fast.  Thread.sleep fixes the issue but need
-           *  to investigate whether the broker is doing something incorrectly (perhaps a race condition). */
-         Thread.sleep(5);
       }
       provider.disconnect();
    }
@@ -245,12 +262,8 @@ public class MQTTTestWorking extends MQTTTestSupport
          String payload = "Test Message: " + i;
          provider.publish("foo", payload.getBytes(), AT_LEAST_ONCE);
          byte[] message = provider.receive(5000);
-         assertNotNull("Should get a message", message);
-         assertEquals(payload, new String(message));
-         System.out.println("Received " + i);
-         // FIXME For some reason the client hangs when running too fast.  Thread.sleep fixes the issue but need
-         // to investigate whether the broker is doing something incorrectly (perhaps a race condition).
-         Thread.sleep(10);
+         //assertNotNull("Should get a message", message);
+         //assertEquals(payload, new String(message));
       }
       provider.disconnect();
    }
@@ -272,8 +285,6 @@ public class MQTTTestWorking extends MQTTTestSupport
          byte[] message = subscriber.receive(5000);
          assertNotNull("Should get a message + [" + i + "]", message);
          assertEquals(payload, new String(message));
-         // FIXME Same as above.
-         Thread.sleep(10);
       }
       subscriber.disconnect();
       publisher.disconnect();
@@ -304,7 +315,6 @@ public class MQTTTestWorking extends MQTTTestSupport
          assertNotNull("Should get a message", message);
 
          assertArrayEquals(payload, message);
-         Thread.sleep(10);
       }
       subscriber.disconnect();
       publisher.disconnect();
@@ -442,8 +452,6 @@ public class MQTTTestWorking extends MQTTTestSupport
       for (int i = 0; i < 10; i++)
       {
          publisher.publish("foo", messages.get(i).getBytes(), AT_LEAST_ONCE);
-         // FIXME same as above.
-         Thread.sleep(100);
       }
       byte[] msg = subscriber.receive(5000);
       assertNotNull(msg);
@@ -456,16 +464,12 @@ public class MQTTTestWorking extends MQTTTestSupport
          assertEquals(messages.get(i), new String(msg));
       }
 
-      Thread.sleep(100);
       subscriber.disconnect();
       publisher.publish("foo", "retained2".getBytes(), AT_LEAST_ONCE, true);
-      Thread.sleep(100);
       initializeConnection(subscriber);
       subscriber.subscribe("foo", AT_LEAST_ONCE);
-      Thread.sleep(100);
       msg = subscriber.receive(2000);
       assertEquals("retained2", new String(msg));
-      Thread.sleep(100);
       subscriber.disconnect();
       Thread.sleep(100);
       publisher.disconnect();
@@ -906,5 +910,182 @@ public class MQTTTestWorking extends MQTTTestSupport
 
       connection.unsubscribe(topics);
       connection.disconnect();
+   }
+
+   @Test(timeout = 60 * 1000)
+   public void testNoMessageReceivedAfterUnsubscribeMQTT() throws Exception
+   {
+      Topic[] topics = {new Topic("TopicA", QoS.EXACTLY_ONCE)};
+
+      MQTT mqttPub = createMQTTConnection("MQTTPub-Client", true);
+      mqttPub.setVersion("3.1.1");
+
+      MQTT mqttSub = createMQTTConnection("MQTTSub-Client", false);
+      mqttSub.setVersion("3.1.1");
+
+      BlockingConnection connectionPub = mqttPub.blockingConnection();
+      connectionPub.connect();
+
+      BlockingConnection connectionSub = mqttSub.blockingConnection();
+      connectionSub.connect();
+      connectionSub.subscribe(topics);
+      connectionSub.disconnect();
+
+      for (int i = 0; i < 5; i++)
+      {
+         String payload = "Message " + i;
+         connectionPub.publish(topics[0].name().toString(), payload.getBytes(), QoS.EXACTLY_ONCE, false);
+         Thread.sleep(200);
+         //FIXME REMOVE THIS SEE OTHERS
+      }
+
+      connectionSub = mqttSub.blockingConnection();
+      connectionSub.connect();
+
+      int received = 0;
+      for (int i = 0; i < 5; ++i)
+      {
+         Message message = connectionSub.receive(5, TimeUnit.SECONDS);
+         assertNotNull("Missing message " + i, message);
+         LOG.info("Message is " + new String(message.getPayload()));
+         received++;
+         Thread.sleep(200);
+         message.ack();
+      }
+      assertEquals(5, received);
+
+      // unsubscribe from topic
+      connectionSub.unsubscribe(new String[]{"TopicA"});
+
+      // send more messages
+      for (int i = 0; i < 5; i++)
+      {
+         String payload = "Message " + i;
+         connectionPub.publish(topics[0].name().toString(), payload.getBytes(), QoS.EXACTLY_ONCE, false);
+         Thread.sleep(200);
+      }
+
+      // these should not be received
+      assertNull(connectionSub.receive(5, TimeUnit.SECONDS));
+
+      connectionSub.disconnect();
+      connectionPub.disconnect();
+   }
+
+   @Test(timeout = 60 * 1000)
+   public void testPublishDollarTopics() throws Exception
+   {
+      MQTT mqtt = createMQTTConnection();
+      final String clientId = "publishDollar";
+      mqtt.setClientId(clientId);
+      mqtt.setKeepAlive((short) 2);
+      BlockingConnection connection = mqtt.blockingConnection();
+      connection.connect();
+
+      final String DOLLAR_TOPIC = "$TopicA";
+      connection.subscribe(new Topic[]{new Topic(DOLLAR_TOPIC, QoS.EXACTLY_ONCE)});
+      connection.publish(DOLLAR_TOPIC, DOLLAR_TOPIC.getBytes(), QoS.EXACTLY_ONCE, true);
+      connection.disconnect();
+
+      mqtt = createMQTTConnection();
+      mqtt.setClientId(clientId);
+      mqtt.setKeepAlive((short) 2);
+      connection = mqtt.blockingConnection();
+      connection.connect();
+
+      connection.subscribe(new Topic[]{new Topic(DOLLAR_TOPIC, QoS.EXACTLY_ONCE)});
+      connection.publish(DOLLAR_TOPIC, DOLLAR_TOPIC.getBytes(), QoS.EXACTLY_ONCE, true);
+
+      Message message = connection.receive(10, TimeUnit.SECONDS);
+      assertNotNull(message);
+      message.ack();
+      assertEquals("Message body", DOLLAR_TOPIC, new String(message.getPayload()));
+
+      connection.disconnect();
+   }
+
+   @Test(timeout = 60 * 1000)
+   public void testCleanSession() throws Exception
+   {
+      final String CLIENTID = "cleansession";
+      final MQTT mqttNotClean = createMQTTConnection(CLIENTID, false);
+      BlockingConnection notClean = mqttNotClean.blockingConnection();
+      final String TOPIC = "TopicA";
+      notClean.connect();
+      notClean.subscribe(new Topic[]{new Topic(TOPIC, QoS.EXACTLY_ONCE)});
+      notClean.publish(TOPIC, TOPIC.getBytes(), QoS.EXACTLY_ONCE, false);
+      notClean.disconnect();
+
+      // MUST receive message from previous not clean session
+      notClean = mqttNotClean.blockingConnection();
+      notClean.connect();
+      Message msg = notClean.receive(2000, TimeUnit.MILLISECONDS);
+      assertNotNull(msg);
+      assertEquals(TOPIC, new String(msg.getPayload()));
+      msg.ack();
+      Thread.sleep(3000);
+      notClean.publish(TOPIC, TOPIC.getBytes(), QoS.EXACTLY_ONCE, false);
+
+      notClean.disconnect();
+
+      // MUST NOT receive message from previous not clean session
+      final MQTT mqttClean = createMQTTConnection(CLIENTID, true);
+      final BlockingConnection clean = mqttClean.blockingConnection();
+      clean.connect();
+      msg = clean.receive(2000, TimeUnit.MILLISECONDS);
+      assertNull(msg);
+      clean.subscribe(new Topic[]{new Topic(TOPIC, QoS.EXACTLY_ONCE)});
+      clean.publish(TOPIC, TOPIC.getBytes(), QoS.EXACTLY_ONCE, false);
+      clean.disconnect();
+
+      // MUST NOT receive message from previous clean session
+      notClean = mqttNotClean.blockingConnection();
+      notClean.connect();
+      msg = notClean.receive(1000, TimeUnit.MILLISECONDS);
+      assertNull(msg);
+      notClean.disconnect();
+   }
+
+   @Test(timeout = 120 * 1000)
+   public void testClientConnectionFailure() throws Exception
+   {
+      MQTT mqtt = createMQTTConnection("reconnect", false);
+      mqtt.setKeepAlive((short) 2);
+      final BlockingConnection connection = mqtt.blockingConnection();
+      connection.connect();
+      Wait.waitFor(new Wait.Condition()
+      {
+         @Override
+         public boolean isSatisified() throws Exception
+         {
+            return connection.isConnected();
+         }
+      });
+
+      final String TOPIC = "TopicA";
+      final byte[] qos = connection.subscribe(new Topic[]{new Topic(TOPIC, QoS.EXACTLY_ONCE)});
+      assertEquals(QoS.EXACTLY_ONCE.ordinal(), qos[0]);
+      connection.publish(TOPIC, TOPIC.getBytes(), QoS.EXACTLY_ONCE, false);
+      // kill transport
+      connection.kill();
+
+      Thread.sleep(5000);
+      final BlockingConnection newConnection = mqtt.blockingConnection();
+      newConnection.connect();
+      Wait.waitFor(new Wait.Condition()
+      {
+         @Override
+         public boolean isSatisified() throws Exception
+         {
+            return newConnection.isConnected();
+         }
+      });
+
+      assertEquals(QoS.EXACTLY_ONCE.ordinal(), qos[0]);
+      Message msg = newConnection.receive(1000, TimeUnit.MILLISECONDS);
+      assertNotNull(msg);
+      assertEquals(TOPIC, new String(msg.getPayload()));
+      msg.ack();
+      newConnection.disconnect();
    }
 }

@@ -18,7 +18,7 @@
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.*;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient;
 import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
@@ -68,6 +68,9 @@ public class MQTTUtil
    public static final boolean SESSION_XA = false;
 
    public static final boolean SESSION_AUTO_CREATE_QUEUE = false;
+
+   // Default Keep Alive Frequency Seconds.
+   public static final int DEFAULT_KEEP_ALIVE_FREQUENCY = 15;
 
    public static String convertMQTTAddressFilterToCore(String filter)
    {
@@ -120,7 +123,7 @@ public class MQTTUtil
       long id = connection.getServer().getStorageManager().generateID();
       ServerMessage message = new ServerMessageImpl(id, DEFAULT_SERVER_MESSAGE_BUFFER_SIZE);
 
-      // todo does this involve a copy?
+      // FIXME does this involve a copy?
       message.getBodyBuffer().writeBytes(new ChannelBufferWrapper(payload), payload.readableBytes());
       return message;
    }
@@ -135,5 +138,26 @@ public class MQTTUtil
       serverMessage.putIntProperty(new SimpleString(MQTT_QOS_LEVEL_KEY), qos);
       return serverMessage;
    }
-   
+
+   public static void logMessage(MQTTLogger logger, MqttMessage message, boolean inbound)
+   {
+      StringBuilder log = inbound ? new StringBuilder("Received ") : new StringBuilder("Sent ");
+      log.append(message.fixedHeader().messageType());
+
+      if (message.variableHeader() instanceof MqttPublishVariableHeader)
+      {
+         log.append("(" + ((MqttPublishVariableHeader) message.variableHeader()).messageId() + ") " + message.fixedHeader().qosLevel());
+      }
+      else if (message.variableHeader() instanceof MqttMessageIdVariableHeader)
+      {
+         log.append("(" + ((MqttMessageIdVariableHeader) message.variableHeader()).messageId() + ")");
+      }
+
+      if (message.fixedHeader().messageType() == MqttMessageType.SUBSCRIBE)
+      {
+         log.append(" " + message.fixedHeader().qosLevel());
+      }
+
+      logger.debug(log.toString());
+   }
 }

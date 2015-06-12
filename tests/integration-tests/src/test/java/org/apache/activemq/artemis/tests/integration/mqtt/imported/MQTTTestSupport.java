@@ -54,7 +54,6 @@ public class MQTTTestSupport extends ActiveMQTestBase
    private static final Logger LOG = LoggerFactory.getLogger(MQTTTestSupport.class);
 
    protected int port = 1883;
-   protected String jmsUri = "vm://localhost";
    protected ActiveMQConnectionFactory cf;
    protected LinkedList<Throwable> exceptions = new LinkedList<Throwable>();
    protected boolean persistent;

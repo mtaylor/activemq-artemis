@@ -33,7 +33,7 @@ public class MQTTSubscriptionManager
 
    private ConcurrentHashMap<String, ServerConsumer> consumers;
 
-   private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;
+   private MQTTLogger log = MQTTLogger.LOGGER;
 
    public MQTTSubscriptionManager(MQTTSession session)
    {
@@ -64,7 +64,7 @@ public class MQTTSubscriptionManager
 
       if (clean)
       {
-         // delete queues
+         // TODO delete queues
       }
    }
 
@@ -79,7 +79,6 @@ public class MQTTSubscriptionManager
       Queue q = session.getServer().locateQueue(queue);
       if (q == null)
       {
-         log.info("Create Queue: Durable " + (qos > 0));
          session.getServerSession().createQueue(new SimpleString(address), queue, null, false, qos > 0);
       }
       return queue;

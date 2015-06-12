@@ -18,9 +18,9 @@
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -46,7 +46,6 @@ import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
 import org.apache.activemq.artemis.core.protocol.mqtt.codec.MQTTDecoder;
 import org.apache.activemq.artemis.core.protocol.mqtt.codec.MQTTEncoder;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection;
-import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 
 public class MQTTProtocolHandler
 {
@@ -64,15 +63,23 @@ public class MQTTProtocolHandler
 
    private MQTTSession session;
 
-   private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;;
+   private MQTTLogger log;
+
+   private long lastMessageReceived;
+
+   private ScheduledFuture<MQTTKeepAliveCheck> keepAliveFuture;
 
    public MQTTProtocolHandler(MQTTSession session)
    {
+      log = MQTTLogger.LOGGER;
       this.connection = session.getConnection();
+
       this.session = session;
 
       decoder = new MQTTDecoder(MAX_MESSAGE_LENGTH);
       encoder = new MQTTEncoder();
+
+      lastMessageReceived = System.currentTimeMillis();
    }
 
    public void handleBuffer(ActiveMQBuffer buffer)
@@ -88,11 +95,14 @@ public class MQTTProtocolHandler
             if (message.decoderResult().isFailure())
             {
                // FIXME We currently do not support messages > netty buffer size.
-               log.warn("Unable to decode message.  Disconnecting: " + message.decoderResult().toString());
+               log.warn("Malformed Message, Disconnecting Client: " + message.decoderResult().toString());
                return;
             }
 
-            log.warn("Message Type " + message.fixedHeader().messageType());
+            lastMessageReceived = System.currentTimeMillis();
+
+            MQTTUtil.logMessage(log, message, true);
+
             switch (message.fixedHeader().messageType())
             {
                case CONNECT:
@@ -160,6 +170,8 @@ public class MQTTProtocolHandler
    {
       String clientId = connect.payload().clientIdentifier();
 
+      int mqttKeepAliveFrequency = setUpKeepAliveCheck(connect);
+
       session.getConnectionManager().connect(clientId,
             connect.payload().userName(),
             connect.payload().password(),
@@ -168,11 +180,30 @@ public class MQTTProtocolHandler
             connect.payload().willTopic(),
             connect.variableHeader().isWillRetain(),
             connect.variableHeader().willQos(),
-            connect.variableHeader().isCleanSession());
+            connect.variableHeader().isCleanSession(),
+            mqttKeepAliveFrequency);
+   }
+
+   private int setUpKeepAliveCheck(MqttConnectMessage message)
+   {
+      int providedKeepAlive = message.variableHeader().keepAliveTimeSeconds();
+      int actualKeepAlive = providedKeepAlive == 0 ? MQTTUtil.DEFAULT_KEEP_ALIVE_FREQUENCY : providedKeepAlive;
+
+      // Spec says check for 1.5 * Keep Alive Interval.  We check every 0.5 intervals.
+      MQTTKeepAliveCheck keepAliveCheck = new MQTTKeepAliveCheck(this, actualKeepAlive);
+
+      long keepAliveFrequency = actualKeepAlive * 1000 / 2;
+      this.connection.getServer().getScheduledPool().scheduleAtFixedRate(keepAliveCheck,
+            keepAliveFrequency,
+            keepAliveFrequency,
+            TimeUnit.MILLISECONDS);
+
+      return actualKeepAlive;
    }
 
    void disconnect()
    {
+      if (keepAliveFuture != null) keepAliveFuture.cancel(true);
       session.getConnectionManager().disconnect();
    }
 
@@ -231,9 +262,10 @@ public class MQTTProtocolHandler
 
    private void sendPublishProtocolControlMessage(int messageId, MqttMessageType messageType)
    {
+      MqttQoS qos = (messageType == MqttMessageType.PUBREL) ? MqttQoS.AT_LEAST_ONCE : MqttQoS.AT_MOST_ONCE;
       MqttFixedHeader fixedHeader = new MqttFixedHeader(messageType,
                                                         false,
-                                                        MqttQoS.AT_LEAST_ONCE, // Spec requires 01 in header.
+                                                        qos, // Spec requires 01 in header for rel
                                                         false,
                                                         0);
       MqttPubAckMessage rel = new MqttPubAckMessage(fixedHeader, MqttMessageIdVariableHeader.from(messageId));
@@ -325,10 +357,7 @@ public class MQTTProtocolHandler
    private void write(MqttMessage message)
    {
       write(((NettyConnection) connection.getTransportConnection()), message);
-      if (!(message instanceof MqttConnAckMessage))
-      {
-         log.warn("Sent to:" + session.getSessionState().getClientId() + "message: " + message);
-      }
+      MQTTUtil.logMessage(log, message, false);
    }
 
    private void write(NettyConnection connection, MqttMessage message)
@@ -340,6 +369,7 @@ public class MQTTProtocolHandler
          synchronized (this)
          {
             connection.write(channelBufferWrapper);
+            connection.checkFlushBatchBuffer();
          }
       }
       catch (Exception e)
@@ -363,5 +393,10 @@ public class MQTTProtocolHandler
 
       //TODO Handle errors
       return 1;
+   }
+
+   public long getLastMessageReceived()
+   {
+      return lastMessageReceived;
    }
 }

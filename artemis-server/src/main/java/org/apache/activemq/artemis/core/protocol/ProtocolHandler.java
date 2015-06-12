@@ -158,6 +158,12 @@ public class ProtocolHandler
             byte[] bytes = new byte[8];
             in.getBytes(0, bytes);
 
+            System.out.println("Protocol");
+            for (int i=0; i<bytes.length; i++)
+            {
+               System.out.println((char) bytes[i]);
+            }
+            System.out.println("---");
             for (String protocol : protocolSet)
             {
                ProtocolManager protocolManager = protocolMap.get(protocol);

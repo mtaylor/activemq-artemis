@@ -18,15 +18,13 @@
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
-import org.apache.activemq.artemis.api.core.Interceptor;
-import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
+import org.apache.activemq.artemis.api.core.Pair;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
-import org.apache.activemq.artemis.utils.ConcurrentHashSet;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MQTTSessionState
@@ -42,21 +40,59 @@ public class MQTTSessionState
 
    private Map<String, Map<Long, Integer>> addressMessageMap;
 
+   private Set<Integer> pubRel;
+
+   private Set<Integer> pubRec;
+
+   private Set<Integer> pub;
+
+   private Map<Integer, Pair<Long, Long>> consumerMessageIdMap; // Integer ID -> Pair <Consumer Id, Message Id>
+
    private boolean durable;
 
    private boolean attached = false;
 
-   private ActiveMQServerLogger log = ActiveMQServerLogger.LOGGER;
+   private MQTTLogger log = MQTTLogger.LOGGER;
 
    public MQTTSessionState(String clientId)
    {
       this.clientId = clientId;
 
+      pubRel = new HashSet<>();
+      pubRec = new HashSet<>();
+      pub = new HashSet<>();
+
       subscriptions = new ConcurrentHashMap<>();
       messageRefStore = new ConcurrentHashMap<>();
       addressMessageMap = new ConcurrentHashMap<>();
 
+      consumerMessageIdMap = new ConcurrentHashMap<>();
       durable = false;
+   }
+
+   Pair<Long, Long> getConsumerMessagePair(int id)
+   {
+      return consumerMessageIdMap.get(id);
+   }
+
+   void addConsumerMessagePair(Integer id, Long consumerId, Long messageId)
+   {
+      consumerMessageIdMap.put(id, new Pair<Long, Long>(consumerId, messageId));
+   }
+
+   Set<Integer> getPubRel()
+   {
+      return pubRel;
+   }
+
+   Set<Integer> getPubRec()
+   {
+      return pubRec;
+   }
+
+   Set<Integer> getPub()
+   {
+      return pub;
    }
 
    boolean getAttached()
@@ -150,16 +186,18 @@ public class MQTTSessionState
    }
 
 
-   void storeMessageRef(Integer mqttId, MQTTMessageInfo messageInfo)
+   void storeMessageRef(Integer mqttId, MQTTMessageInfo messageInfo, boolean storeAddress)
    {
-      log.info("Storing MQTT: " + mqttId + " for " + messageInfo.getAddress() + " " + messageInfo.getServerMessageId() + " Consumer: " + messageInfo.getConsumerId());
       messageRefStore.put(mqttId, messageInfo);
 
 
-      Map<Long, Integer> addressMap = addressMessageMap.get(messageInfo.getAddress());
-      if (addressMap != null)
+      if (storeAddress)
       {
-         addressMap.put(messageInfo.getServerMessageId(), mqttId);
+         Map<Long, Integer> addressMap = addressMessageMap.get(messageInfo.getAddress());
+         if (addressMap != null)
+         {
+            addressMap.put(messageInfo.getServerMessageId(), mqttId);
+         }
       }
    }
 

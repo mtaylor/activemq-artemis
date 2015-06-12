@@ -17,7 +17,6 @@
 
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
-import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.activemq.artemis.core.server.*;
 import org.apache.activemq.artemis.core.server.impl.ServerSessionImpl;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
@@ -25,9 +24,10 @@ import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 public class MQTTSession
 {
-   static final Map<String, MQTTSessionState> SESSIONS = new ConcurrentHashMap<>();
+   static Map<String, MQTTSessionState> SESSIONS = new ConcurrentHashMap<>();
 
    private MQTTConnection connection;
 
@@ -84,7 +84,10 @@ public class MQTTSession
             serverSession.close(false);
          }
 
-         state.setAttached(false);
+         if (state != null)
+         {
+            state.setAttached(false);
+         }
       }
       stopped = true;
    }
@@ -159,25 +162,4 @@ public class MQTTSession
    {
       return retainMessageManager;
    }
-   //   private boolean isDuplicate(ServerMessage message)
-//   {
-//      boolean result = true;
-//      byte[] messageId = ByteBuffer.allocate(8).putLong(message.getMessageID()).array();
-//      synchronized (duplicateIDCache)
-//      {
-//         try
-//         {
-//            if (!duplicateIDCache.contains(messageId))
-//            {
-//               duplicateIDCache.addToCache(messageId, null);
-//               result = false;
-//            }
-//         }
-//         catch(Exception e)
-//         {
-//            log.error("Unable to store ID in duplicate ID cache: " + e.getMessage());
-//         }
-//      }
-//      return result;
-//   }
 }

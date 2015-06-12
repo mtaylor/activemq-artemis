@@ -202,10 +202,10 @@
 //   public void ensureServerCreatesClientIdWhenNoneIsSpecifiedInConnect() throws Exception
 //   {
 //      // Access ClientID Set
-//      Field field = MQTTProtocolHandler.class.getDeclaredField("clientIds");
+//      Field field = MQTTProtocolHandler.class.getDeclaredField("CONNECTED_CLIENTS");
 //      field.setAccessible(true);
-//      Set<String> clientIds = (Set<String>) field.get(protocolHandler);
-//      int size = clientIds.size();
+//      Set<String> CONNECTED_CLIENTS = (Set<String>) field.get(protocolHandler);
+//      int size = CONNECTED_CLIENTS.size();
 //
 //      // Set up mock connections
 //      MockMQTTConnection connection = Utils.createFakeConnection();
@@ -214,7 +214,7 @@
 //      MqttConnectMessage connect = Utils.createMqttConnect(null);
 //      protocolHandler.handleConnect(connection, connect);
 //      Assert.assertFalse(connection.getDestroyed());
-//      Assert.assertTrue(clientIds.size() == size + 1);
+//      Assert.assertTrue(CONNECTED_CLIENTS.size() == size + 1);
 //   }
 //
 //   /**
@@ -224,10 +224,10 @@
 //   public void ensureDisconnectIfCleanSessionIsSetTo0WhenNoClientIdIsSupplied() throws Exception
 //   {
 //      // Access ClientID Set
-//      Field field = MQTTProtocolHandler.class.getField("clientIds");
+//      Field field = MQTTProtocolHandler.class.getField("CONNECTED_CLIENTS");
 //      field.setAccessible(true);
-//      Set<String> clientIds = (Set<String>) field.get(protocolHandler);
-//      int size = clientIds.size();
+//      Set<String> CONNECTED_CLIENTS = (Set<String>) field.get(protocolHandler);
+//      int size = CONNECTED_CLIENTS.size();
 //
 //      // Set up mock connections
 //      MockMQTTConnection connection = Utils.createFakeConnection();
@@ -237,7 +237,7 @@
 //      MqttConnectMessage connect = Utils.createMqttConnect(null, varHeader);
 //      protocolHandler.handleConnect(connection, connect);
 //      Assert.assertTrue(connection.getDestroyed());
-//      Assert.assertTrue(clientIds.size() == size);
+//      Assert.assertTrue(CONNECTED_CLIENTS.size() == size);
 //
 //      MQTTDecoder decoder = new MQTTDecoder();
 //      MqttConnAckMessage connAck = (MqttConnAckMessage) decoder.decode(connection.getTransportOutBuffer()).get(0);
