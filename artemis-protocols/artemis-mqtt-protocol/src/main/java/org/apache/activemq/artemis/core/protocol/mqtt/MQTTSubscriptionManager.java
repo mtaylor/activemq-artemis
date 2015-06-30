@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MQTTSubscriptionManager
 {
+   private static final boolean DURABLE_QUEUES = true;
+
    private MQTTSession session;
 
    private ConcurrentHashMap<Long, Integer> consumerQoSLevels;
@@ -79,7 +81,7 @@ public class MQTTSubscriptionManager
       Queue q = session.getServer().locateQueue(queue);
       if (q == null)
       {
-         session.getServerSession().createQueue(new SimpleString(address), queue, null, false, qos > 0);
+         session.getServerSession().createQueue(new SimpleString(address), queue, null, false, DURABLE_QUEUES && qos >= 0);
       }
       return queue;
    }

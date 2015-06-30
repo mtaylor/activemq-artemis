@@ -74,8 +74,16 @@ public class CoreClientTest extends ActiveMQTestBase
       session.createQueue(QUEUE, QUEUE, null, false);
 
       ClientProducer producer = session.createProducer(QUEUE);
+      ClientConsumer consumer = session.createConsumer(QUEUE);
 
-      final int numMessages = 1000;
+      session.start();
+
+      final int numMessages = 40000;
+
+      ClientMessage message2;
+
+
+      long time = System.currentTimeMillis();
 
       for (int i = 0; i < numMessages; i++)
       {
@@ -96,23 +104,28 @@ public class CoreClientTest extends ActiveMQTestBase
          message.getBodyBuffer().writeString("testINVMCoreClient");
 
          producer.send(message);
-      }
 
-      CoreClientTest.log.info("sent messages");
-
-      ClientConsumer consumer = session.createConsumer(QUEUE);
-
-      session.start();
-
-      for (int i = 0; i < numMessages; i++)
-      {
-         ClientMessage message2 = consumer.receive();
-
-         ActiveMQBuffer buffer = message2.getBodyBuffer();
-
-         Assert.assertEquals("testINVMCoreClient", buffer.readString());
-
+         //
+         message2 = consumer.receive(1000);
          message2.acknowledge();
       }
+
+      System.out.println("TIME: " + (System.currentTimeMillis() - time));
+//      CoreClientTest.log.info("sent messages");
+
+      //ClientConsumer consumer = session.createConsumer(QUEUE);
+
+//      session.start();
+//
+//      for (int i = 0; i < numMessages; i++)
+//      {
+//         ClientMessage message2 = consumer.receive();
+//
+//         ActiveMQBuffer buffer = message2.getBodyBuffer();
+//
+//         Assert.assertEquals("testINVMCoreClient", buffer.readString());
+//
+//         message2.acknowledge();
+//      }
    }
 }

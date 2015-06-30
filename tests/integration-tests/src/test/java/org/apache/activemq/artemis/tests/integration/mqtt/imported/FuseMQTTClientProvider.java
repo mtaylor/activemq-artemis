@@ -19,16 +19,17 @@ package org.apache.activemq.artemis.tests.integration.mqtt.imported;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
-import org.fusesource.mqtt.client.BlockingConnection;
-import org.fusesource.mqtt.client.MQTT;
-import org.fusesource.mqtt.client.Message;
-import org.fusesource.mqtt.client.QoS;
-import org.fusesource.mqtt.client.Topic;
+
+import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
+import org.fusesource.mqtt.client.*;
+import org.fusesource.mqtt.codec.MQTTFrame;
+
 import static org.fusesource.hawtbuf.UTF8Buffer.utf8;
 
 public class FuseMQTTClientProvider implements MQTTClientProvider {
     private final MQTT mqtt = new MQTT();
     private BlockingConnection connection;
+
     @Override
     public void connect(String host) throws Exception {
         mqtt.setHost(host);
@@ -36,7 +37,9 @@ public class FuseMQTTClientProvider implements MQTTClientProvider {
         // shut off connect retry
         mqtt.setConnectAttemptsMax(0);
         mqtt.setReconnectAttemptsMax(0);
+        //mqtt.setTracer(new OutTracer());
         connection = mqtt.blockingConnection();
+
         connection.connect();
     }
 
@@ -107,5 +110,31 @@ public class FuseMQTTClientProvider implements MQTTClientProvider {
     @Override
     public void setKeepAlive(int keepAlive) throws Exception {
         mqtt.setKeepAlive((short) keepAlive);
+    }
+
+    private class OutTracer extends Tracer
+    {
+       public OutTracer()
+       {
+          super();
+       }
+
+       @Override
+       public void debug(String message, Object... args)
+       {
+          System.err.println("DEBUG: " + message + "\n" + args.toString());
+       }
+
+       @Override
+       public void onSend(MQTTFrame frame)
+       {
+          System.err.println("SEND: " + frame.toString());
+       }
+
+       @Override
+       public void onReceive(MQTTFrame frame)
+       {
+          System.err.println("RECEIVE: " + frame.toString());
+       }
     }
 }

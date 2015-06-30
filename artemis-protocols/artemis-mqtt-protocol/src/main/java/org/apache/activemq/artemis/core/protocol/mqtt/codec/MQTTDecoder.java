@@ -38,7 +38,10 @@ public class MQTTDecoder extends MqttDecoder
    public List<Object> decode(ActiveMQBuffer buffer) throws Exception
    {
       List<Object> messages = new ArrayList<>();
-      decode(null, buffer.byteBuf(), messages);
+      while(buffer.readable())
+      {
+         decode(null, buffer.byteBuf(), messages);
+      }
       return messages;
    }
 }

@@ -39,7 +39,7 @@ public class MQTTSession
 
    private ServerSessionImpl serverSession;
 
-   private MQTTQoSManager mqttQoSManager;
+   private MQTTPublishManager mqttPublishManager;
 
    private MQTTConnectionManager mqttConnectionManager;
 
@@ -55,7 +55,7 @@ public class MQTTSession
 
       protocolHandler = new MQTTProtocolHandler(this);
       mqttConnectionManager = new MQTTConnectionManager(this);
-      mqttQoSManager = new MQTTQoSManager(this);
+      mqttPublishManager = new MQTTPublishManager(this);
       sessionCallback = new MQTTSessionCallback(this);
       subscriptionManager = new MQTTSubscriptionManager(this);
       retainMessageManager = new MQTTRetainMessageManager(this);
@@ -64,7 +64,7 @@ public class MQTTSession
    // Called after the client has Connected.
    void start() throws Exception
    {
-      mqttQoSManager.start();
+      mqttPublishManager.start();
       subscriptionManager.start();
       stopped = false;
    }
@@ -76,7 +76,7 @@ public class MQTTSession
       {
          // TODO this should pass in clean session.
          subscriptionManager.stop(false);
-         mqttQoSManager.stop(false);
+         mqttPublishManager.stop(false);
 
          if (serverSession != null)
          {
@@ -102,9 +102,9 @@ public class MQTTSession
       return connection;
    }
 
-   MQTTQoSManager getMqttQoSManager()
+   MQTTPublishManager getMqttPublishManager()
    {
-      return mqttQoSManager;
+      return mqttPublishManager;
    }
 
    MQTTSessionState getState()

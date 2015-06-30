@@ -155,7 +155,10 @@ public class MQTTUtil
 
       if (message.fixedHeader().messageType() == MqttMessageType.SUBSCRIBE)
       {
-         log.append(" " + message.fixedHeader().qosLevel());
+         for (MqttTopicSubscription sub : ((MqttSubscribeMessage) message).payload().topicSubscriptions())
+         {
+            log.append("\n\t" + sub.topicName() + " : " + sub.qualityOfService());
+         }
       }
 
       logger.debug(log.toString());

@@ -69,6 +69,8 @@ public class MQTTProtocolHandler
 
    private ScheduledFuture<MQTTKeepAliveCheck> keepAliveFuture;
 
+   private int count = 0;
+
    public MQTTProtocolHandler(MQTTSession session)
    {
       log = MQTTLogger.LOGGER;
@@ -86,7 +88,12 @@ public class MQTTProtocolHandler
    {
       try
       {
+         if (count == 1)
+         {
+            System.out.println(count);
+         }
          List<Object> messages = decoder.decode(buffer);
+
          for (Object obj : messages)
          {
             MqttMessage message = (MqttMessage) obj;
@@ -112,6 +119,7 @@ public class MQTTProtocolHandler
                   handleConnack((MqttConnAckMessage) message);
                   break;
                case PUBLISH:
+                  count++;
                   handlePublish((MqttPublishMessage) message);
                   break;
                case PUBACK:
@@ -231,9 +239,9 @@ public class MQTTProtocolHandler
       disconnect();
    }
 
-   public synchronized void handlePublish(MqttPublishMessage message) throws Exception
+   public void handlePublish(MqttPublishMessage message) throws Exception
    {
-      session.getMqttQoSManager().handleMessage(message.variableHeader().messageId(),
+      session.getMqttPublishManager().handleMessage(message.variableHeader().messageId(),
             message.variableHeader().topicName(),
             message.fixedHeader().qosLevel().value(),
             message.payload(),
@@ -274,25 +282,25 @@ public class MQTTProtocolHandler
 
    public void handlePuback(MqttPubAckMessage message) throws Exception
    {
-      session.getMqttQoSManager().handlePubAck(message.variableHeader().messageId());
+      session.getMqttPublishManager().handlePubAck(message.variableHeader().messageId());
    }
 
    public void handlePubrec(MqttMessage message) throws Exception
    {
       int messageId =  ((MqttMessageIdVariableHeader) message.variableHeader()).messageId();
-      session.getMqttQoSManager().handlePubRec(messageId);
+      session.getMqttPublishManager().handlePubRec(messageId);
    }
 
    public void handlePubrel(MqttMessage message)
    {
       int messageId = ((MqttMessageIdVariableHeader) message.variableHeader()).messageId();
-      session.getMqttQoSManager().handlePubRel(messageId);
+      session.getMqttPublishManager().handlePubRel(messageId);
    }
 
    public void handlePubcomp( MqttMessage message) throws Exception
    {
       int messageId = ((MqttMessageIdVariableHeader) message.variableHeader()).messageId();
-      session.getMqttQoSManager().handlePubComp(messageId);
+      session.getMqttPublishManager().handlePubComp(messageId);
    }
 
    public void handleSubscribe( MqttSubscribeMessage message) throws Exception
@@ -365,11 +373,11 @@ public class MQTTProtocolHandler
       try
       {
          ByteBufAllocator bufAllocator = connection.getChannel().alloc();
+
          ChannelBufferWrapper channelBufferWrapper = new ChannelBufferWrapper(encoder.encode(message, bufAllocator));
          synchronized (this)
          {
             connection.write(channelBufferWrapper);
-            connection.checkFlushBatchBuffer();
          }
       }
       catch (Exception e)

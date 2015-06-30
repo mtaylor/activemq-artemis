@@ -1,7 +1,6 @@
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import org.apache.activemq.artemis.api.core.SimpleString;
-import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.ServerConsumer;
 import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
@@ -23,7 +22,7 @@ public class MQTTSessionCallback implements SessionCallback
    {
       try
       {
-         session.getMqttQoSManager().sendMessage(message, consumer, deliveryCount);
+         session.getMqttPublishManager().sendMessage(message, consumer, deliveryCount);
       }
       catch (Exception e)
       {

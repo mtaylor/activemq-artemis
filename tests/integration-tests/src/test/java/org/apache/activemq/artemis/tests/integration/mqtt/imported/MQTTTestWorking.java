@@ -30,6 +30,7 @@ import org.apache.activemq.artemis.core.protocol.mqtt.MQTTConnectionManager;
 import org.apache.activemq.artemis.core.protocol.mqtt.MQTTSession;
 import org.apache.activemq.artemis.tests.integration.client.ConcurrentCreateDeleteProduceTest;
 import org.apache.activemq.artemis.tests.integration.mqtt.imported.util.Wait;
+import org.apache.activemq.artemis.tests.unit.core.server.group.impl.SystemPropertyOverrideTest;
 import org.apache.activemq.artemis.utils.ConcurrentHashSet;
 import org.fusesource.mqtt.client.BlockingConnection;
 import org.fusesource.mqtt.client.MQTT;
@@ -255,15 +256,25 @@ public class MQTTTestWorking extends MQTTTestSupport
    public void testSendAndReceiveAtLeastOnce() throws Exception
    {
       final MQTTClientProvider provider = getMQTTClientProvider();
+      provider.setKeepAlive(40000);
       initializeConnection(provider);
       provider.subscribe("foo", AT_LEAST_ONCE);
-      for (int i = 0; i < NUM_MESSAGES; i++)
+
+
+      for (int j=1; j<10; j++)
       {
-         String payload = "Test Message: " + i;
-         provider.publish("foo", payload.getBytes(), AT_LEAST_ONCE);
-         byte[] message = provider.receive(5000);
-         //assertNotNull("Should get a message", message);
-         //assertEquals(payload, new String(message));
+         long time = System.currentTimeMillis();
+         for (int i = 0; i < 40000; i++)
+         {
+            String payload = "Test Message: " + i;
+            provider.publish("foo", payload.getBytes(), AT_LEAST_ONCE);
+            byte[] message = provider.receive(5000);
+
+            //Thread.sleep(2000);
+//            assertNotNull("Should get a message", message);
+//            assertEquals(payload, new String(message));
+         }
+         System.out.println("Time: " + (System.currentTimeMillis() - time));
       }
       provider.disconnect();
    }

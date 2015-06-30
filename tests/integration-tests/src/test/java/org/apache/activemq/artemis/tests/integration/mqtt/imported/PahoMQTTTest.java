@@ -17,6 +17,7 @@
 package org.apache.activemq.artemis.tests.integration.mqtt.imported;
 
 import org.apache.activemq.artemis.core.protocol.mqtt.MQTTLogger;
+import org.apache.activemq.artemis.tests.unit.core.server.group.impl.SystemPropertyOverrideTest;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.junit.Test;
@@ -25,6 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PahoMQTTTest extends MQTTTestSupport
 {
+
+   private long time;
 
    private MQTTLogger log = MQTTLogger.LOGGER;
 
@@ -35,15 +38,18 @@ public class PahoMQTTTest extends MQTTTestSupport
       client.setProtocolVersion(MqttProtocolVersion.V3_1_1);
 
       client.connect();
-      client.subscribe("test", 0);
+      client.subscribe("test", 1);
 
       PahoCallback callback = new PahoCallback();
       client.setCallback(callback);
 
+
       int messagesSent = 0;
+
+      time = System.currentTimeMillis();
       for (int i = 0; i < 100; i++)
       {
-         client.publish("test", "hello".getBytes(), 1, false);
+         client.publish("test", "1".getBytes(), 1, false);
          messagesSent++;
       }
 
@@ -53,7 +59,6 @@ public class PahoMQTTTest extends MQTTTestSupport
       client.close();
 
       assertEquals(messagesSent, callback.getCount());
-
    }
 
    private class PahoCallback implements MqttCallback
@@ -75,7 +80,10 @@ public class PahoMQTTTest extends MQTTTestSupport
       public synchronized void messageArrived(String topic, MqttMessage message) throws Exception
       {
          count++;
-         System.out.println("Received " + count);
+         if (count == 100)
+         {
+            System.out.println("TIME++++++ " + (System.currentTimeMillis() - time));
+         }
       }
 
       @Override
