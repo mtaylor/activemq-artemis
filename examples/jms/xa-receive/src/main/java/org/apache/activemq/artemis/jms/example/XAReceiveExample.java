@@ -29,8 +29,6 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import java.nio.charset.StandardCharsets;
 
-import org.apache.activemq.artemis.common.example.ActiveMQExample;
-
 // Defined on xa-heuristic example, the maven dependency will take care of that
 import org.apache.activemq.artemis.common.example.DummyXid;
 import org.apache.activemq.artemis.utils.UUIDGenerator;
@@ -38,17 +36,9 @@ import org.apache.activemq.artemis.utils.UUIDGenerator;
 /**
  * A simple JMS example showing the usage of XA support in JMS.
  */
-public class XAReceiveExample extends ActiveMQExample
+public class XAReceiveExample
 {
-   private volatile boolean result = true;
-
-   public static void main(final String[] args)
-   {
-      new XAReceiveExample().run(args);
-   }
-
-   @Override
-   public boolean runExample() throws Exception
+   public static void main(final String[] args) throws Exception
    {
       XAConnection connection = null;
       InitialContext initialContext = null;
@@ -90,8 +80,8 @@ public class XAReceiveExample extends ActiveMQExample
 
          // Step 12. create a transaction
          Xid xid1 = new DummyXid("xa-example1".getBytes(StandardCharsets.US_ASCII), 1, UUIDGenerator.getInstance()
-                                                                           .generateStringUUID()
-                                                                           .getBytes());
+                 .generateStringUUID()
+                 .getBytes());
 
          // Step 13. Get the JMS XAResource
          XAResource xaRes = xaSession.getXAResource();
@@ -120,8 +110,8 @@ public class XAReceiveExample extends ActiveMQExample
 
          // Step 20. Create another transaction
          Xid xid2 = new DummyXid("xa-example2".getBytes(), 1, UUIDGenerator.getInstance()
-                                                                           .generateStringUUID()
-                                                                           .getBytes());
+                 .generateStringUUID()
+                 .getBytes());
 
          // Step 21. Start the transaction
          xaRes.start(xid2, XAResource.TMNOFLAGS);
@@ -149,10 +139,8 @@ public class XAReceiveExample extends ActiveMQExample
          }
          else
          {
-            result = false;
+            throw new IllegalStateException();
          }
-
-         return result;
       }
       finally
       {
@@ -167,5 +155,4 @@ public class XAReceiveExample extends ActiveMQExample
          }
       }
    }
-
 }

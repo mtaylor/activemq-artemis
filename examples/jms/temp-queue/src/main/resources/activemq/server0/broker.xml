@@ -37,20 +37,12 @@ under the License.
 
       <paging-directory>${data.dir}/server0/data/messaging/paging</paging-directory>
 
-
-      <!-- Connectors -->
-      <connectors>
-         <connector name="netty-connector">tcp://localhost:61616</connector>
-      </connectors>
-
       <!-- Acceptors -->
       <acceptors>
          <acceptor name="netty-acceptor">tcp://localhost:61616</acceptor>
       </acceptors>
 
       <!-- Other config -->
-
-
       <security-settings>
          <!--security for example queues -->
          <security-setting match="jms.queue.#">

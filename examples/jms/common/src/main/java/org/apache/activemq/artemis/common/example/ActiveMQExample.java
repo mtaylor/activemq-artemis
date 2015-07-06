@@ -33,13 +33,12 @@ import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
  */
 public abstract class ActiveMQExample
 {
-   protected static final Logger log = Logger.getLogger(ActiveMQExample.class.getName());
    public static final int DEFAULT_PORT = 61616;
 
-   public static final String DEFAULT_TCP1 = "tcp://localhost:61616";
-   public static final String DEFAULT_TCP2 = "tcp://localhost:61617";
-   public static final String DEFAULT_TCP3 = "tcp://localhost:61618";
-   public static final String DEFAULT_TCP4 = "tcp://localhost:61619";
+   public static final String DEFAULT_TCP1 = "tcp://localhost:" + DEFAULT_PORT;
+   public static final String DEFAULT_TCP2 = "tcp://localhost:" + (DEFAULT_PORT + 1);
+   public static final String DEFAULT_TCP3 = "tcp://localhost:" + (DEFAULT_PORT + 2);
+   public static final String DEFAULT_TCP4 = "tcp://localhost:" + (DEFAULT_PORT + 3);
 
    protected boolean failure = false;
 
@@ -161,9 +160,8 @@ public abstract class ActiveMQExample
       {
          System.out.println("**********************************");
          System.out.println("Kill server " + id);
-         processes[id].destroyForcibly();
+         processes[id].destroy();
          processes[id].waitFor();
-//         processes[id].destroy();
          processes[id] = null;
          Thread.sleep(1000);
       }

@@ -43,7 +43,6 @@ under the License.
       </acceptors>
 
       <!-- Other config -->
-
       <security-settings>
          <!--security for example topic-->
          <security-setting match="jms.topic.exampleTopic">

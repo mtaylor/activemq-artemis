@@ -27,7 +27,7 @@ under the License.
       <version>1.0.1-SNAPSHOT</version>
    </parent>
 
-   <artifactId>artemis-jms-jms-bridge-example</artifactId>
+   <artifactId>artemis-jms-bridge-example</artifactId>
    <packaging>jar</packaging>
    <name>ActiveMQ Artemis JMS Bridge Example</name>
 
@@ -36,11 +36,6 @@ under the License.
    </properties>
 
    <dependencies>
-      <dependency>
-         <groupId>org.apache.activemq.examples.jms</groupId>
-         <artifactId>common</artifactId>
-         <version>${project.version}</version>
-      </dependency>
       <dependency>
          <groupId>org.apache.activemq</groupId>
          <artifactId>artemis-jms-server</artifactId>
@@ -62,7 +57,7 @@ under the License.
                   <artifactId>artemis-maven-plugin</artifactId>
                   <executions>
                      <execution>
-                        <id>create</id>
+                        <id>create0</id>
                         <goals>
                            <goal>create</goal>
                         </goals>
@@ -72,13 +67,41 @@ under the License.
                         </configuration>
                      </execution>
                      <execution>
-                        <id>create2</id>
+                        <id>create1</id>
                         <goals>
                            <goal>create</goal>
                         </goals>
                         <configuration>
                            <instance>${basedir}/target/server1</instance>
                            <configuration>${basedir}/target/classes/activemq/server1</configuration>
+                        </configuration>
+                     </execution>
+                     <execution>
+                        <id>start0</id>
+                        <goals>
+                           <goal>cli</goal>
+                        </goals>
+                        <configuration>
+                           <spawn>true</spawn>
+                           <location>${basedir}/target/server0</location>
+                           <testURI>tcp://localhost:61616</testURI>
+                           <args>
+                              <param>run</param>
+                           </args>
+                        </configuration>
+                     </execution>
+                     <execution>
+                        <id>start1</id>
+                        <goals>
+                           <goal>cli</goal>
+                        </goals>
+                        <configuration>
+                           <spawn>true</spawn>
+                           <location>${basedir}/target/server1</location>
+                           <testURI>tcp://localhost:61617</testURI>
+                           <args>
+                              <param>run</param>
+                           </args>
                         </configuration>
                      </execution>
                      <execution>
@@ -98,7 +121,7 @@ under the License.
                   <dependencies>
                      <dependency>
                         <groupId>org.apache.activemq.examples.jms</groupId>
-                        <artifactId>artemis-jms-jms-bridge-example</artifactId>
+                        <artifactId>artemis-jms-bridge-example</artifactId>
                         <version>${project.version}</version>
                      </dependency>
                   </dependencies>

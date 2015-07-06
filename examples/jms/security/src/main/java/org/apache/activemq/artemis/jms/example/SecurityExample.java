@@ -27,20 +27,12 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.naming.InitialContext;
 
-import org.apache.activemq.artemis.common.example.ActiveMQExample;
-
-public class SecurityExample extends ActiveMQExample
+public class SecurityExample
 {
-   private boolean result = true;
 
-   public static void main(final String[] args)
+   public static void main(final String[] args) throws Exception
    {
-      new SecurityExample().run(args);
-   }
-
-   @Override
-   public boolean runExample() throws Exception
-   {
+      boolean result = true;
       Connection billConnection = null;
       Connection andrewConnection = null;
       Connection frankConnection = null;
@@ -136,8 +128,6 @@ public class SecurityExample extends ActiveMQExample
          // Step 18. Check permissions on news.us.usTopic for sam: can't send but can receive
          checkUserReceiveNoSend(usTopic, samConnection, "sam", frankConnection);
          System.out.println("-------------------------------------------------------------------------------------");
-
-         return result;
       }
       finally
       {
@@ -168,7 +158,7 @@ public class SecurityExample extends ActiveMQExample
    }
 
    // Check the user can receive message but cannot send message.
-   private void checkUserReceiveNoSend(final Topic topic,
+   private static void checkUserReceiveNoSend(final Topic topic,
                                        final Connection connection,
                                        final String user,
                                        final Connection sendingConn) throws JMSException
@@ -181,12 +171,11 @@ public class SecurityExample extends ActiveMQExample
       try
       {
          producer.send(msg);
-         System.out.println("Security setting is broken! User " + user +
+         throw new IllegalStateException("Security setting is broken! User " + user +
                             " can send message [" +
                             msg.getText() +
                             "] to topic " +
                             topic);
-         result = false;
       }
       catch (JMSException e)
       {
@@ -206,8 +195,7 @@ public class SecurityExample extends ActiveMQExample
       }
       else
       {
-         System.out.println("Security setting is broken! User " + user + " cannot receive message from topic " + topic);
-         result = false;
+         throw new IllegalStateException("Security setting is broken! User " + user + " cannot receive message from topic " + topic);
       }
 
       session1.close();
@@ -215,7 +203,7 @@ public class SecurityExample extends ActiveMQExample
    }
 
    // Check the user can send message but cannot receive message
-   private void checkUserSendNoReceive(final Topic topic,
+   private static void checkUserSendNoReceive(final Topic topic,
                                        final Connection connection,
                                        final String user,
                                        final Connection receivingConn) throws JMSException
@@ -244,12 +232,11 @@ public class SecurityExample extends ActiveMQExample
       }
       else
       {
-         System.out.println("Security setting is broken! User " + user +
+         throw new IllegalStateException("Security setting is broken! User " + user +
                             " cannot send message [" +
                             msg.getText() +
                             "] to topic " +
                             topic);
-         result = false;
       }
 
       session.close();
@@ -257,7 +244,7 @@ public class SecurityExample extends ActiveMQExample
    }
 
    // Check the user has neither send nor receive permission on topic
-   private void checkUserNoSendNoReceive(final Topic topic, final Connection connection, final String user) throws JMSException
+   private static void checkUserNoSendNoReceive(final Topic topic, final Connection connection, final String user) throws JMSException
    {
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
       MessageProducer producer = session.createProducer(topic);
@@ -275,12 +262,11 @@ public class SecurityExample extends ActiveMQExample
       try
       {
          producer.send(msg);
-         System.out.println("Security setting is broken! User " + user +
+         throw new IllegalStateException("Security setting is broken! User " + user +
                             " can send message [" +
                             msg.getText() +
                             "] to topic " +
                             topic);
-         result = false;
       }
       catch (JMSException e)
       {
@@ -291,7 +277,7 @@ public class SecurityExample extends ActiveMQExample
    }
 
    // Check the user connection has both send and receive permissions on the topic
-   private void checkUserSendAndReceive(final Topic topic, final Connection connection, final String user) throws JMSException
+   private static void checkUserSendAndReceive(final Topic topic, final Connection connection, final String user) throws JMSException
    {
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
       TextMessage msg = session.createTextMessage("hello-world-4");
@@ -306,13 +292,12 @@ public class SecurityExample extends ActiveMQExample
       }
       else
       {
-         System.out.println("Error! User " + user + " cannot receive the message! ");
-         result = false;
+         throw new IllegalStateException("Error! User " + user + " cannot receive the message! ");
       }
       session.close();
    }
 
-   private Connection createConnection(final String username, final String password, final ConnectionFactory cf) throws JMSException
+   private static Connection createConnection(final String username, final String password, final ConnectionFactory cf) throws JMSException
    {
       return cf.createConnection(username, password);
    }

@@ -26,21 +26,13 @@ import javax.jms.TextMessage;
 import javax.naming.InitialContext;
 import java.util.Hashtable;
 
-import org.apache.activemq.artemis.common.example.ActiveMQExample;
-
 /**
  * A simple example that demonstrates a colocated server
  *
  */
-public class ColocatedFailoverExample extends ActiveMQExample
+public class ColocatedFailoverExample
 {
    public static void main(final String[] args) throws Exception
-   {
-      new ColocatedFailoverExample().run(args);
-   }
-
-   @Override
-   public boolean runExample() throws Exception
    {
       final int numMessages = 30;
 
@@ -124,8 +116,6 @@ public class ColocatedFailoverExample extends ActiveMQExample
             System.out.println("Got message: " + message0.getText());
          }
          message0.acknowledge();
-
-         return true;
       }
       finally
       {
@@ -151,5 +141,4 @@ public class ColocatedFailoverExample extends ActiveMQExample
          }
       }
    }
-
 }

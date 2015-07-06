@@ -72,7 +72,7 @@ public class ArtemisTest
    public void testSimpleRun() throws Exception
    {
       Run.setEmbedded(true);
-      Artemis.main("create", temporaryFolder.getRoot().getAbsolutePath(), "--force", "--silent-input", "--no-web");
+      Artemis.main("create", temporaryFolder.getRoot().getAbsolutePath(), "--force", "--silent-input", "--no-web", "--slave", "--shared-store");
       System.setProperty("artemis.instance", temporaryFolder.getRoot().getAbsolutePath());
       // Some exceptions may happen on the initialization, but they should be ok on start the basic core protocol
       Artemis.main("run");

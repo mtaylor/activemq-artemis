@@ -61,10 +61,6 @@ under the License.
                         <goals>
                            <goal>create</goal>
                         </goals>
-                        <configuration>
-                           <instance>${basedir}/target/server0</instance>
-                           <configuration>${basedir}/target/classes/activemq/server0</configuration>
-                        </configuration>
                      </execution>
                      <execution>
                         <id>runClient</id>

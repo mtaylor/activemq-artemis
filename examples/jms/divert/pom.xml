@@ -37,11 +37,6 @@ under the License.
 
    <dependencies>
       <dependency>
-         <groupId>org.apache.activemq.examples.jms</groupId>
-         <artifactId>common</artifactId>
-         <version>${project.version}</version>
-      </dependency>
-      <dependency>
          <groupId>org.apache.activemq</groupId>
          <artifactId>artemis-server</artifactId>
          <version>${project.version}</version>
@@ -79,6 +74,33 @@ under the License.
                         <configuration>
                            <instance>${basedir}/target/server1</instance>
                            <configuration>${basedir}/target/classes/activemq/server1</configuration>
+                        </configuration>
+                     </execution>
+                     <execution>
+                        <id>start</id>
+                        <goals>
+                           <goal>cli</goal>
+                        </goals>
+                        <configuration>
+                           <spawn>true</spawn>
+                           <testURI>tcp://localhost:61616</testURI>
+                           <args>
+                              <param>run</param>
+                           </args>
+                        </configuration>
+                     </execution>
+                     <execution>
+                        <id>start2</id>
+                        <goals>
+                           <goal>cli</goal>
+                        </goals>
+                        <configuration>
+                           <spawn>true</spawn>
+                           <location>${basedir}/target/server1</location>
+                           <testURI>tcp://localhost:61617</testURI>
+                           <args>
+                              <param>run</param>
+                           </args>
                         </configuration>
                      </execution>
                      <execution>
