@@ -29,6 +29,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServers;
+import org.apache.activemq.artemis.core.server.group.impl.GroupingHandlerConfiguration;
 import org.apache.activemq.artemis.core.transaction.impl.XidImpl;
 import org.apache.activemq.artemis.tests.integration.IntegrationTestLogger;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
@@ -54,6 +55,7 @@ public class MessageGroupingTest extends ActiveMQTestBase {
    private ClientSessionFactory clientSessionFactory;
 
    private final SimpleString qName = new SimpleString("MessageGroupingTestQueue");
+
    private ServerLocator locator;
 
    @Test
@@ -160,7 +162,7 @@ public class MessageGroupingTest extends ActiveMQTestBase {
       DummyMessageHandler dummyMessageHandler2 = new DummyMessageHandler(latch, true);
       consumer2.setMessageHandler(dummyMessageHandler2);
       Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
-      Assert.assertEquals(100, dummyMessageHandler.list.size());
+      Assert.assertEquals(numMessages, dummyMessageHandler.list.size());
       Assert.assertEquals(0, dummyMessageHandler2.list.size());
       consumer.close();
       consumer2.close();
@@ -512,6 +514,22 @@ public class MessageGroupingTest extends ActiveMQTestBase {
          clientProducer.send(message);
       }
 
+      Thread.sleep(5000);
+      for (int i = 0; i < numMessages; i++)
+      {
+         ClientMessage message = createTextMessage(clientSession, "m" + i);
+         if (i % 2 == 0 || i == 0)
+         {
+            message.putStringProperty(Message.HDR_GROUP_ID, groupId);
+         }
+         else
+         {
+            message.putStringProperty(Message.HDR_GROUP_ID, groupId2);
+         }
+         clientProducer.send(message);
+      }
+
+
       CountDownLatch latch = new CountDownLatch(numMessages);
       DummyMessageHandler dummyMessageHandler = new DummyMessageHandler(latch, true);
       consumer.setMessageHandler(dummyMessageHandler);
@@ -539,7 +557,16 @@ public class MessageGroupingTest extends ActiveMQTestBase {
    public void setUp() throws Exception {
       super.setUp();
       Configuration configuration = createDefaultInVMConfig();
+      GroupingHandlerConfiguration grp = new GroupingHandlerConfiguration();
+      grp.setAddress(new SimpleString("jms.foo.bar.car.goo.who"));
+      grp.setGroupTimeout(1000);
+      grp.setReaperPeriod(1000);
+      grp.setType(GroupingHandlerConfiguration.TYPE.LOCAL);
+
+      configuration.setGroupingHandlerConfiguration(grp);
+
       server = addServer(ActiveMQServers.newActiveMQServer(configuration, false));
+
       server.start();
       locator = createInVMNonHALocator();
       clientSessionFactory = createSessionFactory(locator);

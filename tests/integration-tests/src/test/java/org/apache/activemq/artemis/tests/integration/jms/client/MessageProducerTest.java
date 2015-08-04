@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.artemis.tests.integration.jms.client;
 
+import javax.jms.DeliveryMode;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
@@ -44,6 +45,7 @@ public class MessageProducerTest extends JMSTestBase {
       Session session = conn.createSession();
       try {
          MessageProducer producer = session.createProducer(null);
+         producer.setDeliveryMode(DeliveryMode.PERSISTENT);
          Message m = session.createMessage();
          try {
             producer.send(m);

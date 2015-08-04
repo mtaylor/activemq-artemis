@@ -17,6 +17,7 @@
 package org.apache.activemq.artemis.tests.integration.jms.client;
 
 import javax.jms.Connection;
+import javax.jms.DeliveryMode;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageEOFException;
@@ -187,6 +188,7 @@ public class MessageTest extends JMSTestBase {
       Session sess = conn.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
       MessageProducer prod = sess.createProducer(queue);
+      prod.setDeliveryMode(DeliveryMode.PERSISTENT);
 
       MessageConsumer cons = sess.createConsumer(queue);
 
