@@ -16,10 +16,7 @@ import org.apache.activemq.artemis.utils.ExecutorFactory;
 
 public class ActiveMQJDBCStorageManager extends JournalStorageManager
 {
-   private static final String CREATE_JOURNAL_TABLE = "CREATE TABLE JOURNAL (" +
-                                                      "id INTEGER not NULL, " +
-                                                      "recordType INTEGER not NULL," +
-                                                      "PRIMARY KEY ( id ) )";
+
 
    private String jdbcUrl;
 
