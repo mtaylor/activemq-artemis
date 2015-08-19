@@ -9,6 +9,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffers;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.journal.IOCompletion;
+import org.apache.activemq.artemis.core.journal.impl.JournalImpl;
 import org.apache.activemq.artemis.core.journal.impl.dataformat.JournalCompleteRecordTX;
 import org.apache.activemq.artemis.utils.ActiveMQBufferInputStream;
 
@@ -16,19 +17,20 @@ public class JDBCInsertRecord extends JDBCRecord
 {
    private InputStream record;
 
-   private Long txId;
+   private long txId = -1;
 
-   private JournalCompleteRecordTX.TX_RECORD_TYPE txRecordType;
+   public static String SQL = "INSERT INTO JOURNAL " +
+      "(id,recordType,record,txId) " +
+      "VALUES (?,?,?,?)";
 
-   private InputStream txData;
-
-   protected static String INSERT_RECORD_SQL = "INSERT INTO JOURNAL " +
-      "(id,recordType,record,txId,txRecordType,transactionData) " +
-      "VALUES (?,?,?,?,?,?,?,?)";
-
-   private JDBCInsertRecord(long id, byte recordType, boolean sync, IOCompletion ioCompletion)
+   public JDBCInsertRecord(long id, byte recordType, boolean sync, IOCompletion ioCompletion)
    {
       super (id, recordType, sync, ioCompletion);
+   }
+
+   public JDBCInsertRecord(long id, byte recordType, boolean sync, IOCompletion ioCompletion, boolean storeLineUp)
+   {
+      super (id, recordType, sync, ioCompletion, storeLineUp);
    }
 
    public JDBCInsertRecord(long id, byte recordType, byte[] record, boolean sync, IOCompletion ioCompletion)
@@ -58,38 +60,13 @@ public class JDBCInsertRecord extends JDBCRecord
       this.txId = txId;
    }
 
-   public JDBCInsertRecord(long txId, JournalCompleteRecordTX.TX_RECORD_TYPE txRecordType, boolean sync, IOCompletion ioCompletion)
-   {
-      super(-1, sync, ioCompletion);
-      this.txId = txId;
-      this.txRecordType = txRecordType;
-   }
-
-   public JDBCInsertRecord(long txId, JournalCompleteRecordTX.TX_RECORD_TYPE txRecordType, EncodingSupport transactionData, boolean sync, IOCompletion ioCompletion)
-   {
-      this(txId, txRecordType, sync, ioCompletion);
-
-      ActiveMQBuffer buffer = ActiveMQBuffers.fixedBuffer(transactionData.getEncodeSize());
-      transactionData.encode(buffer);
-      this.txData = new ActiveMQBufferInputStream(buffer);
-   }
-
-   public JDBCInsertRecord(long txId, JournalCompleteRecordTX.TX_RECORD_TYPE txRecordType, byte[] transactionData, boolean sync, IOCompletion ioCompletion)
-   {
-      this(txId, txRecordType, sync, ioCompletion);
-      this.txData = new ByteArrayInputStream(transactionData);
-   }
-
    @Override
    public void addToStatement(PreparedStatement statement) throws SQLException
    {
       statement.setLong(1, id);
       statement.setByte(2, recordType);
       statement.setBinaryStream(3, record);
-
       statement.setLong(4, txId);
-      statement.setInt(5, txRecordType == null ? -1 : txRecordType.ordinal());
-      statement.setBinaryStream(6, txData == null ? new ByteArrayInputStream(new byte[0]) : txData);
       statement.addBatch();
    }
 

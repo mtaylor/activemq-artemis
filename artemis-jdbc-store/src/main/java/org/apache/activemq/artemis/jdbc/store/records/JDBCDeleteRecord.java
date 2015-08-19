@@ -10,17 +10,17 @@ public class JDBCDeleteRecord extends JDBCRecord
 {
    private long txId;
 
-   protected static String DELETE_RECORD_SQL = "DELETE FROM JOURNAL WHERE id=? OR txId=?";
+   protected static String SQL = "DELETE FROM JOURNAL WHERE id=? OR txId=?";
 
    public JDBCDeleteRecord(long id, boolean sync, IOCompletion ioCompletion)
    {
-      super(id, sync, ioCompletion);
+      super(id, JDBCRecord.DELETE_RECORD, sync, ioCompletion);
       txId = -2;
    }
 
    public JDBCDeleteRecord(long id, long txId, boolean sync, IOCompletion completion)
    {
-      super(id, sync, completion);
+      super(id, JDBCRecord.DELETE_RECORD, sync, completion);
       this.txId = txId;
    }
    @Override
