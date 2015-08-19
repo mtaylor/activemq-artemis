@@ -2,22 +2,16 @@ package org.apache.activemq.artemis.jdbc.store;
 
 import java.sql.Driver;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 import org.apache.activemq.artemis.core.config.Configuration;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
 
-public class ActiveMQJDBCStorageManager extends JournalStorageManager
+public class ActiveMQJDBCStorageManager //extends JournalStorageManager
 {
-
-
    private String jdbcUrl;
 
    private Properties jdbcConnectionProperties;
@@ -26,8 +20,11 @@ public class ActiveMQJDBCStorageManager extends JournalStorageManager
 
    private Driver dbDriver;
 
+   private ActiveMQJDBCJournal journal;
+
    public ActiveMQJDBCStorageManager(Configuration config, ExecutorFactory executorFactory) throws SQLException
    {
+
       //super(config, executorFactory);
       loadConfig(config);
 
@@ -37,13 +34,13 @@ public class ActiveMQJDBCStorageManager extends JournalStorageManager
       {
          dbDriver = drivers.get(0);
          dbConnection = dbDriver.connect(jdbcUrl, jdbcConnectionProperties);
-         setupDatabase();
       }
       else
       {
          String error = drivers.isEmpty() ? "No DB driver found on class path" : "Too many DB drivers on class path";
          throw new RuntimeException(error);
       }
+      journal = new ActiveMQJDBCJournal(dbConnection);
    }
 
    private void loadConfig(Configuration config)
@@ -52,13 +49,8 @@ public class ActiveMQJDBCStorageManager extends JournalStorageManager
       jdbcConnectionProperties = new Properties();
    }
 
-   private void setupDatabase() throws SQLException
+   public ActiveMQJDBCJournal getJournal()
    {
-      ResultSet rs = dbConnection.getMetaData().getTables(null, null, "JOURNAL", null);
-      if (!rs.next())
-      {
-         PreparedStatement createJournalTable = dbConnection.prepareStatement(CREATE_JOURNAL_TABLE);
-         createJournalTable.execute();
-      }
+      return journal;
    }
 }

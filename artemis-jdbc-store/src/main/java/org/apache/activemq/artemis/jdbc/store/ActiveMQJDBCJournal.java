@@ -2,11 +2,14 @@ package org.apache.activemq.artemis.jdbc.store;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.activemq.artemis.core.io.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.journal.IOCompletion;
 import org.apache.activemq.artemis.core.journal.Journal;
@@ -16,16 +19,18 @@ import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
-import org.apache.activemq.artemis.core.journal.impl.dataformat.JournalCompleteRecordTX;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCDeleteRecord;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCInsertRecord;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCRecord;
 
 public class ActiveMQJDBCJournal implements Journal
 {
+   private static String CREATE_TABLE_SQL = "CREATE TABLE JOURNAL " +
+                                            "(id INT, recordType SMALLINT, record BLOB, txId BIGINT)";
+
    private static String INSERT_RECORD_SQL = "INSERT INTO JOURNAL " +
-                                             "(id,recordType,record,txId,txRecordType,transactionData,noRecords) " +
-                                             "VALUES (?,?,?,?,?,?,?,?)";
+                                             "(id,recordType,record,txId) " +
+                                             "VALUES (?,?,?,?)";
 
    private static String DELETE_RECORD_SQL = "DELETE FROM JOURNAL WHERE id = ?";
 
@@ -44,6 +49,7 @@ public class ActiveMQJDBCJournal implements Journal
    public ActiveMQJDBCJournal(Connection connection) throws SQLException
    {
       this.connection = connection;
+      setup();
 
       records = new ArrayList<JDBCRecord>();
 
@@ -51,7 +57,24 @@ public class ActiveMQJDBCJournal implements Journal
       deleteJournalRecords = connection.prepareStatement(DELETE_RECORD_SQL);
    }
 
-   private synchronized void sync() throws SQLException
+   public void setup() throws SQLException
+   {
+      // If JOURNAL table doesn't exist then create it
+      ResultSet rs = connection.getMetaData().getTables(null, null, "JOURNAL", null);
+      if (!rs.next())
+      {
+         Statement statement = connection.createStatement();
+         statement.executeUpdate(CREATE_TABLE_SQL);
+      }
+   }
+
+   public void destroy() throws SQLException
+   {
+      Statement statement = connection.createStatement();
+      statement.executeUpdate("DROP TABLE JOURNAL");
+   }
+
+   public synchronized void sync() throws SQLException
    {
       List<JDBCRecord> localRecords;
 
@@ -63,15 +86,15 @@ public class ActiveMQJDBCJournal implements Journal
 
       for (JDBCRecord record : localRecords)
       {
-         record.insertRecord(record.getInsert() ? insertJournalRecords : deleteJournalRecords);
+         record.addToStatement(record.getInsert() ? insertJournalRecords : deleteJournalRecords);
          record.storeLineUp();
       }
 
       try
       {
          connection.setAutoCommit(false);
-         insertJournalRecords.executeUpdate();
-         deleteJournalRecords.executeUpdate();
+         insertJournalRecords.executeBatch();
+         deleteJournalRecords.executeBatch();
          connection.commit();
 
          executeCallbacks(localRecords, true);
@@ -225,14 +248,14 @@ public class ActiveMQJDBCJournal implements Journal
    @Override
    public void appendCommitRecord(long txID, boolean sync) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.COMMIT, sync, null);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.COMMIT_RECORD, sync, null);
       insertRecord(r);
    }
 
    @Override
    public void appendCommitRecord(long txID, boolean sync, IOCompletion callback) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.COMMIT, sync, callback);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.COMMIT_RECORD, sync, callback);
       insertRecord(r);
    }
 
@@ -240,42 +263,43 @@ public class ActiveMQJDBCJournal implements Journal
    public void appendCommitRecord(long txID, boolean sync, IOCompletion callback, boolean lineUpContext) throws Exception
    {
       //FIXME what does line up context mean here?
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.COMMIT, sync, callback);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.COMMIT_RECORD, sync, callback, lineUpContext);
       insertRecord(r);
    }
 
    @Override
    public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.PREPARE, transactionData, sync, null);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.PREPARE_RECORD, transactionData, sync, null);
       insertRecord(r);
    }
 
    @Override
    public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync, IOCompletion callback) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.PREPARE, transactionData, sync, callback);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.PREPARE_RECORD, transactionData, sync, callback);
       insertRecord(r);
    }
 
    @Override
    public void appendPrepareRecord(long txID, byte[] transactionData, boolean sync) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE.PREPARE, transactionData, sync, null);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.PREPARE_RECORD, transactionData, sync, null);
       insertRecord(r);
    }
 
    @Override
    public void appendRollbackRecord(long txID, boolean sync) throws Exception
    {
-      JDBCInsertRecord r = new JDBCInsertRecord(txID, JournalCompleteRecordTX.TX_RECORD_TYPE., sync, null);
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.ROLLBACK_RECORD, sync, null);
       insertRecord(r);
    }
 
    @Override
    public void appendRollbackRecord(long txID, boolean sync, IOCompletion callback) throws Exception
    {
-
+      JDBCInsertRecord r = new JDBCInsertRecord(txID, JDBCRecord.ROLLBACK_RECORD, sync, callback);
+      insertRecord(r);
    }
 
    @Override

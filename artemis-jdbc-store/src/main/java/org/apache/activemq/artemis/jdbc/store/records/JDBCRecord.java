@@ -4,7 +4,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import org.apache.activemq.artemis.core.journal.IOCompletion;
-import org.apache.activemq.artemis.utils.DataConstants;
 
 public abstract class JDBCRecord
 {
@@ -27,11 +26,21 @@ public abstract class JDBCRecord
 
    protected byte recordType;
 
+   protected boolean storeLineUp;
+
    public JDBCRecord(long id, byte recordType, boolean sync, IOCompletion ioCompletion)
    {
       this.id = id;
       this.ioCompletion = ioCompletion;
       this.sync = sync;
+   }
+
+   public JDBCRecord(long id, byte recordType, boolean sync, IOCompletion ioCompletion, boolean storeLineUp)
+   {
+      this.id = id;
+      this.ioCompletion = ioCompletion;
+      this.sync = sync;
+      this.storeLineUp = storeLineUp;
    }
 
    public void complete()
@@ -52,7 +61,7 @@ public abstract class JDBCRecord
 
    public void storeLineUp()
    {
-      if (ioCompletion != null)
+      if (storeLineUp && ioCompletion != null)
       {
          ioCompletion.storeLineUp();
       }
@@ -64,4 +73,9 @@ public abstract class JDBCRecord
     * Returns whether or not this record is a delete or insert.
     */
    public abstract boolean getInsert();
+
+   public boolean getStoreLineUp()
+   {
+      return storeLineUp;
+   }
 }
