@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.activemq.artemis.jdbc.store;
 
 import java.sql.Connection;
@@ -8,6 +25,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.activemq.artemis.core.io.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
@@ -22,17 +40,26 @@ import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCDeleteRecord;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCInsertRecord;
 import org.apache.activemq.artemis.jdbc.store.records.JDBCRecord;
+import org.apache.activemq.artemis.utils.ExecutorFactory;
 
 public class ActiveMQJDBCJournal implements Journal
 {
-   private static String CREATE_TABLE_SQL = "CREATE TABLE JOURNAL " +
+   private static final String CREATE_TABLE_SQL = "CREATE TABLE JOURNAL " +
                                             "(id INT, recordType SMALLINT, record BLOB, txId BIGINT)";
 
-   private static String INSERT_RECORD_SQL = "INSERT INTO JOURNAL " +
+   private static final String INSERT_RECORD_SQL = "INSERT INTO JOURNAL " +
                                              "(id,recordType,record,txId) " +
                                              "VALUES (?,?,?,?)";
 
-   private static String DELETE_RECORD_SQL = "DELETE FROM JOURNAL WHERE id = ?";
+   private static final String DELETE_RECORD_SQL = "DELETE FROM JOURNAL WHERE id = ?";
+
+   private static final String SELECT_RECORD_SQL = "SELECT id, recordType, record, txId FROM JOURNAL";
+
+   private static String COUNT_RECORD_SQL  = "SELECT COUNT(*) FROM JOURNAL";
+
+   private static final  String DESTROY_JOURNAL_SQL  = "DROP TABLE JOURNAL";
+
+   private static int USER_VERSION = 1;
 
    private Connection connection;
 
@@ -42,11 +69,19 @@ public class ActiveMQJDBCJournal implements Journal
 
    private PreparedStatement deleteJournalRecords;
 
-   private Object insertRecordsLock = new Object();
+   private PreparedStatement selectJournalRecords;
 
-   private Object deleteRecordsLock = new Object();
+   private PreparedStatement countJournalRecords;
 
-   public ActiveMQJDBCJournal(Connection connection) throws SQLException
+   private final Object insertRecordsLock = new Object();
+
+   private final Object deleteRecordsLock = new Object();
+
+   private ScheduledSync scheduledSync;
+
+   private ScheduledExecutorService executorService;
+
+   public ActiveMQJDBCJournal(Connection connection, ExecutorFactory executorFactory) throws SQLException
    {
       this.connection = connection;
       setup();
@@ -55,6 +90,11 @@ public class ActiveMQJDBCJournal implements Journal
 
       insertJournalRecords = connection.prepareStatement(INSERT_RECORD_SQL);
       deleteJournalRecords = connection.prepareStatement(DELETE_RECORD_SQL);
+      selectJournalRecords = connection.prepareStatement(SELECT_RECORD_SQL);
+      countJournalRecords = connection.prepareStatement(COUNT_RECORD_SQL);
+
+      scheduledSync = new ScheduledSync(this);
+
    }
 
    public void setup() throws SQLException
@@ -70,8 +110,10 @@ public class ActiveMQJDBCJournal implements Journal
 
    public void destroy() throws SQLException
    {
+      connection.setAutoCommit(false);
       Statement statement = connection.createStatement();
-      statement.executeUpdate("DROP TABLE JOURNAL");
+      statement.executeUpdate(DESTROY_JOURNAL_SQL);
+      connection.commit();
    }
 
    public synchronized void sync() throws SQLException
@@ -140,6 +182,7 @@ public class ActiveMQJDBCJournal implements Journal
          records.add(record);
       }
    }
+
    @Override
    public void appendAddRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception
    {
@@ -305,7 +348,37 @@ public class ActiveMQJDBCJournal implements Journal
    @Override
    public JournalLoadInformation load(LoaderCallback reloadManager) throws Exception
    {
-      return null;
+      JDBCInsertRecord record = null;
+      int count = 0;
+
+      try (ResultSet records = selectJournalRecords.executeQuery())
+      {
+         while (records.next())
+         {
+            record = JDBCInsertRecord.load(records);
+            switch (record.getRecordType())
+            {
+               case JDBCRecord.ADD_RECORD:
+                  reloadManager.addRecord(new RecordInfo(record.getId(),
+                                                         record.getRecordType(),
+                                                         record.getRecordData(),
+                                                         false,
+                                                         (short) 0));
+               case JDBCRecord.UPDATE_RECORD:
+                  reloadManager.updateRecord(new RecordInfo(record.getId(),
+                                                            record.getRecordType(),
+                                                            record.getRecordData(),
+                                                            true,
+                                                            (short) 0));
+
+               default:
+                  PreparedTransactionInfo p = new PreparedTransactionInfo(record.getTxId(), record.getRecordData());
+                  reloadManager.addPreparedTransaction(p);
+            }
+            count++;
+         }
+      }
+      return new JournalLoadInformation(count, count > 0 ? record.getId() : 0);
    }
 
    @Override
@@ -339,15 +412,21 @@ public class ActiveMQJDBCJournal implements Journal
    }
 
    @Override
-   public int getNumberOfRecords()
+   public int getNumberOfRecords() throws SQLException
    {
-      return 0;
+      int count = 0;
+      try (ResultSet rs = countJournalRecords.executeQuery())
+      {
+         rs.next();
+         count = rs.getInt(1);
+      }
+      return count;
    }
 
    @Override
    public int getUserVersion()
    {
-      return 0;
+      return USER_VERSION;
    }
 
    @Override
@@ -439,6 +518,5 @@ public class ActiveMQJDBCJournal implements Journal
    {
       return false;
    }
-
 
 }
