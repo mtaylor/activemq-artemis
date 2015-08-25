@@ -24,11 +24,14 @@ public final class AddMessageRecord {
       this.message = message;
    }
 
+
    final ServerMessage message;
 
-   long scheduledDeliveryTime;
+   // mtaylor (Added to compile)
+   public long scheduledDeliveryTime;
 
-   int deliveryCount;
+   // mtaylor (Added to compile)
+   public int deliveryCount;
 
    public ServerMessage getMessage() {
       return message;
@@ -41,4 +44,6 @@ public final class AddMessageRecord {
    public int getDeliveryCount() {
       return deliveryCount;
    }
+
+
 }

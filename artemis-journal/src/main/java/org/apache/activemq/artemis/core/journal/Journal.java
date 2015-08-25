@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.artemis.core.journal;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -161,7 +162,7 @@ public interface Journal extends ActiveMQComponent {
 
    int getAlignment() throws Exception;
 
-   int getNumberOfRecords();
+   int getNumberOfRecords() throws SQLException;
 
    int getUserVersion();
 
