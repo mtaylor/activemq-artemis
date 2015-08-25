@@ -6,9 +6,9 @@ import static junit.framework.TestCase.fail;
 
 public class ActiveMQJDBCStoreTest
 {
-   @Test
-   public void testJDBCStoreSetup() throws Exception
-   {
-      //fail();
-   }
+//   @Test
+//   public void testJDBCStoreSetup() throws Exception
+//   {
+//      //fail();
+//   }
 }

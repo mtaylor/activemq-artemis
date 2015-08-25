@@ -319,6 +319,16 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       return this;
    }
 
+   public boolean isDropMessagesWhenFull()
+   {
+      return dropMessagesWhenFull;
+   }
+
+   public void setDropMessageWhenFull(boolean dropMessagesWhenFull)
+   {
+      this.dropMessagesWhenFull = dropMessagesWhenFull;
+   }
+
    /**
     * merge 2 objects in to 1
     *
