@@ -1,4 +1,4 @@
-package org.apache.activemq.artemis.jdbc.store;/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -15,14 +15,29 @@ package org.apache.activemq.artemis.jdbc.store;/*
  * limitations under the License.
  */
 
-import java.sql.Connection;
+package org.apache.activemq.artemis.jdbc.store.journal;
 
-public class JDBCStore
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.activemq.artemis.core.journal.RecordInfo;
+
+final class TransactionHolder
 {
-   private org
-   public JDBCStore(Connection connection, String tableName)
+   public TransactionHolder(final long id)
    {
-
+      transactionID = id;
    }
 
+   public final long transactionID;
+
+   public final List<RecordInfo> recordInfos = new ArrayList<RecordInfo>();
+
+   public final List<RecordInfo> recordsToDelete = new ArrayList<RecordInfo>();
+
+   public boolean prepared;
+
+   public boolean invalid;
+
+   public byte[] extraData;
 }

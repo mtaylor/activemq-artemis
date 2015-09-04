@@ -537,6 +537,7 @@
             <module>artemis-native</module>
             <module>artemis-protocols</module>
             <module>artemis-journal</module>
+            <module>artemis-jdbc-store</module>
             <module>artemis-ra</module>
             <module>artemis-rest</module>
             <module>artemis-service-extensions</module>
@@ -573,6 +574,7 @@
             <module>artemis-jms-server</module>
             <module>artemis-native</module>
             <module>artemis-journal</module>
+            <module>artemis-jdbc-store</module>
             <module>artemis-ra</module>
             <module>artemis-rest</module>
             <module>artemis-service-extensions</module>
@@ -631,6 +633,7 @@
             <module>artemis-jms-server</module>
             <module>artemis-native</module>
             <module>artemis-journal</module>
+            <module>artemis-jdbc-store</module>
             <module>artemis-ra</module>
             <module>artemis-rest</module>
             <module>artemis-service-extensions</module>
@@ -673,6 +676,7 @@
             <module>artemis-jms-server</module>
             <module>artemis-native</module>
             <module>artemis-journal</module>
+            <module>artemis-jdbc-store</module>
             <module>artemis-ra</module>
             <module>artemis-rest</module>
             <module>artemis-service-extensions</module>
@@ -707,6 +711,7 @@
             <module>artemis-jms-server</module>
             <module>artemis-native</module>
             <module>artemis-journal</module>
+            <module>artemis-jdbc-store</module>
             <module>artemis-ra</module>
             <module>artemis-rest</module>
             <module>artemis-service-extensions</module>

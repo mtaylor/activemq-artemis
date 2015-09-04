@@ -1,0 +1,602 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.activemq.artemis.jdbc.store.journal;
+
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Timer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import org.apache.activemq.artemis.core.io.SequentialFileFactory;
+import org.apache.activemq.artemis.core.journal.EncodingSupport;
+import org.apache.activemq.artemis.core.journal.IOCompletion;
+import org.apache.activemq.artemis.core.journal.Journal;
+import org.apache.activemq.artemis.core.journal.JournalLoadInformation;
+import org.apache.activemq.artemis.core.journal.LoaderCallback;
+import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
+import org.apache.activemq.artemis.core.journal.RecordInfo;
+import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
+import org.apache.activemq.artemis.core.journal.impl.JournalFile;
+
+public class JDBCJournalImpl implements Journal
+{
+   // Sync Delay in ms
+   public static final int SYNC_DELAY = 5000;
+
+   // Max No records to store in memory before sync
+   public static final int MAX_SYNC_RECORDS = 1000;
+
+   private static int USER_VERSION = 1;
+
+   private final String tableName;
+
+   private Connection connection;
+
+   private List<JDBCJournalRecord> records;
+
+   private PreparedStatement insertJournalRecords;
+
+   private PreparedStatement selectJournalRecords;
+
+   private PreparedStatement countJournalRecords;
+
+   private final Object insertRecordsLock = new Object();
+
+   private JDBCJournalSync scheduledSync;
+
+   private ScheduledExecutorService executorService;
+
+   private boolean started;
+
+   private String jdbcUrl;
+
+   private Properties jdbcConnectionProperties;
+
+   public JDBCJournalImpl(String jdbcUrl, Properties jdbcConnectionProperties, String tableName) throws SQLException
+   {
+      this.tableName = tableName;
+      this.jdbcUrl = jdbcUrl;
+      this.jdbcConnectionProperties = jdbcConnectionProperties;
+
+      records = new ArrayList<JDBCJournalRecord>();
+      scheduledSync = new JDBCJournalSync(this);
+   }
+
+   @Override
+   public void start() throws Exception
+   {
+      List<Driver> drivers = Collections.list(DriverManager.getDrivers());
+      if (drivers.size() == 1)
+      {
+         Driver driver = drivers.get(0);
+         connection = driver.connect(jdbcUrl, jdbcConnectionProperties);
+      }
+      else
+      {
+         String error = drivers.isEmpty() ? "No DB driver found on class path" : "Too many DB drivers on class path";
+         throw new RuntimeException(error);
+      }
+
+      // If JOURNAL table doesn't exist then create it
+      ResultSet rs = connection.getMetaData().getTables(null, null, tableName, null);
+      if (!rs.next())
+      {
+         Statement statement = connection.createStatement();
+         String s = JDBCJournalRecord.createTableSQL(tableName);
+         statement.executeUpdate(JDBCJournalRecord.createTableSQL(tableName));
+      }
+
+      insertJournalRecords = connection.prepareStatement(JDBCJournalRecord.insertRecordsSQL(tableName));
+      selectJournalRecords = connection.prepareStatement(JDBCJournalRecord.selectRecordsSQL(tableName));
+      countJournalRecords = connection.prepareStatement("SELECT COUNT(*) FROM " + tableName);
+
+      Timer t = new Timer();
+      t.scheduleAtFixedRate(new JDBCJournalSync(this), SYNC_DELAY * 2, SYNC_DELAY);
+
+      started = true;
+   }
+
+   @Override
+   public void stop() throws Exception
+   {
+      connection.close();
+      started = false;
+   }
+
+   public void destroy() throws SQLException
+   {
+      connection.setAutoCommit(false);
+      Statement statement = connection.createStatement();
+      statement.executeUpdate("DROP TABLE " + tableName);
+      connection.commit();
+   }
+
+   public int sync() throws SQLException
+   {
+      List<JDBCJournalRecord> recordRef = records;
+      records = new ArrayList<JDBCJournalRecord>();
+
+      for (JDBCJournalRecord record : recordRef)
+      {
+         record.storeLineUp();
+         record.writeRecord(insertJournalRecords);
+      }
+
+      boolean success = false;
+      try
+      {
+         connection.setAutoCommit(false);
+         insertJournalRecords.executeBatch();
+         connection.commit();
+         success = true;
+      }
+      catch (SQLException e)
+      {
+         connection.rollback();
+         e.printStackTrace();
+      }
+      executeCallbacks(recordRef, success);
+      return recordRef.size();
+   }
+
+   // TODO Use an executor.
+   private void executeCallbacks(final List<JDBCJournalRecord> records, final boolean result)
+   {
+      Runnable r = new Runnable()
+      {
+         @Override
+         public void run()
+         {
+            for (JDBCJournalRecord record : records)
+            {
+               record.complete(result);
+            }
+         }
+      };
+      Thread t = new Thread(r);
+      t.start();
+   }
+
+   private void appendRecord(JDBCJournalRecord record) throws SQLException
+   {
+      records.add(record);
+   }
+
+   @Override
+   public void appendAddRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendAddRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendAddRecord(long id, byte recordType, EncodingSupport record, boolean sync, IOCompletion completionCallback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      r.setIoCompletion(completionCallback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendUpdateRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendUpdateRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendUpdateRecord(long id, byte recordType, EncodingSupport record, boolean sync, IOCompletion completionCallback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setSync(sync);
+      r.setIoCompletion(completionCallback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendDeleteRecord(long id, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendDeleteRecord(long id, boolean sync, IOCompletion completionCallback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD);
+      r.setSync(sync);
+      r.setIoCompletion(completionCallback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendAddRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD_TX);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendAddRecordTransactional(long txID, long id, byte recordType, EncodingSupport record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD_TX);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendUpdateRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD_TX);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendUpdateRecordTransactional(long txID, long id, byte recordType, EncodingSupport record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD_TX);
+      r.setUserRecordType(recordType);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendDeleteRecordTransactional(long txID, long id, byte[] record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendDeleteRecordTransactional(long txID, long id, EncodingSupport record) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
+      r.setRecord(record);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendDeleteRecordTransactional(long txID, long id) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendCommitRecord(long txID, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
+      r.setTxId(txID);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendCommitRecord(long txID, boolean sync, IOCompletion callback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
+      r.setTxId(txID);
+      r.setIoCompletion(callback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendCommitRecord(long txID, boolean sync, IOCompletion callback, boolean lineUpContext) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
+      r.setTxId(txID);
+      r.setStoreLineUp(lineUpContext);
+      r.setIoCompletion(callback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
+      r.setTxId(txID);
+      r.setTxData(transactionData);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync, IOCompletion callback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
+      r.setTxId(txID);
+      r.setTxData(transactionData);
+      r.setSync(sync);
+      r.setIoCompletion(callback);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendPrepareRecord(long txID, byte[] transactionData, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
+      r.setTxId(txID);
+      r.setTxData(transactionData);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendRollbackRecord(long txID, boolean sync) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.ROLLBACK_RECORD);
+      r.setTxId(txID);
+      r.setSync(sync);
+      appendRecord(r);
+   }
+
+   @Override
+   public void appendRollbackRecord(long txID, boolean sync, IOCompletion callback) throws Exception
+   {
+      JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
+      r.setTxId(txID);
+      r.setSync(sync);
+      r.setIoCompletion(callback);
+      appendRecord(r);
+   }
+
+   @Override
+   public JournalLoadInformation load(LoaderCallback reloadManager) throws Exception
+   {
+      JournalLoadInformation jli = new JournalLoadInformation();
+      JDBCJournalReaderCallback jrc = new JDBCJournalReaderCallback(reloadManager);
+      JDBCJournalRecord r;
+
+      try (ResultSet rs = selectJournalRecords.executeQuery())
+      {
+         int noRecords = 0;
+         while (rs.next())
+         {
+            r = JDBCJournalRecord.readRecord(rs);
+            switch (r.getRecordType())
+            {
+               case JDBCJournalRecord.ADD_RECORD:
+                  jrc.onReadAddRecord(r.toRecordInfo());
+                  break;
+               case JDBCJournalRecord.UPDATE_RECORD:
+                  jrc.onReadUpdateRecord(r.toRecordInfo());
+                  break;
+               case JDBCJournalRecord.DELETE_RECORD:
+                  jrc.onReadDeleteRecord(r.getId());
+                  break;
+               case JDBCJournalRecord.ADD_RECORD_TX:
+                  jrc.onReadAddRecordTX(r.getTxId(), r.toRecordInfo());
+                  break;
+               case JDBCJournalRecord.UPDATE_RECORD_TX:
+                  jrc.onReadUpdateRecordTX(r.getTxId(), r.toRecordInfo());
+                  break;
+               case JDBCJournalRecord.DELETE_RECORD_TX:
+                  jrc.onReadDeleteRecordTX(r.getTxId(), r.toRecordInfo());
+                  break;
+               case JDBCJournalRecord.PREPARE_RECORD:
+                  jrc.onReadPrepareRecord(r.getTxId(), r.getTxDataAsByteArray(), r.getTxCheckNoRecords());
+                  break;
+               case JDBCJournalRecord.COMMIT_RECORD:
+                  jrc.onReadCommitRecord(r.getTxId(), r.getTxCheckNoRecords());
+                  break;
+               case JDBCJournalRecord.ROLLBACK_RECORD:
+                  jrc.onReadRollbackRecord(r.getTxId());
+                  break;
+               default:
+                  throw new Exception("Error Reading Journal, Unknown Record Type: " + r.getRecordType());
+            }
+            noRecords++;
+         }
+         jli.setMaxID(((JDBCJournalLoaderCallback) reloadManager).getMaxId());
+         jli.setNumberOfRecords(noRecords);
+      }
+      return jli;
+   }
+
+   @Override
+   public JournalLoadInformation loadInternalOnly() throws Exception
+   {
+      return null;
+   }
+
+   @Override
+   public JournalLoadInformation loadSyncOnly(JournalState state) throws Exception
+   {
+      return null;
+   }
+
+   @Override
+   public void lineUpContext(IOCompletion callback)
+   {
+      callback.storeLineUp();
+   }
+
+   @Override
+   public JournalLoadInformation load(List<RecordInfo> committedRecords, List<PreparedTransactionInfo> preparedTransactions, TransactionFailureCallback transactionFailure) throws Exception
+   {
+      return load(committedRecords, preparedTransactions, transactionFailure, true);
+   }
+
+   public synchronized JournalLoadInformation load(final List<RecordInfo> committedRecords,
+                                                   final List<PreparedTransactionInfo> preparedTransactions,
+                                                   final TransactionFailureCallback failureCallback,
+                                                   final boolean fixBadTX) throws Exception
+   {
+      JDBCJournalLoaderCallback lc = new JDBCJournalLoaderCallback(committedRecords, preparedTransactions, failureCallback, fixBadTX);
+      return load(lc);
+   }
+
+   @Override
+   public int getAlignment() throws Exception
+   {
+      return 0;
+   }
+
+   @Override
+   public int getNumberOfRecords() throws SQLException
+   {
+      int count = 0;
+      try (ResultSet rs = countJournalRecords.executeQuery())
+      {
+         rs.next();
+         count = rs.getInt(1);
+      }
+      return count;
+   }
+
+   @Override
+   public int getUserVersion()
+   {
+      return USER_VERSION;
+   }
+
+   @Override
+   public void perfBlast(int pages)
+   {
+
+   }
+
+   @Override
+   public void runDirectJournalBlast() throws Exception
+   {
+
+   }
+
+   @Override
+   public Map<Long, JournalFile> createFilesForBackupSync(long[] fileIds) throws Exception
+   {
+      return null;
+   }
+
+   @Override
+   public void synchronizationLock()
+   {
+
+   }
+
+   @Override
+   public void synchronizationUnlock()
+   {
+
+   }
+
+   @Override
+   public void forceMoveNextFile() throws Exception
+   {
+
+   }
+
+   @Override
+   public JournalFile[] getDataFiles()
+   {
+      return new JournalFile[0];
+   }
+
+   @Override
+   public SequentialFileFactory getFileFactory()
+   {
+      return null;
+   }
+
+   @Override
+   public int getFileSize()
+   {
+      return 0;
+   }
+
+   @Override
+   public void scheduleCompactAndBlock(int timeout) throws Exception
+   {
+
+   }
+
+   @Override
+   public void replicationSyncPreserveOldFiles()
+   {
+
+   }
+
+   @Override
+   public void replicationSyncFinished()
+   {
+
+   }
+
+   @Override
+   public boolean isStarted()
+   {
+      return started;
+   }
+
+}
