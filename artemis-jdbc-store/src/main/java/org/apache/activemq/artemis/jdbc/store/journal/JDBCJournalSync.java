@@ -1,4 +1,4 @@
-package org.apache.activemq.artemis.jdbc.store.store.impl.JDBCEncoding;/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -15,13 +15,30 @@ package org.apache.activemq.artemis.jdbc.store.store.impl.JDBCEncoding;/*
  * limitations under the License.
  */
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+package org.apache.activemq.artemis.jdbc.store.journal;
+
 import java.sql.SQLException;
+import java.util.TimerTask;
 
-public interface JDBCEncodingSupport
+public class JDBCJournalSync extends TimerTask
 {
-   public void encode(PreparedStatement statement) throws SQLException;
+   private final JDBCJournalImpl journal;
 
-   public Object decode(ResultSet resultSet) throws SQLException;
+   public JDBCJournalSync(JDBCJournalImpl journal)
+   {
+      this.journal = journal;
+   }
+
+   @Override
+   public void run()
+   {
+      try
+      {
+         journal.sync();
+      }
+      catch (SQLException e)
+      {
+         e.printStackTrace();
+      }
+   }
 }

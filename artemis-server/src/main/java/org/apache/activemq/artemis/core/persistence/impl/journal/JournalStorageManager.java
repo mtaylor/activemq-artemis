@@ -35,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -110,6 +111,7 @@ import org.apache.activemq.artemis.core.transaction.TransactionOperation;
 import org.apache.activemq.artemis.core.transaction.TransactionOperationAbstract;
 import org.apache.activemq.artemis.core.transaction.TransactionPropertyIndexes;
 import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
+import org.apache.activemq.artemis.jdbc.store.journal.JDBCJournalImpl;
 import org.apache.activemq.artemis.utils.Base64;
 import org.apache.activemq.artemis.utils.ByteUtil;
 import org.apache.activemq.artemis.utils.DataConstants;
@@ -178,7 +180,9 @@ public class JournalStorageManager implements StorageManager
 
    private Journal bindingsJournal;
 
-   private final Journal originalMessageJournal;
+   //
+   // private final Journal originalMessageJournal;
+   private Journal originalMessageJournal;
 
    private final Journal originalBindingsJournal;
 
@@ -248,7 +252,7 @@ public class JournalStorageManager implements StorageManager
                                               "activemq-bindings",
                                               "bindings",
                                               1);
-
+      
       bindingsJournal = localBindings;
       originalBindingsJournal = localBindings;
 
@@ -285,18 +289,29 @@ public class JournalStorageManager implements StorageManager
 
       idGenerator = new BatchingIDGenerator(0, JournalStorageManager.CHECKPOINT_BATCH_SIZE, this);
 
-      Journal localMessage = new JournalImpl(config.getJournalFileSize(),
-                                             config.getJournalMinFiles(),
-                                             config.getJournalCompactMinFiles(),
-                                             config.getJournalCompactPercentage(),
-                                             journalFF,
-                                             "activemq-data",
-                                             "amq",
-                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
-                                                : config.getJournalMaxIO_NIO());
+//      Journal localMessage = new JournalImpl(config.getJournalFileSize(),
+//                                             config.getJournalMinFiles(),
+//                                             config.getJournalCompactMinFiles(),
+//                                             config.getJournalCompactPercentage(),
+//                                             journalFF,
+//                                             "activemq-data",
+//                                             "amq",
+//                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
+//                                                : config.getJournalMaxIO_NIO());
 
-      messageJournal = localMessage;
-      originalMessageJournal = localMessage;
+
+      String jdbcUrl = "jdbc:derby:derbyDB;create=true";
+      Properties jdbcConnectionProperties = new Properties();
+      try
+      {
+         Journal localMessage = new JDBCJournalImpl(jdbcUrl, jdbcConnectionProperties, "J_MESSAGE_JOURNAL");
+         messageJournal = localMessage;
+         originalMessageJournal = localMessage;
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+      }
 
       largeMessagesDirectory = config.getLargeMessagesDirectory();
 

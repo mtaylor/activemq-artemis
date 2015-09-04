@@ -15,29 +15,37 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.artemis.jdbc.store;
+package org.apache.activemq.artemis.tests.integration.jdbc.store.journal;
 
-import java.sql.SQLException;
+import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
+import org.apache.activemq.artemis.core.journal.EncodingSupport;
 
-public class ScheduledSync implements Runnable
+public class FakeEncodingSupportImpl implements EncodingSupport
 {
-   private ActiveMQJDBCJournal journal;
 
-   public ScheduledSync(ActiveMQJDBCJournal journal)
+   private byte[] data;
+
+   public FakeEncodingSupportImpl(byte[] data)
    {
-      this.journal = journal;
+      this.data = data;
    }
 
    @Override
-   public void run()
+   public int getEncodeSize()
    {
-      try
-      {
-         journal.sync();
-      }
-      catch (SQLException e)
-      {
-         e.printStackTrace();
-      }
+      return data.length;
+   }
+
+   @Override
+   public void encode(ActiveMQBuffer buffer)
+   {
+      buffer.writeBytes(data);
+   }
+
+   @Override
+   public void decode(ActiveMQBuffer buffer)
+   {
+      data = new byte[buffer.readableBytes()];
+      buffer.readBytes(data);
    }
 }
