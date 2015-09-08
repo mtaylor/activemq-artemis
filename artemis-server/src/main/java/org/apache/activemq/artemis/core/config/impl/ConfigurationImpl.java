@@ -1427,12 +1427,11 @@ public class ConfigurationImpl implements Configuration, Serializable {
       try {
          // Resolve wont work without "/" as the last character
          URI artemisHome = new URI(getBrokerInstance().toURI() + "/");
-         URI relative = artemisHome.resolve(subFolder);
+         URI relative = artemisHome.resolve(subFolder.replace("\\", "/"));
          return new File(relative.getPath());
       }
       catch (Exception e) {
          throw new RuntimeException(e);
       }
    }
-
 }
