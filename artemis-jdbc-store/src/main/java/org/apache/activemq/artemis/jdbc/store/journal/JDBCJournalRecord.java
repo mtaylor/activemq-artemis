@@ -70,7 +70,7 @@ public class JDBCJournalRecord
    private Long id;
    private byte recordType;
    private byte compactCount;
-   private long txId ;
+   private long txId;
 
    // DB fields for ADD_RECORD(TX), UPDATE_RECORD(TX),
    private int variableSize;
@@ -151,7 +151,14 @@ public class JDBCJournalRecord
    {
       if (ioCompletion != null)
       {
-         if (success) ioCompletion.done(); else ioCompletion.onError(1, "DATABASE INSERT FAILED");
+         if (success)
+         {
+            ioCompletion.done();
+         }
+         else
+         {
+            ioCompletion.onError(1, "DATABASE INSERT FAILED");
+         }
       }
    }
 
@@ -363,6 +370,6 @@ public class JDBCJournalRecord
 
    public RecordInfo toRecordInfo() throws IOException
    {
-      return new RecordInfo(getId(), getRecordType(), getRecordData(), isUpdate(), getCompactCount());
+      return new RecordInfo(getId(), getUserRecordType(), getRecordData(), isUpdate(), getCompactCount());
    }
 }

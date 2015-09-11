@@ -252,7 +252,6 @@ public class JournalStorageManager implements StorageManager
                                               "activemq-bindings",
                                               "bindings",
                                               1);
-      
       bindingsJournal = localBindings;
       originalBindingsJournal = localBindings;
 
@@ -298,9 +297,11 @@ public class JournalStorageManager implements StorageManager
 //                                             "amq",
 //                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
 //                                                : config.getJournalMaxIO_NIO());
+//
+//      messageJournal = localMessage;
+//      originalMessageJournal = localMessage;
 
-
-      String jdbcUrl = "jdbc:derby:derbyDB;create=true";
+      String jdbcUrl = "jdbc:derby:/tmp/data/server;create=true";
       Properties jdbcConnectionProperties = new Properties();
       try
       {
@@ -310,7 +311,7 @@ public class JournalStorageManager implements StorageManager
       }
       catch (Exception e)
       {
-         e.printStackTrace();
+         throw new RuntimeException("Error creating JDBC Journal");
       }
 
       largeMessagesDirectory = config.getLargeMessagesDirectory();

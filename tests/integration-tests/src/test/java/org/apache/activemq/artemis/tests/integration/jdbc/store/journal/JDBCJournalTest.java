@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.artemis.tests.integration.jdbc.store.journal;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -32,7 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class JDBCJournalTest
 {
@@ -46,7 +44,7 @@ public class JDBCJournalTest
    @Before
    public void setup() throws Exception
    {
-      jdbcUrl = "jdbc:derby:derbyDB;create=true";
+      jdbcUrl = "jdbc:derby:/tmp/data;create=true";
       jdbcConnectionProperties = new Properties();
       journal = new JDBCJournalImpl(jdbcUrl, jdbcConnectionProperties, JOURNAL_TABLE_NAME);
       journal.start();
@@ -61,7 +59,7 @@ public class JDBCJournalTest
          journal.appendAddRecord(1, (byte) 1, new byte[0], true);
       }
 
-      Thread.sleep(1000);
+      Thread.sleep(3000);
       assertEquals(noRecords, journal.getNumberOfRecords());
 
    }
@@ -126,18 +124,17 @@ public class JDBCJournalTest
          journal.appendCommitRecord(i, true);
       }
 
-      Thread.sleep(30000);
-
+      Thread.sleep(2000);
       List<RecordInfo> recordInfos = new ArrayList<>();
       List<PreparedTransactionInfo> txInfos = new ArrayList<>();
 
       journal.load(recordInfos, txInfos, null);
 
-      assertEquals(recordInfos.size(), noRecords + noTxRecords);
+      assertEquals(noRecords + (noTxRecords * noTx), recordInfos.size());
    }
 
    @After
-   public void tearDown() throws SQLException
+   public void tearDown() throws Exception
    {
       journal.destroy();
    }

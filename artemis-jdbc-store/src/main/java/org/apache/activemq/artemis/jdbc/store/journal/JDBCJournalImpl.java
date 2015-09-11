@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.artemis.core.io.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
@@ -48,10 +48,7 @@ import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 public class JDBCJournalImpl implements Journal
 {
    // Sync Delay in ms
-   public static final int SYNC_DELAY = 5000;
-
-   // Max No records to store in memory before sync
-   public static final int MAX_SYNC_RECORDS = 1000;
+   public static final int SYNC_DELAY = 500;
 
    private static int USER_VERSION = 1;
 
@@ -67,10 +64,6 @@ public class JDBCJournalImpl implements Journal
 
    private PreparedStatement countJournalRecords;
 
-   private final Object insertRecordsLock = new Object();
-
-   private JDBCJournalSync scheduledSync;
-
    private ScheduledExecutorService executorService;
 
    private boolean started;
@@ -79,6 +72,12 @@ public class JDBCJournalImpl implements Journal
 
    private Properties jdbcConnectionProperties;
 
+   private Timer syncTimer;
+
+   private Driver dbDriver;
+
+   private final ReadWriteLock journalLock = new ReentrantReadWriteLock();
+
    public JDBCJournalImpl(String jdbcUrl, Properties jdbcConnectionProperties, String tableName) throws SQLException
    {
       this.tableName = tableName;
@@ -86,7 +85,6 @@ public class JDBCJournalImpl implements Journal
       this.jdbcConnectionProperties = jdbcConnectionProperties;
 
       records = new ArrayList<JDBCJournalRecord>();
-      scheduledSync = new JDBCJournalSync(this);
    }
 
    @Override
@@ -95,8 +93,8 @@ public class JDBCJournalImpl implements Journal
       List<Driver> drivers = Collections.list(DriverManager.getDrivers());
       if (drivers.size() == 1)
       {
-         Driver driver = drivers.get(0);
-         connection = driver.connect(jdbcUrl, jdbcConnectionProperties);
+         dbDriver = drivers.get(0);
+         connection = dbDriver.connect(jdbcUrl, jdbcConnectionProperties);
       }
       else
       {
@@ -117,21 +115,47 @@ public class JDBCJournalImpl implements Journal
       selectJournalRecords = connection.prepareStatement(JDBCJournalRecord.selectRecordsSQL(tableName));
       countJournalRecords = connection.prepareStatement("SELECT COUNT(*) FROM " + tableName);
 
-      Timer t = new Timer();
-      t.scheduleAtFixedRate(new JDBCJournalSync(this), SYNC_DELAY * 2, SYNC_DELAY);
+      syncTimer = new Timer();
+      syncTimer.scheduleAtFixedRate(new JDBCJournalSync(this), SYNC_DELAY * 2, SYNC_DELAY);
 
       started = true;
    }
 
    @Override
-   public void stop() throws Exception
+   public synchronized void stop() throws Exception
    {
-      connection.close();
-      started = false;
+      if (started)
+      {
+         syncTimer.cancel();
+         sync();
+         try
+         {
+            if (dbIsDerby())
+            {
+               DriverManager.getConnection("jdbc:derby:;shutdown=true");
+            }
+         }
+         catch (SQLException e)
+         {
+            // Correct result from a derby shutdown is an exception with error code 50000
+            if (e.getErrorCode() != 50000) throw e;
+         }
+         finally
+         {
+            connection.close();
+         }
+         started = false;
+      }
    }
 
-   public void destroy() throws SQLException
+   private boolean dbIsDerby()
    {
+      return true;
+   }
+
+   public void destroy() throws Exception
+   {
+      stop();
       connection.setAutoCommit(false);
       Statement statement = connection.createStatement();
       statement.executeUpdate("DROP TABLE " + tableName);
@@ -186,7 +210,15 @@ public class JDBCJournalImpl implements Journal
 
    private void appendRecord(JDBCJournalRecord record) throws SQLException
    {
-      records.add(record);
+      try
+      {
+         journalLock.writeLock().lock();
+         records.add(record);
+      }
+      finally
+      {
+         journalLock.writeLock().unlock();
+      }
    }
 
    @Override
@@ -539,16 +571,14 @@ public class JDBCJournalImpl implements Journal
       return null;
    }
 
-   @Override
-   public void synchronizationLock()
+   public final void synchronizationLock()
    {
-
+      journalLock.writeLock().lock();
    }
 
-   @Override
-   public void synchronizationUnlock()
+   public final void synchronizationUnlock()
    {
-
+      journalLock.writeLock().unlock();
    }
 
    @Override
