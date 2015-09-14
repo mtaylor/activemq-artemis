@@ -275,9 +275,6 @@ public class ActiveMQResourceAdapter implements ResourceAdapter, Serializable {
 
       managedConnectionFactories.clear();
 
-      for (ActiveMQConnectionFactory knownConnectionFactory : knownConnectionFactories.values()) {
-         knownConnectionFactory.close();
-      }
       knownConnectionFactories.clear();
 
       if (defaultActiveMQConnectionFactory != null) {
