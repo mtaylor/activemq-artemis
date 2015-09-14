@@ -570,9 +570,6 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
 
       // if the topologyArray is null, we will use the initialConnectors
       if (usedTopology != null) {
-         if (ActiveMQClientLogger.LOGGER.isTraceEnabled()) {
-            ActiveMQClientLogger.LOGGER.trace("Selecting connector from toplogy.");
-         }
          int pos = loadBalancingPolicy.select(usedTopology.length);
          Pair<TransportConfiguration, TransportConfiguration> pair = usedTopology[pos];
 
@@ -580,9 +577,6 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
       }
       else {
          // Get from initialconnectors
-         if (ActiveMQClientLogger.LOGGER.isTraceEnabled()) {
-            ActiveMQClientLogger.LOGGER.trace("Selecting connector from initial connectors.");
-         }
 
          int pos = loadBalancingPolicy.select(initialConnectors.length);
 
@@ -1759,9 +1753,5 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
    private Object writeReplace() throws ObjectStreamException {
       ServerLocatorImpl clone = new ServerLocatorImpl(this);
       return clone;
-   }
-
-   public boolean isReceivedToplogy() {
-      return receivedTopology;
    }
 }
