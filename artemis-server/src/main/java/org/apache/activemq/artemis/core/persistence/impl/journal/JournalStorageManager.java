@@ -124,6 +124,7 @@ import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
 import org.apache.activemq.artemis.utils.Base64;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
 import org.apache.activemq.artemis.utils.ActiveMQThreadFactory;
+import org.apache.activemq.artemis.utils.IDGenerator;
 
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.ACKNOWLEDGE_CURSOR;
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.ADD_LARGE_MESSAGE_PENDING;
@@ -2959,4 +2960,7 @@ public class JournalStorageManager implements StorageManager
       txoper.confirmedMessages.add(recordID);
    }
 
+   public IDGenerator getIDGenerator() {
+      return idGenerator;
+   }
 }

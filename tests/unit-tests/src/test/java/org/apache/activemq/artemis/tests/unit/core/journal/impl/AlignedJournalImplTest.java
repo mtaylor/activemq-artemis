@@ -834,10 +834,10 @@ public class AlignedJournalImplTest extends ActiveMQTestBase {
       setupAndLoadJournal(JOURNAL_SIZE, 1);
 
       Assert.assertEquals(1, transactions.size());
-      Assert.assertEquals(1, transactions.get(0).recordsToDelete.size());
+      Assert.assertEquals(1, transactions.get(0).getRecordsToDelete().size());
       Assert.assertEquals(1, records.size());
 
-      for (RecordInfo record : transactions.get(0).recordsToDelete) {
+      for (RecordInfo record : transactions.get(0).getRecordsToDelete()) {
          byte[] data = record.data;
          Assert.assertEquals(100, data.length);
          for (byte element : data) {
@@ -845,10 +845,10 @@ public class AlignedJournalImplTest extends ActiveMQTestBase {
          }
       }
 
-      Assert.assertEquals(10, transactions.get(0).extraData.length);
+      Assert.assertEquals(10, transactions.get(0).getExtraData().length);
 
       for (int i = 0; i < 10; i++) {
-         Assert.assertEquals((byte) 1, transactions.get(0).extraData[i]);
+         Assert.assertEquals((byte) 1, transactions.get(0).getExtraData()[i]);
       }
 
       journalImpl.appendCommitRecord(1L, false);
@@ -889,9 +889,9 @@ public class AlignedJournalImplTest extends ActiveMQTestBase {
       Assert.assertEquals(0, records.size());
       Assert.assertEquals(1, transactions.size());
 
-      Assert.assertEquals(10, transactions.get(0).extraData.length);
+      Assert.assertEquals(10, transactions.get(0).getExtraData().length);
       for (int i = 0; i < 10; i++) {
-         Assert.assertEquals((byte) 1, transactions.get(0).extraData[i]);
+         Assert.assertEquals((byte) 1, transactions.get(0).getExtraData()[i]);
       }
 
       journalImpl.checkReclaimStatus();
@@ -920,9 +920,9 @@ public class AlignedJournalImplTest extends ActiveMQTestBase {
 
       Assert.assertEquals(1, transactions.size());
 
-      Assert.assertEquals(15, transactions.get(0).extraData.length);
+      Assert.assertEquals(15, transactions.get(0).getExtraData().length);
 
-      for (byte element : transactions.get(0).extraData) {
+      for (byte element : transactions.get(0).getExtraData()) {
          Assert.assertEquals(2, element);
       }
 
