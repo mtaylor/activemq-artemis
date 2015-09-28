@@ -32,15 +32,16 @@ import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 import org.apache.activemq.artemis.core.journal.impl.dataformat.ByteArrayEncoding;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
+import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager;
 import org.apache.activemq.artemis.core.replication.ReplicationManager.ADD_OPERATION_TYPE;
 
 /**
- * Used by the {@link org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager} to replicate journal calls.
+ * Used by the {@link JournalStorageManager} to replicate journal calls.
  * <p>
  * This class wraps a {@link ReplicationManager} and the local {@link Journal}. Every call will be
  * relayed to both instances.
  *
- * @see org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager
+ * @see JournalStorageManager
  */
 public class ReplicatedJournal implements Journal
 {

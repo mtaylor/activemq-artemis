@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -57,7 +56,6 @@ import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.io.IOCallback;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.filter.Filter;
-import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.io.IOCriticalErrorListener;
 import org.apache.activemq.artemis.core.journal.Journal;
 import org.apache.activemq.artemis.core.journal.JournalLoadInformation;
@@ -65,7 +63,6 @@ import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.core.io.SequentialFile;
 import org.apache.activemq.artemis.core.io.SequentialFileFactory;
-import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.io.aio.AIOSequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 import org.apache.activemq.artemis.core.journal.impl.JournalImpl;
@@ -78,7 +75,6 @@ import org.apache.activemq.artemis.core.paging.PagingStore;
 import org.apache.activemq.artemis.core.paging.cursor.PagePosition;
 import org.apache.activemq.artemis.core.paging.cursor.PageSubscription;
 import org.apache.activemq.artemis.core.paging.cursor.PagedReferenceImpl;
-import org.apache.activemq.artemis.core.paging.cursor.impl.PagePositionImpl;
 import org.apache.activemq.artemis.core.paging.impl.PageTransactionInfoImpl;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
@@ -87,6 +83,23 @@ import org.apache.activemq.artemis.core.persistence.StorageManager;
 import org.apache.activemq.artemis.core.persistence.config.PersistedAddressSetting;
 import org.apache.activemq.artemis.core.persistence.config.PersistedRoles;
 import org.apache.activemq.artemis.core.persistence.impl.PageCountPending;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.CursorAckRecordEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.DeleteEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.DeliveryCountUpdateEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.DuplicateIDEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.FinishPageMessageOperation;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.GroupingEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.HeuristicCompletionEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.LargeMessageEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountPendingImpl;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountRecord;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountRecordInc;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageUpdateTXEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PendingLargeMessageEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PersistentQueueBindingEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.RefEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.ScheduledDeliveryEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.XidEncoding;
 import org.apache.activemq.artemis.core.postoffice.Binding;
 import org.apache.activemq.artemis.core.postoffice.DuplicateIDCache;
 import org.apache.activemq.artemis.core.postoffice.PostOffice;
@@ -106,22 +119,13 @@ import org.apache.activemq.artemis.core.server.impl.JournalLoader;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
 import org.apache.activemq.artemis.core.transaction.ResourceManager;
 import org.apache.activemq.artemis.core.transaction.Transaction;
-import org.apache.activemq.artemis.core.transaction.Transaction.State;
-import org.apache.activemq.artemis.core.transaction.TransactionOperation;
-import org.apache.activemq.artemis.core.transaction.TransactionOperationAbstract;
 import org.apache.activemq.artemis.core.transaction.TransactionPropertyIndexes;
 import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
-import org.apache.activemq.artemis.jdbc.store.journal.JDBCJournalImpl;
 import org.apache.activemq.artemis.utils.Base64;
-import org.apache.activemq.artemis.utils.ByteUtil;
-import org.apache.activemq.artemis.utils.DataConstants;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
 import org.apache.activemq.artemis.utils.ActiveMQThreadFactory;
-import org.apache.activemq.artemis.utils.UUID;
-import org.apache.activemq.artemis.utils.XidCodecSupport;
 
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.ACKNOWLEDGE_CURSOR;
-import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.ADD_LARGE_MESSAGE;
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.ADD_LARGE_MESSAGE_PENDING;
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.DUPLICATE_ID;
 import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalRecordIds.PAGE_CURSOR_COUNTER_INC;
@@ -288,31 +292,18 @@ public class JournalStorageManager implements StorageManager
 
       idGenerator = new BatchingIDGenerator(0, JournalStorageManager.CHECKPOINT_BATCH_SIZE, this);
 
-//      Journal localMessage = new JournalImpl(config.getJournalFileSize(),
-//                                             config.getJournalMinFiles(),
-//                                             config.getJournalCompactMinFiles(),
-//                                             config.getJournalCompactPercentage(),
-//                                             journalFF,
-//                                             "activemq-data",
-//                                             "amq",
-//                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
-//                                                : config.getJournalMaxIO_NIO());
-//
-//      messageJournal = localMessage;
-//      originalMessageJournal = localMessage;
+      Journal localMessage = new JournalImpl(config.getJournalFileSize(),
+                                             config.getJournalMinFiles(),
+                                             config.getJournalCompactMinFiles(),
+                                             config.getJournalCompactPercentage(),
+                                             journalFF,
+                                             "activemq-data",
+                                             "amq",
+                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
+                                                : config.getJournalMaxIO_NIO());
 
-      String jdbcUrl = "jdbc:derby:/tmp/data/server;create=true";
-      Properties jdbcConnectionProperties = new Properties();
-      try
-      {
-         Journal localMessage = new JDBCJournalImpl(jdbcUrl, jdbcConnectionProperties, "J_MESSAGE_JOURNAL");
-         messageJournal = localMessage;
-         originalMessageJournal = localMessage;
-      }
-      catch (Exception e)
-      {
-         throw new RuntimeException("Error creating JDBC Journal");
-      }
+      messageJournal = localMessage;
+      originalMessageJournal = localMessage;
 
       largeMessagesDirectory = config.getLargeMessagesDirectory();
 
@@ -1555,7 +1546,7 @@ public class JournalStorageManager implements StorageManager
 
          JournalLoadInformation info = messageJournal.load(records,
                                                            preparedTransactions,
-                                                           new LargeMessageTXFailureCallback(messages));
+                                                           new LargeMessageTXFailureCallback(this, messages));
 
          ArrayList<LargeServerMessage> largeMessages = new ArrayList<LargeServerMessage>();
 
@@ -1813,15 +1804,15 @@ public class JournalStorageManager implements StorageManager
 
                   encoding.decode(buff);
 
-                  PageSubscription sub = locateSubscription(encoding.queueID, pageSubscriptions, queueInfos, pagingManager);
+                  PageSubscription sub = locateSubscription(encoding.getQueueID(), pageSubscriptions, queueInfos, pagingManager);
 
                   if (sub != null)
                   {
-                     sub.getCounter().loadValue(record.id, encoding.value);
+                     sub.getCounter().loadValue(record.id, encoding.getValue());
                   }
                   else
                   {
-                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingPage(encoding.queueID);
+                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingPage(encoding.getQueueID());
                      messageJournal.appendDeleteRecord(record.id, false);
                   }
 
@@ -1834,15 +1825,15 @@ public class JournalStorageManager implements StorageManager
 
                   encoding.decode(buff);
 
-                  PageSubscription sub = locateSubscription(encoding.queueID, pageSubscriptions, queueInfos, pagingManager);
+                  PageSubscription sub = locateSubscription(encoding.getQueueID(), pageSubscriptions, queueInfos, pagingManager);
 
                   if (sub != null)
                   {
-                     sub.getCounter().loadInc(record.id, encoding.value);
+                     sub.getCounter().loadInc(record.id, encoding.getValue());
                   }
                   else
                   {
-                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingPageCursor(encoding.queueID);
+                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingPageCursor(encoding.getQueueID());
                      messageJournal.appendDeleteRecord(record.id, false);
                   }
 
@@ -2551,7 +2542,7 @@ public class JournalStorageManager implements StorageManager
     * @return
     * @throws Exception
     */
-   private LargeServerMessage parseLargeMessage(final Map<Long, ServerMessage> messages, final ActiveMQBuffer buff) throws Exception
+   public LargeServerMessage parseLargeMessage(final Map<Long, ServerMessage> messages, final ActiveMQBuffer buff) throws Exception
    {
       LargeServerMessage largeMessage = createLargeMessage();
 
@@ -2594,11 +2585,11 @@ public class JournalStorageManager implements StorageManager
       // recover prepared transactions
       for (PreparedTransactionInfo preparedTransaction : preparedTransactions)
       {
-         XidEncoding encodingXid = new XidEncoding(preparedTransaction.extraData);
+         XidEncoding encodingXid = new XidEncoding(preparedTransaction.getExtraData());
 
          Xid xid = encodingXid.xid;
 
-         Transaction tx = new TransactionImpl(preparedTransaction.id, xid, this);
+         Transaction tx = new TransactionImpl(preparedTransaction.getId(), xid, this);
 
          List<MessageReference> referencesToAck = new ArrayList<MessageReference>();
 
@@ -2608,7 +2599,7 @@ public class JournalStorageManager implements StorageManager
          // Then have reacknowledge(tx) methods on queue, which needs to add the page size
 
          // first get any sent messages for this tx and recreate
-         for (RecordInfo record : preparedTransaction.records)
+         for (RecordInfo record : preparedTransaction.getRecords())
          {
             byte[] data = record.data;
 
@@ -2747,19 +2738,19 @@ public class JournalStorageManager implements StorageManager
 
                   encoding.decode(buff);
 
-                  PageSubscription sub = locateSubscription(encoding.queueID,
+                  PageSubscription sub = locateSubscription(encoding.getQueueID(),
                                                             pageSubscriptions,
                                                             queueInfos,
                                                             pagingManager);
 
                   if (sub != null)
                   {
-                     sub.getCounter().applyIncrementOnTX(tx, record.id, encoding.value);
+                     sub.getCounter().applyIncrementOnTX(tx, record.id, encoding.getValue());
                      sub.notEmpty();
                   }
                   else
                   {
-                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingACK(encoding.queueID);
+                     ActiveMQServerLogger.LOGGER.journalCannotFindQueueReloadingACK(encoding.getQueueID());
                   }
 
                   break;
@@ -2772,7 +2763,7 @@ public class JournalStorageManager implements StorageManager
             }
          }
 
-         for (RecordInfo recordDeleted : preparedTransaction.recordsToDelete)
+         for (RecordInfo recordDeleted : preparedTransaction.getRecordsToDelete())
          {
             byte[] data = recordDeleted.data;
 
@@ -2888,969 +2879,6 @@ public class JournalStorageManager implements StorageManager
    }
 
    /**
-    * It's public as other classes may want to unparse data on tools
-    */
-   public static class XidEncoding implements EncodingSupport
-   {
-      public final Xid xid;
-
-      XidEncoding(final Xid xid)
-      {
-         this.xid = xid;
-      }
-
-      XidEncoding(final byte[] data)
-      {
-         xid = XidCodecSupport.decodeXid(ActiveMQBuffers.wrappedBuffer(data));
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         throw new IllegalStateException("Non Supported Operation");
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         XidCodecSupport.encodeXid(xid, buffer);
-      }
-
-      public int getEncodeSize()
-      {
-         return XidCodecSupport.getXidEncodeLength(xid);
-      }
-   }
-
-   protected static class HeuristicCompletionEncoding implements EncodingSupport
-   {
-      public Xid xid;
-
-      public boolean isCommit;
-
-      @Override
-      public String toString()
-      {
-         return "HeuristicCompletionEncoding [xid=" + xid + ", isCommit=" + isCommit + "]";
-      }
-
-      HeuristicCompletionEncoding(final Xid xid, final boolean isCommit)
-      {
-         this.xid = xid;
-         this.isCommit = isCommit;
-      }
-
-      HeuristicCompletionEncoding()
-      {
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         xid = XidCodecSupport.decodeXid(buffer);
-         isCommit = buffer.readBoolean();
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         XidCodecSupport.encodeXid(xid, buffer);
-         buffer.writeBoolean(isCommit);
-      }
-
-      public int getEncodeSize()
-      {
-         return XidCodecSupport.getXidEncodeLength(xid) + DataConstants.SIZE_BOOLEAN;
-      }
-   }
-
-   private static class GroupingEncoding implements EncodingSupport, GroupingInfo
-   {
-      public long id;
-
-      public SimpleString groupId;
-
-      public SimpleString clusterName;
-
-      public GroupingEncoding(final long id, final SimpleString groupId, final SimpleString clusterName)
-      {
-         this.id = id;
-         this.groupId = groupId;
-         this.clusterName = clusterName;
-      }
-
-      public GroupingEncoding()
-      {
-      }
-
-      public int getEncodeSize()
-      {
-         return SimpleString.sizeofString(groupId) + SimpleString.sizeofString(clusterName);
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeSimpleString(groupId);
-         buffer.writeSimpleString(clusterName);
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         groupId = buffer.readSimpleString();
-         clusterName = buffer.readSimpleString();
-      }
-
-      public long getId()
-      {
-         return id;
-      }
-
-      public void setId(final long id)
-      {
-         this.id = id;
-      }
-
-      public SimpleString getGroupId()
-      {
-         return groupId;
-      }
-
-      public SimpleString getClusterName()
-      {
-         return clusterName;
-      }
-
-      @Override
-      public String toString()
-      {
-         return "GroupingEncoding [id=" + id + ", groupId=" + groupId + ", clusterName=" + clusterName + "]";
-      }
-   }
-
-   public static class PersistentQueueBindingEncoding implements EncodingSupport, QueueBindingInfo
-   {
-      public long id;
-
-      public SimpleString name;
-
-      public SimpleString address;
-
-      public SimpleString filterString;
-
-      public boolean autoCreated;
-
-      public SimpleString user;
-
-      public PersistentQueueBindingEncoding()
-      {
-      }
-
-      @Override
-      public String toString()
-      {
-         return "PersistentQueueBindingEncoding [id=" + id +
-            ", name=" +
-            name +
-            ", address=" +
-            address +
-            ", filterString=" +
-            filterString +
-            ", user=" +
-            user +
-            ", autoCreated=" +
-            autoCreated +
-            "]";
-      }
-
-      public PersistentQueueBindingEncoding(final SimpleString name,
-                                            final SimpleString address,
-                                            final SimpleString filterString,
-                                            final SimpleString user,
-                                            final boolean autoCreated)
-      {
-         this.name = name;
-         this.address = address;
-         this.filterString = filterString;
-         this.user = user;
-         this.autoCreated = autoCreated;
-      }
-
-      public long getId()
-      {
-         return id;
-      }
-
-      public void setId(final long id)
-      {
-         this.id = id;
-      }
-
-      public SimpleString getAddress()
-      {
-         return address;
-      }
-
-      public void replaceQueueName(SimpleString newName)
-      {
-         this.name = newName;
-      }
-
-      public SimpleString getFilterString()
-      {
-         return filterString;
-      }
-
-      public SimpleString getQueueName()
-      {
-         return name;
-      }
-
-      public SimpleString getUser()
-      {
-         return user;
-      }
-
-      public boolean isAutoCreated()
-      {
-         return autoCreated;
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         name = buffer.readSimpleString();
-         address = buffer.readSimpleString();
-         filterString = buffer.readNullableSimpleString();
-
-         String metadata = buffer.readNullableSimpleString().toString();
-         if (metadata != null)
-         {
-            String[] elements = metadata.split(";");
-            for (String element : elements)
-            {
-               String[] keyValuePair = element.split("=");
-               if (keyValuePair.length == 2)
-               {
-                  if (keyValuePair[0].equals("user"))
-                  {
-                     user = SimpleString.toSimpleString(keyValuePair[1]);
-                  }
-               }
-            }
-         }
-
-         autoCreated = buffer.readBoolean();
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeSimpleString(name);
-         buffer.writeSimpleString(address);
-         buffer.writeNullableSimpleString(filterString);
-         buffer.writeNullableSimpleString(createMetadata());
-         buffer.writeBoolean(autoCreated);
-      }
-
-      public int getEncodeSize()
-      {
-         return SimpleString.sizeofString(name) + SimpleString.sizeofString(address) +
-            SimpleString.sizeofNullableString(filterString) + DataConstants.SIZE_BOOLEAN +
-            SimpleString.sizeofNullableString(createMetadata());
-      }
-
-      private SimpleString createMetadata()
-      {
-         StringBuilder metadata = new StringBuilder();
-         metadata.append("user=").append(user).append(";");
-         return SimpleString.toSimpleString(metadata.toString());
-      }
-   }
-
-   public static class LargeMessageEncoding implements EncodingSupport
-   {
-      public final LargeServerMessage message;
-
-      public LargeMessageEncoding(final LargeServerMessage message)
-      {
-         this.message = message;
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
-       */
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         message.decodeHeadersAndProperties(buffer);
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
-       */
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         message.encode(buffer);
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
-       */
-      public int getEncodeSize()
-      {
-         return message.getEncodeSize();
-      }
-
-   }
-
-   public static class PendingLargeMessageEncoding implements EncodingSupport
-   {
-      public long largeMessageID;
-
-      public PendingLargeMessageEncoding(final long pendingLargeMessageID)
-      {
-         this.largeMessageID = pendingLargeMessageID;
-      }
-
-      public PendingLargeMessageEncoding()
-      {
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
-       */
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         largeMessageID = buffer.readLong();
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
-       */
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(largeMessageID);
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
-       */
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG;
-      }
-
-      @Override
-      public String toString()
-      {
-         return "PendingLargeMessageEncoding::MessageID=" + largeMessageID;
-      }
-
-   }
-
-   public static class DeliveryCountUpdateEncoding implements EncodingSupport
-   {
-      public long queueID;
-
-      public int count;
-
-      public DeliveryCountUpdateEncoding()
-      {
-         super();
-      }
-
-      public DeliveryCountUpdateEncoding(final long queueID, final int count)
-      {
-         super();
-         this.queueID = queueID;
-         this.count = count;
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-         count = buffer.readInt();
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-         buffer.writeInt(count);
-      }
-
-      public int getEncodeSize()
-      {
-         return 8 + 4;
-      }
-
-      @Override
-      public String toString()
-      {
-         return "DeliveryCountUpdateEncoding [queueID=" + queueID + ", count=" + count + "]";
-      }
-
-   }
-
-   public static class QueueEncoding implements EncodingSupport
-   {
-      public long queueID;
-
-      public QueueEncoding(final long queueID)
-      {
-         super();
-         this.queueID = queueID;
-      }
-
-      public QueueEncoding()
-      {
-         super();
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-      }
-
-      public int getEncodeSize()
-      {
-         return 8;
-      }
-
-      @Override
-      public String toString()
-      {
-         return "QueueEncoding [queueID=" + queueID + "]";
-      }
-
-   }
-
-   public static class DeleteEncoding implements EncodingSupport
-   {
-      public byte recordType;
-
-      public long id;
-
-      public DeleteEncoding(final byte recordType, final long id)
-      {
-         this.recordType = recordType;
-         this.id = id;
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
-       */
-      @Override
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_BYTE + DataConstants.SIZE_LONG;
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.api.core.ActiveMQBuffer)
-       */
-      @Override
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeByte(recordType);
-         buffer.writeLong(id);
-      }
-
-      /* (non-Javadoc)
-       * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.api.core.ActiveMQBuffer)
-       */
-      @Override
-      public void decode(ActiveMQBuffer buffer)
-      {
-         recordType = buffer.readByte();
-         id = buffer.readLong();
-      }
-   }
-
-   public static class RefEncoding extends QueueEncoding
-   {
-      public RefEncoding()
-      {
-         super();
-      }
-
-      public RefEncoding(final long queueID)
-      {
-         super(queueID);
-      }
-   }
-
-   public static class PageUpdateTXEncoding implements EncodingSupport
-   {
-
-      public long pageTX;
-
-      public int recods;
-
-      @Override
-      public String toString()
-      {
-         return "PageUpdateTXEncoding [pageTX=" + pageTX + ", recods=" + recods + "]";
-      }
-
-      public PageUpdateTXEncoding()
-      {
-      }
-
-      public PageUpdateTXEncoding(final long pageTX, final int records)
-      {
-         this.pageTX = pageTX;
-         this.recods = records;
-      }
-
-      public void decode(ActiveMQBuffer buffer)
-      {
-         this.pageTX = buffer.readLong();
-         this.recods = buffer.readInt();
-      }
-
-      @Override
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(pageTX);
-         buffer.writeInt(recods);
-      }
-
-      @Override
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG + DataConstants.SIZE_INT;
-      }
-
-      public List<MessageReference> getRelatedMessageReferences()
-      {
-         return null;
-      }
-   }
-
-   protected static class ScheduledDeliveryEncoding extends QueueEncoding
-   {
-      public long scheduledDeliveryTime;
-
-      @Override
-      public String toString()
-      {
-         return "ScheduledDeliveryEncoding [scheduledDeliveryTime=" + scheduledDeliveryTime + "]";
-      }
-
-      public ScheduledDeliveryEncoding(final long scheduledDeliveryTime, final long queueID)
-      {
-         super(queueID);
-         this.scheduledDeliveryTime = scheduledDeliveryTime;
-      }
-
-      public ScheduledDeliveryEncoding()
-      {
-      }
-
-      @Override
-      public int getEncodeSize()
-      {
-         return super.getEncodeSize() + 8;
-      }
-
-      @Override
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         super.encode(buffer);
-         buffer.writeLong(scheduledDeliveryTime);
-      }
-
-      @Override
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         super.decode(buffer);
-         scheduledDeliveryTime = buffer.readLong();
-      }
-   }
-
-   public static class DuplicateIDEncoding implements EncodingSupport
-   {
-      public SimpleString address;
-
-      public byte[] duplID;
-
-      public DuplicateIDEncoding(final SimpleString address, final byte[] duplID)
-      {
-         this.address = address;
-
-         this.duplID = duplID;
-      }
-
-      public DuplicateIDEncoding()
-      {
-      }
-
-      public void decode(final ActiveMQBuffer buffer)
-      {
-         address = buffer.readSimpleString();
-
-         int size = buffer.readInt();
-
-         duplID = new byte[size];
-
-         buffer.readBytes(duplID);
-      }
-
-      public void encode(final ActiveMQBuffer buffer)
-      {
-         buffer.writeSimpleString(address);
-
-         buffer.writeInt(duplID.length);
-
-         buffer.writeBytes(duplID);
-      }
-
-      public int getEncodeSize()
-      {
-         return SimpleString.sizeofString(address) + DataConstants.SIZE_INT + duplID.length;
-      }
-
-      @Override
-      public String toString()
-      {
-         // this would be useful when testing. Most tests on the testsuite will use a SimpleString on the duplicate ID
-         // and this may be useful to validate the journal on those tests
-         // You may uncomment these two lines on that case and replcate the toString for the PrintData
-
-         // SimpleString simpleStr = new SimpleString(duplID);
-         // return "DuplicateIDEncoding [address=" + address + ", duplID=" + simpleStr + "]";
-
-         String bridgeRepresentation = null;
-
-         // The bridge will generate IDs on these terms:
-         // This will make them easier to read
-         if (address.toString().startsWith("BRIDGE") && duplID.length == 24)
-         {
-            try
-            {
-               ByteBuffer buff = ByteBuffer.wrap(duplID);
-
-               // 16 for UUID
-               byte[] bytesUUID = new byte[16];
-
-               buff.get(bytesUUID);
-
-               UUID uuid = new UUID(UUID.TYPE_TIME_BASED, bytesUUID);
-
-               long id = buff.getLong();
-               bridgeRepresentation = "nodeUUID=" + uuid.toString() + " messageID=" + id;
-            }
-            catch (Throwable ignored)
-            {
-               bridgeRepresentation = null;
-            }
-         }
-
-         if (bridgeRepresentation != null)
-         {
-            return "DuplicateIDEncoding [address=" + address + ", duplID=" + ByteUtil.bytesToHex(duplID, 2) + " / " +
-               bridgeRepresentation + "]";
-         }
-         else
-         {
-            return "DuplicateIDEncoding [address=" + address + ", duplID=" + ByteUtil.bytesToHex(duplID, 2) + "]";
-         }
-      }
-   }
-
-   /**
-    * This is only used when loading a transaction.
-    * <p>
-    * it might be possible to merge the functionality of this class with
-    * {@link org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.FinishPageMessageOperation}
-    */
-   // TODO: merge this class with the one on the PagingStoreImpl
-   private static class FinishPageMessageOperation extends TransactionOperationAbstract implements TransactionOperation
-   {
-
-      @Override
-      public void afterCommit(final Transaction tx)
-      {
-         // If part of the transaction goes to the queue, and part goes to paging, we can't let depage start for the
-         // transaction until all the messages were added to the queue
-         // or else we could deliver the messages out of order
-
-         PageTransactionInfo pageTransaction = (PageTransactionInfo) tx.getProperty(TransactionPropertyIndexes.PAGE_TRANSACTION);
-
-         if (pageTransaction != null)
-         {
-            pageTransaction.commit();
-         }
-      }
-
-      @Override
-      public void afterRollback(final Transaction tx)
-      {
-         PageTransactionInfo pageTransaction = (PageTransactionInfo) tx.getProperty(TransactionPropertyIndexes.PAGE_TRANSACTION);
-
-         if (tx.getState() == State.PREPARED && pageTransaction != null)
-         {
-            pageTransaction.rollback();
-         }
-      }
-   }
-
-   protected static final class PageCountRecord implements EncodingSupport
-   {
-
-      @Override
-      public String toString()
-      {
-         return "PageCountRecord [queueID=" + queueID + ", value=" + value + "]";
-      }
-
-      PageCountRecord()
-      {
-
-      }
-
-      PageCountRecord(long queueID, long value)
-      {
-         this.queueID = queueID;
-         this.value = value;
-      }
-
-      long queueID;
-
-      long value;
-
-      @Override
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG * 2;
-      }
-
-      @Override
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-         buffer.writeLong(value);
-      }
-
-      @Override
-      public void decode(ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-         value = buffer.readLong();
-      }
-
-   }
-
-   protected static final class PageCountPendingImpl implements EncodingSupport, PageCountPending
-   {
-
-      @Override
-      public String toString()
-      {
-         return "PageCountPending [queueID=" + queueID + ", pageID=" + pageID + "]";
-      }
-
-      PageCountPendingImpl()
-      {
-
-      }
-
-      PageCountPendingImpl(long queueID, long pageID, int inc)
-      {
-         this.queueID = queueID;
-         this.pageID = pageID;
-      }
-
-      long id;
-
-      long queueID;
-
-      long pageID;
-
-
-      public void setID(long id)
-      {
-         this.id = id;
-      }
-
-      public long getID()
-      {
-         return id;
-      }
-
-      public long getQueueID()
-      {
-         return queueID;
-      }
-
-      public long getPageID()
-      {
-         return pageID;
-      }
-
-      @Override
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG * 2;
-      }
-
-      @Override
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-         buffer.writeLong(pageID);
-      }
-
-      @Override
-      public void decode(ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-         pageID = buffer.readLong();
-      }
-
-   }
-
-   protected static final class PageCountRecordInc implements EncodingSupport
-   {
-
-      @Override
-      public String toString()
-      {
-         return "PageCountRecordInc [queueID=" + queueID + ", value=" + value + "]";
-      }
-
-      PageCountRecordInc()
-      {
-
-      }
-
-      PageCountRecordInc(long queueID, int value)
-      {
-         this.queueID = queueID;
-         this.value = value;
-      }
-
-      long queueID;
-
-      int value;
-
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG + DataConstants.SIZE_INT;
-      }
-
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-         buffer.writeInt(value);
-      }
-
-      public void decode(ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-         value = buffer.readInt();
-      }
-
-   }
-
-   public static class CursorAckRecordEncoding implements EncodingSupport
-   {
-      public CursorAckRecordEncoding(final long queueID, final PagePosition position)
-      {
-         this.queueID = queueID;
-         this.position = position;
-      }
-
-      public CursorAckRecordEncoding()
-      {
-         this.position = new PagePositionImpl();
-      }
-
-      @Override
-      public String toString()
-      {
-         return "CursorAckRecordEncoding [queueID=" + queueID + ", position=" + position + "]";
-      }
-
-      public long queueID;
-
-      public PagePosition position;
-
-      public int getEncodeSize()
-      {
-         return DataConstants.SIZE_LONG + DataConstants.SIZE_LONG + DataConstants.SIZE_INT;
-      }
-
-      public void encode(ActiveMQBuffer buffer)
-      {
-         buffer.writeLong(queueID);
-         buffer.writeLong(position.getPageNr());
-         buffer.writeInt(position.getMessageNr());
-      }
-
-      public void decode(ActiveMQBuffer buffer)
-      {
-         queueID = buffer.readLong();
-         long pageNR = buffer.readLong();
-         int messageNR = buffer.readInt();
-         this.position = new PagePositionImpl(pageNR, messageNR);
-      }
-   }
-
-   private class LargeMessageTXFailureCallback implements TransactionFailureCallback
-   {
-      private final Map<Long, ServerMessage> messages;
-
-      public LargeMessageTXFailureCallback(final Map<Long, ServerMessage> messages)
-      {
-         super();
-         this.messages = messages;
-      }
-
-      public void failedTransaction(final long transactionID,
-                                    final List<RecordInfo> records,
-                                    final List<RecordInfo> recordsToDelete)
-      {
-         for (RecordInfo record : records)
-         {
-            if (record.userRecordType == ADD_LARGE_MESSAGE)
-            {
-               byte[] data = record.data;
-
-               ActiveMQBuffer buff = ActiveMQBuffers.wrappedBuffer(data);
-
-               try
-               {
-                  LargeServerMessage serverMessage = parseLargeMessage(messages, buff);
-                  serverMessage.decrementDelayDeletionCount();
-               }
-               catch (Exception e)
-               {
-                  ActiveMQServerLogger.LOGGER.journalError(e);
-               }
-            }
-         }
-      }
-
-   }
-
-   public static final class AckDescribe
-   {
-      public RefEncoding refEncoding;
-
-      public AckDescribe(RefEncoding refEncoding)
-      {
-         this.refEncoding = refEncoding;
-      }
-
-      @Override
-      public String toString()
-      {
-         return "ACK;" + refEncoding;
-      }
-
-   }
-
-
-   /**
     * @param id
     * @param buffer
     * @return
@@ -3905,8 +2933,7 @@ public class JournalStorageManager implements StorageManager
    }
 
    @Override
-   public boolean
-   addToPage(PagingStore store, ServerMessage msg, Transaction tx, RouteContextList listCtx) throws Exception
+   public boolean addToPage(PagingStore store, ServerMessage msg, Transaction tx, RouteContextList listCtx) throws Exception
    {
       /**
        * Exposing the read-lock here is an encapsulation violation done in order to keep the code
@@ -3926,30 +2953,10 @@ public class JournalStorageManager implements StorageManager
       TXLargeMessageConfirmationOperation txoper = (TXLargeMessageConfirmationOperation) tx.getProperty(TransactionPropertyIndexes.LARGE_MESSAGE_CONFIRMATIONS);
       if (txoper == null)
       {
-         txoper = new TXLargeMessageConfirmationOperation();
+         txoper = new TXLargeMessageConfirmationOperation(this);
          tx.putProperty(TransactionPropertyIndexes.LARGE_MESSAGE_CONFIRMATIONS, txoper);
       }
       txoper.confirmedMessages.add(recordID);
    }
 
-   final class TXLargeMessageConfirmationOperation extends TransactionOperationAbstract
-   {
-      public List<Long> confirmedMessages = new LinkedList<Long>();
-
-      @Override
-      public void afterRollback(Transaction tx)
-      {
-         for (Long msg : confirmedMessages)
-         {
-            try
-            {
-               JournalStorageManager.this.confirmPendingLargeMessage(msg);
-            }
-            catch (Throwable e)
-            {
-               ActiveMQServerLogger.LOGGER.journalErrorConfirmingLargeMessage(e, msg);
-            }
-         }
-      }
-   }
 }
