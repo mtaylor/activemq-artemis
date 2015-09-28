@@ -40,19 +40,18 @@ import org.apache.activemq.artemis.core.io.nio.NIOSequentialFileFactory;
 import org.apache.activemq.artemis.core.paging.cursor.impl.PageSubscriptionCounterImpl;
 import org.apache.activemq.artemis.core.paging.impl.PageTransactionInfoImpl;
 import org.apache.activemq.artemis.core.persistence.impl.journal.BatchingIDGenerator.IDCounterEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.AckDescribe;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.CursorAckRecordEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.DeliveryCountUpdateEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.DuplicateIDEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.HeuristicCompletionEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.LargeMessageEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.PageCountPendingImpl;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.PageCountRecord;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.PageCountRecordInc;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.PageUpdateTXEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.PendingLargeMessageEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.RefEncoding;
-import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager.ScheduledDeliveryEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.CursorAckRecordEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.DeliveryCountUpdateEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.DuplicateIDEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.HeuristicCompletionEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.LargeMessageEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountPendingImpl;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountRecord;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageCountRecordInc;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PageUpdateTXEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.PendingLargeMessageEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.RefEncoding;
+import org.apache.activemq.artemis.core.persistence.impl.journal.codec.ScheduledDeliveryEncoding;
 import org.apache.activemq.artemis.core.server.LargeServerMessage;
 import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
@@ -190,15 +189,15 @@ public final class DescribeJournal {
             public void checkRecordCounter(RecordInfo info) {
                if (info.getUserRecordType() == JournalRecordIds.PAGE_CURSOR_COUNTER_VALUE) {
                   PageCountRecord encoding = (PageCountRecord) newObjectEncoding(info);
-                  long queueIDForCounter = encoding.queueID;
+                  long queueIDForCounter = encoding.getQueueID();
 
                   PageSubscriptionCounterImpl subsCounter = lookupCounter(counters, queueIDForCounter);
 
-                  if (subsCounter.getValue() != 0 && subsCounter.getValue() != encoding.value) {
-                     out.println("####### Counter replace wrongly on queue " + queueIDForCounter + " oldValue=" + subsCounter.getValue() + " newValue=" + encoding.value);
+                  if (subsCounter.getValue() != 0 && subsCounter.getValue() != encoding.getValue()) {
+                     out.println("####### Counter replace wrongly on queue " + queueIDForCounter + " oldValue=" + subsCounter.getValue() + " newValue=" + encoding.getValue());
                   }
 
-                  subsCounter.loadValue(info.id, encoding.value);
+                  subsCounter.loadValue(info.id, encoding.getValue());
                   subsCounter.processReload();
                   out.print("#Counter queue " + queueIDForCounter + " value=" + subsCounter.getValue() + ", result=" + subsCounter.getValue());
                   if (subsCounter.getValue() < 0) {
@@ -211,13 +210,13 @@ public final class DescribeJournal {
                }
                else if (info.getUserRecordType() == JournalRecordIds.PAGE_CURSOR_COUNTER_INC) {
                   PageCountRecordInc encoding = (PageCountRecordInc) newObjectEncoding(info);
-                  long queueIDForCounter = encoding.queueID;
+                  long queueIDForCounter = encoding.getQueueID();
 
                   PageSubscriptionCounterImpl subsCounter = lookupCounter(counters, queueIDForCounter);
 
-                  subsCounter.loadInc(info.id, encoding.value);
+                  subsCounter.loadInc(info.id, encoding.getValue());
                   subsCounter.processReload();
-                  out.print("#Counter queue " + queueIDForCounter + " value=" + subsCounter.getValue() + " increased by " + encoding.value);
+                  out.print("#Counter queue " + queueIDForCounter + " value=" + subsCounter.getValue() + " increased by " + encoding.getValue());
                   if (subsCounter.getValue() < 0) {
                      out.println(" #NegativeCounter!!!!");
                   }
@@ -300,20 +299,20 @@ public final class DescribeJournal {
          }
          else if (info.getUserRecordType() == JournalRecordIds.PAGE_CURSOR_COUNTER_VALUE) {
             PageCountRecord encoding = (PageCountRecord) o;
-            queueIDForCounter = encoding.queueID;
+            queueIDForCounter = encoding.getQueueID();
 
             subsCounter = lookupCounter(counters, queueIDForCounter);
 
-            subsCounter.loadValue(info.id, encoding.value);
+            subsCounter.loadValue(info.id, encoding.getValue());
             subsCounter.processReload();
          }
          else if (info.getUserRecordType() == JournalRecordIds.PAGE_CURSOR_COUNTER_INC) {
             PageCountRecordInc encoding = (PageCountRecordInc) o;
-            queueIDForCounter = encoding.queueID;
+            queueIDForCounter = encoding.getQueueID();
 
             subsCounter = lookupCounter(counters, queueIDForCounter);
 
-            subsCounter.loadInc(info.id, encoding.value);
+            subsCounter.loadInc(info.id, encoding.getValue());
             subsCounter.processReload();
          }
 
@@ -334,8 +333,8 @@ public final class DescribeJournal {
       out.println("### Prepared TX ###");
 
       for (PreparedTransactionInfo tx : preparedTransactions) {
-         out.println(tx.id);
-         for (RecordInfo info : tx.records) {
+         out.println(tx.getId());
+         for (RecordInfo info : tx.getRecords()) {
             Object o = newObjectEncoding(info);
             out.println("- " + describeRecord(info, o));
             if (info.getUserRecordType() == 31) {
@@ -354,7 +353,7 @@ public final class DescribeJournal {
             }
          }
 
-         for (RecordInfo info : tx.recordsToDelete) {
+         for (RecordInfo info : tx.getRecordsToDelete()) {
             out.println("- " + describeRecord(info) + " <marked to delete>");
          }
       }
