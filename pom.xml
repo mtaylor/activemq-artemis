@@ -47,6 +47,7 @@
       <module>artemis-ra</module>
       <module>artemis-rest</module>
       <module>artemis-service-extensions</module>
+      <module>artemis-jdbc-store</module>
       <module>artemis-maven-plugin</module>
       <module>integration/activemq-spring-integration</module>
       <module>integration/activemq-aerogear-integration</module>
