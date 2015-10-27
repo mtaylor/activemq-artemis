@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -105,7 +106,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    private volatile MessageHandler handler;
 
-   private volatile boolean closing;
+   private final AtomicBoolean closing = new AtomicBoolean(false);
 
    private volatile boolean closed;
 
@@ -402,7 +403,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
    }
 
    public void close() throws ActiveMQException {
-      doCleanUp(true);
+         doCleanUp(true);
    }
 
    /**
@@ -412,7 +413,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
     * @throws ActiveMQException
     */
    public Thread prepareForClose(final FutureLatch future) throws ActiveMQException {
-      closing = true;
+      closing.set(true);
 
       resetLargeMessageController();
 
@@ -504,7 +505,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
    }
 
    public synchronized void handleMessage(final ClientMessageInternal message) throws Exception {
-      if (closing) {
+      if (closing.get()) {
          // This is ok - we just ignore the message
          return;
       }
@@ -588,7 +589,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    public synchronized void handleLargeMessage(final ClientLargeMessageInternal clientLargeMessage,
                                                long largeMessageSize) throws Exception {
-      if (closing) {
+      if (closing.get()) {
          // This is ok - we just ignore the message
          return;
       }
@@ -620,7 +621,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
    public synchronized void handleLargeMessageContinuation(final byte[] chunk,
                                                            final int flowControlSize,
                                                            final boolean isContinues) throws Exception {
-      if (closing) {
+      if (closing.get()) {
          return;
       }
       if (currentLargeMessageController == null) {
@@ -861,7 +862,6 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
       FutureLatch future = new FutureLatch();
 
       sessionExecutor.execute(future);
-
       boolean ok = future.await(ClientConsumerImpl.CLOSE_TIMEOUT_MILLISECONDS);
 
       if (!ok) {
@@ -876,7 +876,7 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
    }
 
    private void callOnMessage() throws Exception {
-      if (closing || stopped) {
+      if (closing.get() || stopped) {
          return;
       }
 
@@ -981,14 +981,16 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    private void doCleanUp(final boolean sendCloseMessage) throws ActiveMQException {
       try {
-         if (closed) {
-            return;
-         }
 
          // We need an extra flag closing, since we need to prevent any more messages getting queued to execute
          // after this and we can't just set the closed flag to true here, since after/in onmessage the message
          // might be acked and if the consumer is already closed, the ack will be ignored
-         closing = true;
+
+         /* We also need to ensure that doCleanUp is only called by a single thread at a time, interleaving doCleanUp
+            can cause stuck closeDown tasks in the sessionExectuor */
+         if (closed || !closing.compareAndSet(false, true)) {
+            return;
+         }
 
          // Now we wait for any current handler runners to run.
          waitForOnMessageToComplete(true);
