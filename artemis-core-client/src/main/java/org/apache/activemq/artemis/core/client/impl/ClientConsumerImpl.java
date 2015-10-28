@@ -129,6 +129,8 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    private final ClassLoader contextClassLoader;
 
+   private final Object cleanUpLock = new Object();
+
    // Constructors
    // ---------------------------------------------------------------------------------
 
@@ -980,47 +982,52 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
    }
 
    private void doCleanUp(final boolean sendCloseMessage) throws ActiveMQException {
-      try {
-         if (closed) {
-            return;
-         }
 
-         // We need an extra flag closing, since we need to prevent any more messages getting queued to execute
-         // after this and we can't just set the closed flag to true here, since after/in onmessage the message
-         // might be acked and if the consumer is already closed, the ack will be ignored
-         closing = true;
+      synchronized (cleanUpLock) {
 
-         // Now we wait for any current handler runners to run.
-         waitForOnMessageToComplete(true);
+         try {
 
-         resetLargeMessageController();
-
-         closed = true;
-
-         synchronized (this) {
-            if (receiverThread != null) {
-               // Wake up any receive() thread that might be waiting
-               notify();
+            if (closed) {
+               return;
             }
 
-            handler = null;
+            // We need an extra flag closing, since we need to prevent any more messages getting queued to execute
+            // after this and we can't just set the closed flag to true here, since after/in onmessage the message
+            // might be acked and if the consumer is already closed, the ack will be ignored
+            closing = true;
 
-            receiverThread = null;
+            // Now we wait for any current handler runners to run.
+            waitForOnMessageToComplete(true);
+
+            resetLargeMessageController();
+
+            closed = true;
+
+            synchronized (this) {
+               if (receiverThread != null) {
+                  // Wake up any receive() thread that might be waiting
+                  notify();
+               }
+
+               handler = null;
+
+               receiverThread = null;
+            }
+
+            flushAcks();
+
+            clearBuffer();
+
+            if (sendCloseMessage) {
+               sessionContext.closeConsumer(this);
+            }
+         }
+         catch (Throwable t) {
+            // Consumer close should always return without exception
          }
 
-         flushAcks();
-
-         clearBuffer();
-
-         if (sendCloseMessage) {
-            sessionContext.closeConsumer(this);
-         }
+         session.removeConsumer(this);
       }
-      catch (Throwable t) {
-         // Consumer close should always return without exception
-      }
-
-      session.removeConsumer(this);
    }
 
    private void clearBuffer() {
