@@ -129,6 +129,8 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    private final ClassLoader contextClassLoader;
 
+   private final Object closeLock = new Object();
+   
    // Constructors
    // ---------------------------------------------------------------------------------
 
@@ -981,21 +983,31 @@ public final class ClientConsumerImpl implements ClientConsumerInternal {
 
    private void doCleanUp(final boolean sendCloseMessage) throws ActiveMQException {
       try {
-         if (closed) {
+
+         // Optimization, check without aquiring lock.
+         if (closed)
+         {
             return;
          }
 
-         // We need an extra flag closing, since we need to prevent any more messages getting queued to execute
-         // after this and we can't just set the closed flag to true here, since after/in onmessage the message
-         // might be acked and if the consumer is already closed, the ack will be ignored
-         closing = true;
+         synchronized (closeLock)
+         {
+            if (closed)
+            {
+               return;
+            }
 
-         // Now we wait for any current handler runners to run.
-         waitForOnMessageToComplete(true);
+            // We need an extra flag closing, since we need to prevent any more messages getting queued to execute
+            // after this and we can't just set the closed flag to true here, since after/in onmessage the message
+            // might be acked and if the consumer is already closed, the ack will be ignored
+            closing = true;
 
-         resetLargeMessageController();
+            // Now we wait for any current handler runners to run.
+            waitForOnMessageToComplete(true);
+            resetLargeMessageController();
 
-         closed = true;
+            closed = true;
+         }
 
          synchronized (this) {
             if (receiverThread != null) {
