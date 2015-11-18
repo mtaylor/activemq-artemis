@@ -917,4 +917,7 @@ public interface Configuration {
     */
    File getBrokerInstance();
 
+   StoreConfiguration getStoreConfiguration();
+
+   Configuration setStoreConfiguration(StoreConfiguration storeConfiguration);
 }

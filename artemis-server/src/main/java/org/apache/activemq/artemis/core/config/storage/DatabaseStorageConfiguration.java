@@ -16,15 +16,15 @@
  */
 package org.apache.activemq.artemis.core.config.storage;
 
-import org.apache.activemq.artemis.core.config.StorageConfiguration;
+import org.apache.activemq.artemis.core.config.StoreConfiguration;
 
-public class DatabaseStorageConfiguration implements StorageConfiguration {
+public class DatabaseStorageConfiguration implements StoreConfiguration {
 
    private String messageTableName;
 
    private String bindingsTableName;
 
-   private String databaseConnectionUrl;
+   private String jdbcConnectionUrl;
 
    @Override
    public StoreType getStoreType() {
@@ -45,5 +45,13 @@ public class DatabaseStorageConfiguration implements StorageConfiguration {
 
    public void setBindingsTableName(String bindingsTableName) {
       this.bindingsTableName = bindingsTableName;
+   }
+
+   public void setJdbcConnectionUrl(String jdbcConnectionUrl) {
+      this.jdbcConnectionUrl = jdbcConnectionUrl;
+   }
+
+   public String getJdbcConnectionUrl() {
+      return jdbcConnectionUrl;
    }
 }

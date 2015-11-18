@@ -18,7 +18,7 @@ package org.apache.activemq.artemis.core.config;
 
 import java.io.Serializable;
 
-public interface StorageConfiguration extends Serializable {
+public interface StoreConfiguration extends Serializable {
 
    public enum StoreType {
       FILE,
