@@ -32,8 +32,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class JDBCJournalTest
-{
+public class JDBCJournalTest {
+
    private static final String JOURNAL_TABLE_NAME = "MESSAGE_JOURNAL";
 
    private JDBCJournalImpl journal;
@@ -41,9 +41,9 @@ public class JDBCJournalTest
    private String jdbcUrl;
 
    private Properties jdbcConnectionProperties;
+
    @Before
-   public void setup() throws Exception
-   {
+   public void setup() throws Exception {
       jdbcUrl = "jdbc:derby:/tmp/data;create=true";
       jdbcConnectionProperties = new Properties();
       journal = new JDBCJournalImpl(jdbcUrl, jdbcConnectionProperties, JOURNAL_TABLE_NAME);
@@ -51,11 +51,9 @@ public class JDBCJournalTest
    }
 
    @Test
-   public void testInsertRecords() throws Exception
-   {
+   public void testInsertRecords() throws Exception {
       int noRecords = 10;
-      for (int i = 0; i < noRecords; i++)
-      {
+      for (int i = 0; i < noRecords; i++) {
          journal.appendAddRecord(1, (byte) 1, new byte[0], true);
       }
 
@@ -65,33 +63,27 @@ public class JDBCJournalTest
    }
 
    @Test
-   public void testCallbacks() throws Exception
-   {
+   public void testCallbacks() throws Exception {
       final int noRecords = 10;
       final CountDownLatch done = new CountDownLatch(noRecords);
 
-      IOCompletion completion = new IOCompletion()
-      {
+      IOCompletion completion = new IOCompletion() {
          @Override
-         public void storeLineUp()
-         {
+         public void storeLineUp() {
          }
 
          @Override
-         public void done()
-         {
+         public void done() {
             done.countDown();
          }
 
          @Override
-         public void onError(int errorCode, String errorMessage)
-         {
+         public void onError(int errorCode, String errorMessage) {
 
          }
       };
 
-      for (int i = 0; i < noRecords; i++)
-      {
+      for (int i = 0; i < noRecords; i++) {
          journal.appendAddRecord(1, (byte) 1, new FakeEncodingSupportImpl(new byte[0]), true, completion);
       }
       journal.sync();
@@ -101,23 +93,19 @@ public class JDBCJournalTest
    }
 
    @Test
-   public void testReadJournal() throws Exception
-   {
+   public void testReadJournal() throws Exception {
       int noRecords = 100;
 
       // Standard Add Records
-      for (int i = 0; i < noRecords; i++)
-      {
+      for (int i = 0; i < noRecords; i++) {
          journal.appendAddRecord(i, (byte) i, new byte[i], true);
       }
 
       // TX Records
       int noTx = 10;
       int noTxRecords = 100;
-      for (int i = 1000; i < 1000 + noTx; i++)
-      {
-         for (int j = 0; j < noTxRecords; j++)
-         {
+      for (int i = 1000; i < 1000 + noTx; i++) {
+         for (int j = 0; j < noTxRecords; j++) {
             journal.appendAddRecordTransactional(i, Long.valueOf(i + "" + j), (byte) 1, new byte[0]);
          }
          journal.appendPrepareRecord(i, new byte[0], true);
@@ -134,8 +122,7 @@ public class JDBCJournalTest
    }
 
    @After
-   public void tearDown() throws Exception
-   {
+   public void tearDown() throws Exception {
       journal.destroy();
    }
 }

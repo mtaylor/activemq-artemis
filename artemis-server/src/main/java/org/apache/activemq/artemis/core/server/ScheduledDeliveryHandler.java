@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.artemis.core.server;
 
-import org.apache.activemq.artemis.core.filter.Filter;
-
 import java.util.List;
+
+import org.apache.activemq.artemis.core.filter.Filter;
 
 public interface ScheduledDeliveryHandler {
 

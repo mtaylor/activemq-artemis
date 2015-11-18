@@ -114,7 +114,9 @@ public class ActiveMQJAASSecurityManager implements ActiveMQSecurityManager2 {
       return authorized;
    }
 
-   private Subject getAuthenticatedSubject(final String user, final String password, final X509Certificate[] certificates) throws LoginException {
+   private Subject getAuthenticatedSubject(final String user,
+                                           final String password,
+                                           final X509Certificate[] certificates) throws LoginException {
       LoginContext lc = new LoginContext(configurationName, new JaasCallbackHandler(user, password, certificates));
       lc.login();
       return lc.getSubject();

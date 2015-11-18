@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.artemis.core.server.impl;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.ActiveMQInternalErrorException;
 import org.apache.activemq.artemis.api.core.Pair;
@@ -43,9 +46,6 @@ import org.apache.activemq.artemis.core.server.cluster.qourum.SharedNothingBacku
 import org.apache.activemq.artemis.core.server.group.GroupingHandler;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.utils.ReusableLatch;
-
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.activemq.artemis.core.server.cluster.qourum.SharedNothingBackupQuorum.BACKUP_ACTIVATION.FAILURE_REPLICATING;
 import static org.apache.activemq.artemis.core.server.cluster.qourum.SharedNothingBackupQuorum.BACKUP_ACTIVATION.FAIL_OVER;

@@ -16,6 +16,12 @@
  */
 package org.apache.activemq.artemis.tests.integration.client;
 
+import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.api.core.SimpleString;
@@ -37,12 +43,6 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.transaction.xa.XAResource;
-import javax.transaction.xa.Xid;
-import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 public class MessageGroupingTest extends ActiveMQTestBase {
 
@@ -515,20 +515,16 @@ public class MessageGroupingTest extends ActiveMQTestBase {
       }
 
       Thread.sleep(5000);
-      for (int i = 0; i < numMessages; i++)
-      {
+      for (int i = 0; i < numMessages; i++) {
          ClientMessage message = createTextMessage(clientSession, "m" + i);
-         if (i % 2 == 0 || i == 0)
-         {
+         if (i % 2 == 0 || i == 0) {
             message.putStringProperty(Message.HDR_GROUP_ID, groupId);
          }
-         else
-         {
+         else {
             message.putStringProperty(Message.HDR_GROUP_ID, groupId2);
          }
          clientProducer.send(message);
       }
-
 
       CountDownLatch latch = new CountDownLatch(numMessages);
       DummyMessageHandler dummyMessageHandler = new DummyMessageHandler(latch, true);

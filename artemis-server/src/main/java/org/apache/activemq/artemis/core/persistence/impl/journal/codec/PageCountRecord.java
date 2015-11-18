@@ -20,55 +20,47 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class PageCountRecord implements EncodingSupport
-{
+public class PageCountRecord implements EncodingSupport {
+
    private long queueID;
 
    private long value;
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "PageCountRecord [queueID=" + queueID + ", value=" + value + "]";
    }
 
-   public PageCountRecord()
-   {
+   public PageCountRecord() {
 
    }
 
-   public PageCountRecord(long queueID, long value)
-   {
+   public PageCountRecord(long queueID, long value) {
       this.queueID = queueID;
       this.value = value;
    }
 
-   public long getQueueID()
-   {
+   public long getQueueID() {
       return queueID;
    }
 
-   public long getValue()
-   {
+   public long getValue() {
       return value;
    }
 
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_LONG * 2;
    }
 
    @Override
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeLong(queueID);
       buffer.writeLong(value);
    }
 
    @Override
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       queueID = buffer.readLong();
       value = buffer.readLong();
    }

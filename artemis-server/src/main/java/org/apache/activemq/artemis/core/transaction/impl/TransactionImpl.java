@@ -17,7 +17,6 @@
 package org.apache.activemq.artemis.core.transaction.impl;
 
 import javax.transaction.xa.Xid;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;

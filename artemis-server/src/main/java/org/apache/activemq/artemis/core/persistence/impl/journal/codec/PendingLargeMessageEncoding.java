@@ -20,46 +20,40 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class PendingLargeMessageEncoding implements EncodingSupport
-{
+public class PendingLargeMessageEncoding implements EncodingSupport {
+
    public long largeMessageID;
 
-   public PendingLargeMessageEncoding(final long pendingLargeMessageID)
-   {
+   public PendingLargeMessageEncoding(final long pendingLargeMessageID) {
       this.largeMessageID = pendingLargeMessageID;
    }
 
-   public PendingLargeMessageEncoding()
-   {
+   public PendingLargeMessageEncoding() {
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
     */
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       largeMessageID = buffer.readLong();
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
     */
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeLong(largeMessageID);
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
     */
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_LONG;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "PendingLargeMessageEncoding::MessageID=" + largeMessageID;
    }
 

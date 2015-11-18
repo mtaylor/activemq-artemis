@@ -25,25 +25,22 @@ import org.apache.activemq.artemis.utils.ByteUtil;
 import org.apache.activemq.artemis.utils.DataConstants;
 import org.apache.activemq.artemis.utils.UUID;
 
-public class DuplicateIDEncoding implements EncodingSupport
-{
+public class DuplicateIDEncoding implements EncodingSupport {
+
    public SimpleString address;
 
    public byte[] duplID;
 
-   public DuplicateIDEncoding(final SimpleString address, final byte[] duplID)
-   {
+   public DuplicateIDEncoding(final SimpleString address, final byte[] duplID) {
       this.address = address;
 
       this.duplID = duplID;
    }
 
-   public DuplicateIDEncoding()
-   {
+   public DuplicateIDEncoding() {
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       address = buffer.readSimpleString();
 
       int size = buffer.readInt();
@@ -53,8 +50,7 @@ public class DuplicateIDEncoding implements EncodingSupport
       buffer.readBytes(duplID);
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeSimpleString(address);
 
       buffer.writeInt(duplID.length);
@@ -62,14 +58,12 @@ public class DuplicateIDEncoding implements EncodingSupport
       buffer.writeBytes(duplID);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return SimpleString.sizeofString(address) + DataConstants.SIZE_INT + duplID.length;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       // this would be useful when testing. Most tests on the testsuite will use a SimpleString on the duplicate ID
       // and this may be useful to validate the journal on those tests
       // You may uncomment these two lines on that case and replcate the toString for the PrintData
@@ -81,10 +75,8 @@ public class DuplicateIDEncoding implements EncodingSupport
 
       // The bridge will generate IDs on these terms:
       // This will make them easier to read
-      if (address.toString().startsWith("BRIDGE") && duplID.length == 24)
-      {
-         try
-         {
+      if (address.toString().startsWith("BRIDGE") && duplID.length == 24) {
+         try {
             ByteBuffer buff = ByteBuffer.wrap(duplID);
 
             // 16 for UUID
@@ -97,19 +89,16 @@ public class DuplicateIDEncoding implements EncodingSupport
             long id = buff.getLong();
             bridgeRepresentation = "nodeUUID=" + uuid.toString() + " messageID=" + id;
          }
-         catch (Throwable ignored)
-         {
+         catch (Throwable ignored) {
             bridgeRepresentation = null;
          }
       }
 
-      if (bridgeRepresentation != null)
-      {
+      if (bridgeRepresentation != null) {
          return "DuplicateIDEncoding [address=" + address + ", duplID=" + ByteUtil.bytesToHex(duplID, 2) + " / " +
             bridgeRepresentation + "]";
       }
-      else
-      {
+      else {
          return "DuplicateIDEncoding [address=" + address + ", duplID=" + ByteUtil.bytesToHex(duplID, 2) + "]";
       }
    }

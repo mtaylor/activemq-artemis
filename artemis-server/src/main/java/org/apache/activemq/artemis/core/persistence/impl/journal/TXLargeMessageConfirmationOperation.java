@@ -23,27 +23,22 @@ import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.core.transaction.TransactionOperationAbstract;
 
-public final class TXLargeMessageConfirmationOperation extends TransactionOperationAbstract
-{
+public final class TXLargeMessageConfirmationOperation extends TransactionOperationAbstract {
+
    private AbstractJournalStorageManager journalStorageManager;
    public List<Long> confirmedMessages = new LinkedList<Long>();
 
-   public TXLargeMessageConfirmationOperation(AbstractJournalStorageManager journalStorageManager)
-   {
+   public TXLargeMessageConfirmationOperation(AbstractJournalStorageManager journalStorageManager) {
       this.journalStorageManager = journalStorageManager;
    }
 
    @Override
-   public void afterRollback(Transaction tx)
-   {
-      for (Long msg : confirmedMessages)
-      {
-         try
-         {
+   public void afterRollback(Transaction tx) {
+      for (Long msg : confirmedMessages) {
+         try {
             journalStorageManager.confirmPendingLargeMessage(msg);
          }
-         catch (Throwable e)
-         {
+         catch (Throwable e) {
             ActiveMQServerLogger.LOGGER.journalErrorConfirmingLargeMessage(e, msg);
          }
       }

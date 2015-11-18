@@ -20,36 +20,32 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.server.LargeServerMessage;
 
-public class LargeMessageEncoding implements EncodingSupport
-{
+public class LargeMessageEncoding implements EncodingSupport {
+
    public final LargeServerMessage message;
 
-   public LargeMessageEncoding(final LargeServerMessage message)
-   {
+   public LargeMessageEncoding(final LargeServerMessage message) {
       this.message = message;
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
     */
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       message.decodeHeadersAndProperties(buffer);
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.spi.core.remoting.ActiveMQBuffer)
     */
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       message.encode(buffer);
    }
 
    /* (non-Javadoc)
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
     */
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return message.getEncodeSize();
    }
 

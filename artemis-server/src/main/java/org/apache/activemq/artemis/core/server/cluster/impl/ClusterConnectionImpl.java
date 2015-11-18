@@ -54,12 +54,12 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.NodeManager;
 import org.apache.activemq.artemis.core.server.Queue;
+import org.apache.activemq.artemis.core.server.cluster.ActiveMQServerSideProtocolManagerFactory;
 import org.apache.activemq.artemis.core.server.cluster.Bridge;
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection;
 import org.apache.activemq.artemis.core.server.cluster.ClusterControl;
 import org.apache.activemq.artemis.core.server.cluster.ClusterManager;
 import org.apache.activemq.artemis.core.server.cluster.ClusterManager.IncomingInterceptorLookingForExceptionMessage;
-import org.apache.activemq.artemis.core.server.cluster.ActiveMQServerSideProtocolManagerFactory;
 import org.apache.activemq.artemis.core.server.cluster.MessageFlowRecord;
 import org.apache.activemq.artemis.core.server.cluster.RemoteQueueBinding;
 import org.apache.activemq.artemis.core.server.group.impl.Proposal;
@@ -73,9 +73,11 @@ import org.apache.activemq.artemis.utils.TypedProperties;
 
 public final class ClusterConnectionImpl implements ClusterConnection, AfterConnectInternalListener {
 
-   /** When getting member on node-up and down we have to remove the name from the transport config
-    *  as the setting we build here doesn't need to consider the name, so use the same name on all
-    *  the instances.  */
+   /**
+    * When getting member on node-up and down we have to remove the name from the transport config
+    * as the setting we build here doesn't need to consider the name, so use the same name on all
+    * the instances.
+    */
    private static final String TRANSPORT_CONFIG_NAME = "topology-member";
 
    private static final boolean isTrace = ActiveMQServerLogger.LOGGER.isTraceEnabled();

@@ -35,10 +35,10 @@ import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.io.IOCriticalErrorListener;
+import org.apache.activemq.artemis.core.io.SequentialFile;
 import org.apache.activemq.artemis.core.journal.Journal;
 import org.apache.activemq.artemis.core.journal.Journal.JournalState;
 import org.apache.activemq.artemis.core.journal.JournalLoadInformation;
-import org.apache.activemq.artemis.core.io.SequentialFile;
 import org.apache.activemq.artemis.core.journal.impl.FileWrapperJournal;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 import org.apache.activemq.artemis.core.paging.PagedMessage;
@@ -53,8 +53,8 @@ import org.apache.activemq.artemis.core.protocol.core.Channel;
 import org.apache.activemq.artemis.core.protocol.core.ChannelHandler;
 import org.apache.activemq.artemis.core.protocol.core.Packet;
 import org.apache.activemq.artemis.core.protocol.core.impl.PacketImpl;
-import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.BackupReplicationStartFailedMessage;
 import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.ActiveMQExceptionMessage;
+import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.BackupReplicationStartFailedMessage;
 import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.ReplicationAddMessage;
 import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.ReplicationAddTXMessage;
 import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.ReplicationCommitMessage;
@@ -476,9 +476,9 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
     * {@link FileWrapperJournal} in place to store messages while synchronization is going on.
     *
     * @param packet
-    * @throws Exception
     * @return if the incoming packet indicates the synchronization is finished then return an acknowledgement otherwise
-    *         return an empty response
+    * return an empty response
+    * @throws Exception
     */
    private ReplicationResponseMessageV2 handleStartReplicationSynchronization(final ReplicationStartSyncMessage packet) throws Exception {
       ReplicationResponseMessageV2 replicationResponseMessage = new ReplicationResponseMessageV2();

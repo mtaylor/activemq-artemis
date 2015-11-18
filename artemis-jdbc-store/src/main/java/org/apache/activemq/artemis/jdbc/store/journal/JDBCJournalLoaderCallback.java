@@ -27,8 +27,8 @@ import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 
-public class JDBCJournalLoaderCallback implements LoaderCallback
-{
+public class JDBCJournalLoaderCallback implements LoaderCallback {
+
    private static final int DELETE_FLUSH = 20000;
 
    private final List<PreparedTransactionInfo> preparedTransactions;
@@ -50,29 +50,24 @@ public class JDBCJournalLoaderCallback implements LoaderCallback
    public JDBCJournalLoaderCallback(final List<RecordInfo> committedRecords,
                                     final List<PreparedTransactionInfo> preparedTransactions,
                                     final TransactionFailureCallback failureCallback,
-                                    final boolean fixBadTX)
-   {
+                                    final boolean fixBadTX) {
       this.committedRecords = committedRecords;
       this.preparedTransactions = preparedTransactions;
       this.failureCallback = failureCallback;
       this.fixBadTX = fixBadTX;
    }
 
-   public synchronized void checkMaxId(long id)
-   {
-      if (maxId < id)
-      {
+   public synchronized void checkMaxId(long id) {
+      if (maxId < id) {
          maxId = id;
       }
    }
 
-   public void addPreparedTransaction(final PreparedTransactionInfo preparedTransaction)
-   {
+   public void addPreparedTransaction(final PreparedTransactionInfo preparedTransaction) {
       preparedTransactions.add(preparedTransaction);
    }
 
-   public synchronized void addRecord(final RecordInfo info)
-   {
+   public synchronized void addRecord(final RecordInfo info) {
       int index = committedRecords.size();
       committedRecords.add(index, info);
 
@@ -83,39 +78,32 @@ public class JDBCJournalLoaderCallback implements LoaderCallback
       checkMaxId(info.id);
    }
 
-   public synchronized void updateRecord(final RecordInfo info)
-   {
+   public synchronized void updateRecord(final RecordInfo info) {
       int index = committedRecords.size();
       committedRecords.add(index, info);
       deleteReferences.get(info.id).add(index);
    }
 
-   public synchronized void deleteRecord(final long id)
-   {
-      for (Integer i : deleteReferences.get(id))
-      {
+   public synchronized void deleteRecord(final long id) {
+      for (Integer i : deleteReferences.get(id)) {
          committedRecords.remove(i);
       }
    }
 
-   public int getNoRecords()
-   {
+   public int getNoRecords() {
       return committedRecords.size();
    }
 
    @Override
    public void failedTransaction(final long transactionID,
                                  final List<RecordInfo> records,
-                                 final List<RecordInfo> recordsToDelete)
-   {
-      if (failureCallback != null)
-      {
+                                 final List<RecordInfo> recordsToDelete) {
+      if (failureCallback != null) {
          failureCallback.failedTransaction(transactionID, records, recordsToDelete);
       }
    }
 
-   public long getMaxId()
-   {
+   public long getMaxId() {
       return maxId;
    }
 

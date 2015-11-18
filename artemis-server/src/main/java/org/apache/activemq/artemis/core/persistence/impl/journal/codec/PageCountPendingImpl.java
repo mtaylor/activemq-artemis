@@ -21,22 +21,18 @@ import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.persistence.impl.PageCountPending;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class PageCountPendingImpl implements EncodingSupport, PageCountPending
-{
+public class PageCountPendingImpl implements EncodingSupport, PageCountPending {
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "PageCountPending [queueID=" + queueID + ", pageID=" + pageID + "]";
    }
 
-   public PageCountPendingImpl()
-   {
+   public PageCountPendingImpl() {
 
    }
 
-   public PageCountPendingImpl(long queueID, long pageID, int inc)
-   {
+   public PageCountPendingImpl(long queueID, long pageID, int inc) {
       this.queueID = queueID;
       this.pageID = pageID;
    }
@@ -47,43 +43,35 @@ public class PageCountPendingImpl implements EncodingSupport, PageCountPending
 
    long pageID;
 
-
-   public void setID(long id)
-   {
+   public void setID(long id) {
       this.id = id;
    }
 
-   public long getID()
-   {
+   public long getID() {
       return id;
    }
 
-   public long getQueueID()
-   {
+   public long getQueueID() {
       return queueID;
    }
 
-   public long getPageID()
-   {
+   public long getPageID() {
       return pageID;
    }
 
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_LONG * 2;
    }
 
    @Override
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeLong(queueID);
       buffer.writeLong(pageID);
    }
 
    @Override
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       queueID = buffer.readLong();
       pageID = buffer.readLong();
    }

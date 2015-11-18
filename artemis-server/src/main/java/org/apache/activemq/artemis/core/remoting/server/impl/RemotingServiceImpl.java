@@ -198,8 +198,8 @@ public class RemotingServiceImpl implements RemotingService, ConnectionLifeCycle
          @Override
          public ThreadFactory run() {
             return new ActiveMQThreadFactory("ActiveMQ-remoting-threads-" + server.toString() +
-                                                                        "-" +
-                                                                        System.identityHashCode(this), false, Thread.currentThread().getContextClassLoader());
+                                                "-" +
+                                                System.identityHashCode(this), false, Thread.currentThread().getContextClassLoader());
          }
       });
 

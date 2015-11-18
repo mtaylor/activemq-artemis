@@ -377,7 +377,6 @@ public class ConfigurationImpl implements Configuration, Serializable {
       return this;
    }
 
-
    public ConfigurationImpl addConnectorConfiguration(final String name, final String uri) throws Exception {
 
       ConnectorTransportConfigurationParser parser = new ConnectorTransportConfigurationParser();
@@ -390,7 +389,6 @@ public class ConfigurationImpl implements Configuration, Serializable {
 
       return this;
    }
-
 
    public ConfigurationImpl clearConnectorConfigurations() {
       connectorConfigs.clear();

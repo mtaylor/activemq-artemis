@@ -18,42 +18,36 @@ package org.apache.activemq.artemis.core.persistence.impl.journal.codec;
 
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 
-public class ScheduledDeliveryEncoding extends QueueEncoding
-{
+public class ScheduledDeliveryEncoding extends QueueEncoding {
+
    public long scheduledDeliveryTime;
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "ScheduledDeliveryEncoding [scheduledDeliveryTime=" + scheduledDeliveryTime + "]";
    }
 
-   public ScheduledDeliveryEncoding(final long scheduledDeliveryTime, final long queueID)
-   {
+   public ScheduledDeliveryEncoding(final long scheduledDeliveryTime, final long queueID) {
       super(queueID);
       this.scheduledDeliveryTime = scheduledDeliveryTime;
    }
 
-   public ScheduledDeliveryEncoding()
-   {
+   public ScheduledDeliveryEncoding() {
    }
 
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return super.getEncodeSize() + 8;
    }
 
    @Override
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       super.encode(buffer);
       buffer.writeLong(scheduledDeliveryTime);
    }
 
    @Override
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       super.decode(buffer);
       scheduledDeliveryTime = buffer.readLong();
    }

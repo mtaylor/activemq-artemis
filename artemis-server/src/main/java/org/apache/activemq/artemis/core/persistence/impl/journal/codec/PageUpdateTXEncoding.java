@@ -23,50 +23,42 @@ import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.server.MessageReference;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class PageUpdateTXEncoding implements EncodingSupport
-{
+public class PageUpdateTXEncoding implements EncodingSupport {
 
    public long pageTX;
 
    public int recods;
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "PageUpdateTXEncoding [pageTX=" + pageTX + ", recods=" + recods + "]";
    }
 
-   public PageUpdateTXEncoding()
-   {
+   public PageUpdateTXEncoding() {
    }
 
-   public PageUpdateTXEncoding(final long pageTX, final int records)
-   {
+   public PageUpdateTXEncoding(final long pageTX, final int records) {
       this.pageTX = pageTX;
       this.recods = records;
    }
 
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       this.pageTX = buffer.readLong();
       this.recods = buffer.readInt();
    }
 
    @Override
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeLong(pageTX);
       buffer.writeInt(recods);
    }
 
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_LONG + DataConstants.SIZE_INT;
    }
 
-   public List<MessageReference> getRelatedMessageReferences()
-   {
+   public List<MessageReference> getRelatedMessageReferences() {
       return null;
    }
 }

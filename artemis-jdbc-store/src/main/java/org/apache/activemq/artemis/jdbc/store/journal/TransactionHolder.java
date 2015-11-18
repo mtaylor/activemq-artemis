@@ -22,10 +22,9 @@ import java.util.List;
 
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 
-final class TransactionHolder
-{
-   public TransactionHolder(final long id)
-   {
+final class TransactionHolder {
+
+   public TransactionHolder(final long id) {
       transactionID = id;
    }
 

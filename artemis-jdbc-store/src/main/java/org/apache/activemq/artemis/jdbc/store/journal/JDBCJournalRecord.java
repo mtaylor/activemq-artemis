@@ -31,8 +31,7 @@ import org.apache.activemq.artemis.core.journal.IOCompletion;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.utils.ActiveMQBufferInputStream;
 
-public class JDBCJournalRecord
-{
+public class JDBCJournalRecord {
    /*
    Database Table Schema:
 
@@ -86,8 +85,7 @@ public class JDBCJournalRecord
 
    private boolean isUpdate;
 
-   public JDBCJournalRecord(long id, byte recordType)
-   {
+   public JDBCJournalRecord(long id, byte recordType) {
       this.id = id;
       this.recordType = recordType;
       this.isUpdate = recordType == UPDATE_RECORD || recordType == UPDATE_RECORD_TX;
@@ -103,75 +101,36 @@ public class JDBCJournalRecord
       txCheckNoRecords = 0;
    }
 
-   public static String createTableSQL(String tableName)
-   {
-      return "CREATE TABLE " + tableName + "(id BIGINT, "
-                                         + "recordType SMALLINT, "
-                                         + "compactCount SMALLINT, "
-                                         + "txId BIGINT, "
-                                         + "userRecordType SMALLINT, "
-                                         + "variableSize INTEGER, "
-                                         + "record BLOB, "
-                                         + "txDataSize INTEGER, "
-                                         + "txData BLOB, "
-                                         + "txCheckNoRecords INTEGER)";
+   public static String createTableSQL(String tableName) {
+      return "CREATE TABLE " + tableName + "(id BIGINT, " + "recordType SMALLINT, " + "compactCount SMALLINT, " + "txId BIGINT, " + "userRecordType SMALLINT, " + "variableSize INTEGER, " + "record BLOB, " + "txDataSize INTEGER, " + "txData BLOB, " + "txCheckNoRecords INTEGER)";
    }
 
-   public static String insertRecordsSQL(String tableName)
-   {
-      return "INSERT INTO " + tableName + "(id,"
-                                         + "recordType,"
-                                         + "compactCount,"
-                                         + "txId,"
-                                         + "userRecordType,"
-                                         + "variableSize,"
-                                         + "record,"
-                                         + "txDataSize,"
-                                         + "txData,"
-                                         + "txCheckNoRecords) "
-                                         + "VALUES (?,?,?,?,?,?,?,?,?,?)";
+   public static String insertRecordsSQL(String tableName) {
+      return "INSERT INTO " + tableName + "(id," + "recordType," + "compactCount," + "txId," + "userRecordType," + "variableSize," + "record," + "txDataSize," + "txData," + "txCheckNoRecords) " + "VALUES (?,?,?,?,?,?,?,?,?,?)";
    }
 
-   public static String selectRecordsSQL(String tableName)
-   {
-      return "SELECT id,"
-                   + "recordType,"
-                   + "compactCount,"
-                   + "txId,"
-                   + "userRecordType,"
-                   + "variableSize,"
-                   + "record,"
-                   + "txDataSize,"
-                   + "txData,"
-                   + "txCheckNoRecords "
-                   + "FROM " + tableName;
+   public static String selectRecordsSQL(String tableName) {
+      return "SELECT id," + "recordType," + "compactCount," + "txId," + "userRecordType," + "variableSize," + "record," + "txDataSize," + "txData," + "txCheckNoRecords " + "FROM " + tableName;
    }
 
-   public void complete(boolean success)
-   {
-      if (ioCompletion != null)
-      {
-         if (success)
-         {
+   public void complete(boolean success) {
+      if (ioCompletion != null) {
+         if (success) {
             ioCompletion.done();
          }
-         else
-         {
+         else {
             ioCompletion.onError(1, "DATABASE INSERT FAILED");
          }
       }
    }
 
-   public void storeLineUp()
-   {
-      if (storeLineUp && ioCompletion != null)
-      {
+   public void storeLineUp() {
+      if (storeLineUp && ioCompletion != null) {
          ioCompletion.storeLineUp();
       }
    }
 
-   public void writeRecord(PreparedStatement statement) throws SQLException
-   {
+   public void writeRecord(PreparedStatement statement) throws SQLException {
       statement.setLong(1, id);
       statement.setByte(2, recordType);
       statement.setByte(3, compactCount);
@@ -185,8 +144,7 @@ public class JDBCJournalRecord
       statement.addBatch();
    }
 
-   public static JDBCJournalRecord readRecord(ResultSet rs) throws SQLException
-   {
+   public static JDBCJournalRecord readRecord(ResultSet rs) throws SQLException {
       JDBCJournalRecord record = new JDBCJournalRecord(rs.getLong(1), (byte) rs.getShort(2));
       record.setCompactCount((byte) rs.getShort(3));
       record.setTxId(rs.getLong(4));
@@ -199,99 +157,80 @@ public class JDBCJournalRecord
       return record;
    }
 
-   public IOCompletion getIoCompletion()
-   {
+   public IOCompletion getIoCompletion() {
       return ioCompletion;
    }
 
-   public void setIoCompletion(IOCompletion ioCompletion)
-   {
+   public void setIoCompletion(IOCompletion ioCompletion) {
       this.ioCompletion = ioCompletion;
    }
 
-   public boolean isStoreLineUp()
-   {
+   public boolean isStoreLineUp() {
       return storeLineUp;
    }
 
-   public void setStoreLineUp(boolean storeLineUp)
-   {
+   public void setStoreLineUp(boolean storeLineUp) {
       this.storeLineUp = storeLineUp;
    }
 
-   public boolean isSync()
-   {
+   public boolean isSync() {
       return sync;
    }
 
-   public void setSync(boolean sync)
-   {
+   public void setSync(boolean sync) {
       this.sync = sync;
    }
 
-   public Long getId()
-   {
+   public Long getId() {
       return id;
    }
 
-   public byte getRecordType()
-   {
+   public byte getRecordType() {
       return recordType;
    }
 
-   public byte getCompactCount()
-   {
+   public byte getCompactCount() {
       return compactCount;
    }
 
-   public void setCompactCount(byte compactCount)
-   {
+   public void setCompactCount(byte compactCount) {
       this.compactCount = compactCount;
    }
 
-   public long getTxId()
-   {
+   public long getTxId() {
       return txId;
    }
 
-   public void setTxId(long txId)
-   {
+   public void setTxId(long txId) {
       this.txId = txId;
    }
 
-   public int getVariableSize()
-   {
+   public int getVariableSize() {
       return variableSize;
    }
 
-   public void setVariableSize(int variableSize)
-   {
+   public void setVariableSize(int variableSize) {
       this.variableSize = variableSize;
    }
 
-   public byte getUserRecordType()
-   {
+   public byte getUserRecordType() {
       return userRecordType;
    }
 
-   public void setUserRecordType(byte userRecordType)
-   {
+   public void setUserRecordType(byte userRecordType) {
       this.userRecordType = userRecordType;
    }
 
-   public void setRecord(byte[] record)
-   {
+   public void setRecord(byte[] record) {
       this.variableSize = record.length;
       this.record = new ByteArrayInputStream(record);
    }
 
-   public void setRecord(InputStream record)
-   {
+   public void setRecord(InputStream record) {
       this.record = record;
    }
 
-   public void setRecord(EncodingSupport record)
-   {
+   public void setRecord(EncodingSupport record) {
       this.variableSize = record.getEncodeSize();
 
       ActiveMQBuffer encodedBuffer = ActiveMQBuffers.fixedBuffer(variableSize);
@@ -299,43 +238,35 @@ public class JDBCJournalRecord
       this.record = new ActiveMQBufferInputStream(encodedBuffer);
    }
 
-   public InputStream getRecord()
-   {
+   public InputStream getRecord() {
       return record;
    }
 
-   public int getTxCheckNoRecords()
-   {
+   public int getTxCheckNoRecords() {
       return txCheckNoRecords;
    }
 
-   public void setTxCheckNoRecords(int txCheckNoRecords)
-   {
+   public void setTxCheckNoRecords(int txCheckNoRecords) {
       this.txCheckNoRecords = txCheckNoRecords;
    }
 
-   public void setTxDataSize(int txDataSize)
-   {
+   public void setTxDataSize(int txDataSize) {
       this.txDataSize = txDataSize;
    }
 
-   public int getTxDataSize()
-   {
+   public int getTxDataSize() {
       return txDataSize;
    }
 
-   public InputStream getTxData()
-   {
+   public InputStream getTxData() {
       return txData;
    }
 
-   public void setTxData(InputStream record)
-   {
+   public void setTxData(InputStream record) {
       this.record = record;
    }
 
-   public void setTxData(EncodingSupport txData)
-   {
+   public void setTxData(EncodingSupport txData) {
       this.txDataSize = txData.getEncodeSize();
 
       ActiveMQBuffer encodedBuffer = ActiveMQBuffers.fixedBuffer(variableSize);
@@ -343,33 +274,28 @@ public class JDBCJournalRecord
       this.txData = new ActiveMQBufferInputStream(encodedBuffer);
    }
 
-   public void setTxData(byte[] txData)
-   {
+   public void setTxData(byte[] txData) {
       this.txDataSize = txData.length;
       this.txData = new ByteArrayInputStream(txData);
    }
 
-   public boolean isUpdate()
-   {
+   public boolean isUpdate() {
       return isUpdate;
    }
 
-   public byte[] getRecordData() throws IOException
-   {
+   public byte[] getRecordData() throws IOException {
       byte[] data = new byte[variableSize];
       record.read(data);
       return data;
    }
 
-   public byte[] getTxDataAsByteArray() throws IOException
-   {
+   public byte[] getTxDataAsByteArray() throws IOException {
       byte[] data = new byte[txDataSize];
       txData.read(data);
       return data;
    }
 
-   public RecordInfo toRecordInfo() throws IOException
-   {
+   public RecordInfo toRecordInfo() throws IOException {
       return new RecordInfo(getId(), getUserRecordType(), getRecordData(), isUpdate(), getCompactCount());
    }
 }

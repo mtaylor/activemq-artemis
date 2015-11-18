@@ -19,44 +19,38 @@ package org.apache.activemq.artemis.core.persistence.impl.journal.codec;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 
-public class DeliveryCountUpdateEncoding implements EncodingSupport
-{
+public class DeliveryCountUpdateEncoding implements EncodingSupport {
+
    public long queueID;
 
    public int count;
 
-   public DeliveryCountUpdateEncoding()
-   {
+   public DeliveryCountUpdateEncoding() {
       super();
    }
 
-   public DeliveryCountUpdateEncoding(final long queueID, final int count)
-   {
+   public DeliveryCountUpdateEncoding(final long queueID, final int count) {
       super();
       this.queueID = queueID;
       this.count = count;
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       queueID = buffer.readLong();
       count = buffer.readInt();
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeLong(queueID);
       buffer.writeInt(count);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return 8 + 4;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "DeliveryCountUpdateEncoding [queueID=" + queueID + ", count=" + count + "]";
    }
 

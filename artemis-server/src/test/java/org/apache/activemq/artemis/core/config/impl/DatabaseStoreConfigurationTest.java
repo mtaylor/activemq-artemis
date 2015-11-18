@@ -16,23 +16,16 @@
  */
 package org.apache.activemq.artemis.core.config.impl;
 
-import java.util.List;
-
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.FileDeploymentManager;
-import org.apache.activemq.artemis.core.server.cluster.ha.HAPolicy;
-import org.apache.activemq.artemis.core.server.cluster.ha.LiveOnlyPolicy;
-import org.apache.activemq.artemis.core.server.cluster.ha.ScaleDownPolicy;
-import org.apache.activemq.artemis.core.server.impl.Activation;
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl;
-import org.apache.activemq.artemis.core.server.impl.LiveOnlyActivation;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.junit.Test;
 
 public class DatabaseStoreConfigurationTest extends ActiveMQTestBase {
 
    @Test
-   public void liveOnlyTest() throws Exception {
+   public void databaseStoreConfigTest() throws Exception {
       Configuration configuration = createConfiguration("database-store-config.xml");
       ActiveMQServerImpl server = new ActiveMQServerImpl(configuration);
       try {

@@ -16,15 +16,13 @@
  */
 package org.apache.activemq.artemis.core.persistence.impl.journal.codec;
 
-public class RefEncoding extends QueueEncoding
-{
-   public RefEncoding()
-   {
+public class RefEncoding extends QueueEncoding {
+
+   public RefEncoding() {
       super();
    }
 
-   public RefEncoding(final long queueID)
-   {
+   public RefEncoding(final long queueID) {
       super(queueID);
    }
 }

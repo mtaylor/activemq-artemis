@@ -34,10 +34,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.activemq.artemis.core.security.Role;
-import org.apache.activemq.artemis.core.server.SecuritySettingPlugin;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
+import org.apache.activemq.artemis.core.server.SecuritySettingPlugin;
 
 public class LegacyLDAPSecuritySettingPlugin implements SecuritySettingPlugin {
+
    private static final long serialVersionUID = 4793109879399750045L;
 
    public static final String INITIAL_CONTEXT_FACTORY = "initialContextFactory";
@@ -295,14 +296,7 @@ public class LegacyLDAPSecuritySettingPlugin implements SecuritySettingPlugin {
                Rdn rdn = ldapname.getRdn(ldapname.size() - 1);
                String roleName = rdn.getValue().toString();
                ActiveMQServerLogger.LOGGER.debug("\tRole name: " + roleName);
-               Role role = new Role(roleName,
-                                    permissionType.equalsIgnoreCase(writePermissionValue),
-                                    permissionType.equalsIgnoreCase(readPermissionValue),
-                                    permissionType.equalsIgnoreCase(adminPermissionValue),
-                                    permissionType.equalsIgnoreCase(adminPermissionValue),
-                                    permissionType.equalsIgnoreCase(adminPermissionValue),
-                                    permissionType.equalsIgnoreCase(adminPermissionValue),
-                                    false); // there is no permission from ActiveMQ 5.x that corresponds to the "manage" permission in ActiveMQ Artemis
+               Role role = new Role(roleName, permissionType.equalsIgnoreCase(writePermissionValue), permissionType.equalsIgnoreCase(readPermissionValue), permissionType.equalsIgnoreCase(adminPermissionValue), permissionType.equalsIgnoreCase(adminPermissionValue), permissionType.equalsIgnoreCase(adminPermissionValue), permissionType.equalsIgnoreCase(adminPermissionValue), false); // there is no permission from ActiveMQ 5.x that corresponds to the "manage" permission in ActiveMQ Artemis
                roles.add(role);
             }
 

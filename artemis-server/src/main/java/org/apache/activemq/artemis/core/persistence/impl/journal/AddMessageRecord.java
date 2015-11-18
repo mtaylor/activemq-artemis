@@ -24,7 +24,6 @@ public final class AddMessageRecord {
       this.message = message;
    }
 
-
    final ServerMessage message;
 
    // mtaylor (Added to compile)
@@ -44,6 +43,5 @@ public final class AddMessageRecord {
    public int getDeliveryCount() {
       return deliveryCount;
    }
-
 
 }

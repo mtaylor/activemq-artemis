@@ -20,31 +20,26 @@ package org.apache.activemq.artemis.tests.integration.jdbc.store.journal;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 
-public class FakeEncodingSupportImpl implements EncodingSupport
-{
+public class FakeEncodingSupportImpl implements EncodingSupport {
 
    private byte[] data;
 
-   public FakeEncodingSupportImpl(byte[] data)
-   {
+   public FakeEncodingSupportImpl(byte[] data) {
       this.data = data;
    }
 
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return data.length;
    }
 
    @Override
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeBytes(data);
    }
 
    @Override
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       data = new byte[buffer.readableBytes()];
       buffer.readBytes(data);
    }

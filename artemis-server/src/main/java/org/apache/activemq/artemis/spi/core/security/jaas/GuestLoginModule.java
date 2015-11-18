@@ -36,7 +36,6 @@ import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
  *
  * Useful for unauthenticated communication channels being used in the
  * same broker as authenticated ones.
- *
  */
 public class GuestLoginModule implements LoginModule {
 

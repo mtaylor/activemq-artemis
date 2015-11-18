@@ -18,18 +18,16 @@ package org.apache.activemq.artemis.core.persistence.impl.journal;
 
 import org.apache.activemq.artemis.core.persistence.impl.journal.codec.RefEncoding;
 
-public final class AckDescribe
-{
+public final class AckDescribe {
+
    public RefEncoding refEncoding;
 
-   public AckDescribe(RefEncoding refEncoding)
-   {
+   public AckDescribe(RefEncoding refEncoding) {
       this.refEncoding = refEncoding;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "ACK;" + refEncoding;
    }
 

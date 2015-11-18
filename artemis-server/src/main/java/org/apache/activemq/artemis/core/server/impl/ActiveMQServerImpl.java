@@ -711,7 +711,6 @@ public class ActiveMQServerImpl implements ActiveMQServer {
          }
       }
 
-
       pagingManager = null;
       securityStore = null;
       resourceManager = null;
@@ -987,7 +986,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       if (securityStore != null) {
          X509Certificate[] certificates = null;
          if (connection.getTransportConnection() instanceof NettyConnection) {
-            certificates = CertificateUtil.getCertsFromChannel(((NettyConnection)connection.getTransportConnection()).getChannel());
+            certificates = CertificateUtil.getCertsFromChannel(((NettyConnection) connection.getTransportConnection()).getChannel());
          }
          securityStore.authenticate(username, password, certificates);
       }
@@ -1939,10 +1938,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
     * move any older data away and log a warning about it.
     */
    void moveServerData() {
-      File[] dataDirs = new File[]{configuration.getBindingsLocation(),
-                                   configuration.getJournalLocation(),
-                                   configuration.getPagingLocation(),
-                                   configuration.getLargeMessagesLocation()};
+      File[] dataDirs = new File[]{configuration.getBindingsLocation(), configuration.getJournalLocation(), configuration.getPagingLocation(), configuration.getLargeMessagesLocation()};
 
       boolean allEmpty = true;
       int lowestSuffixForMovedData = 1;

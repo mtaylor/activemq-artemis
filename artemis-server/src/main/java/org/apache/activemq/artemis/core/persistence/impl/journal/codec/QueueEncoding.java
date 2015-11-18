@@ -19,39 +19,33 @@ package org.apache.activemq.artemis.core.persistence.impl.journal.codec;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 
-public class QueueEncoding implements EncodingSupport
-{
+public class QueueEncoding implements EncodingSupport {
+
    public long queueID;
 
-   public QueueEncoding(final long queueID)
-   {
+   public QueueEncoding(final long queueID) {
       super();
       this.queueID = queueID;
    }
 
-   public QueueEncoding()
-   {
+   public QueueEncoding() {
       super();
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       queueID = buffer.readLong();
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeLong(queueID);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return 8;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "QueueEncoding [queueID=" + queueID + "]";
    }
 

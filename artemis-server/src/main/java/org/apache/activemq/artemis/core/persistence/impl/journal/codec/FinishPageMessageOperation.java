@@ -29,31 +29,26 @@ import org.apache.activemq.artemis.core.transaction.TransactionPropertyIndexes;
  * {@link FinishPageMessageOperation}
  */
 // TODO: merge this class with the one on the PagingStoreImpl
-public class FinishPageMessageOperation extends TransactionOperationAbstract implements TransactionOperation
-{
+public class FinishPageMessageOperation extends TransactionOperationAbstract implements TransactionOperation {
 
    @Override
-   public void afterCommit(final Transaction tx)
-   {
+   public void afterCommit(final Transaction tx) {
       // If part of the transaction goes to the queue, and part goes to paging, we can't let depage start for the
       // transaction until all the messages were added to the queue
       // or else we could deliver the messages out of order
 
       PageTransactionInfo pageTransaction = (PageTransactionInfo) tx.getProperty(TransactionPropertyIndexes.PAGE_TRANSACTION);
 
-      if (pageTransaction != null)
-      {
+      if (pageTransaction != null) {
          pageTransaction.commit();
       }
    }
 
    @Override
-   public void afterRollback(final Transaction tx)
-   {
+   public void afterRollback(final Transaction tx) {
       PageTransactionInfo pageTransaction = (PageTransactionInfo) tx.getProperty(TransactionPropertyIndexes.PAGE_TRANSACTION);
 
-      if (tx.getState() == Transaction.State.PREPARED && pageTransaction != null)
-      {
+      if (tx.getState() == Transaction.State.PREPARED && pageTransaction != null) {
          pageTransaction.rollback();
       }
    }

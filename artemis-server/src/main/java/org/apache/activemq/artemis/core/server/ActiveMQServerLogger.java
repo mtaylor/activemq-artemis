@@ -1007,7 +1007,7 @@ public interface ActiveMQServerLogger extends BasicLogger {
 
    @LogMessage(level = Logger.Level.WARN)
    @Message(id = 222168, value = "The ''" + TransportConstants.PROTOCOL_PROP_NAME + "'' property is deprecated. If you want this Acceptor to support multiple protocols, use the ''" + TransportConstants.PROTOCOLS_PROP_NAME + "'' property, e.g. with value ''CORE,AMQP,STOMP''",
-            format = Message.Format.MESSAGE_FORMAT)
+      format = Message.Format.MESSAGE_FORMAT)
    void warnDeprecatedProtocol();
 
    @LogMessage(level = Logger.Level.WARN)

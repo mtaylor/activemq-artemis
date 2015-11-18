@@ -19,57 +19,45 @@ package org.apache.activemq.artemis.core.persistence.impl.journal;
 import org.apache.activemq.artemis.core.io.IOCallback;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
 
-final class DummyOperationContext implements OperationContext
-{
+final class DummyOperationContext implements OperationContext {
 
    private static DummyOperationContext instance = new DummyOperationContext();
 
-   public static OperationContext getInstance()
-   {
+   public static OperationContext getInstance() {
       return DummyOperationContext.instance;
    }
 
-   public void executeOnCompletion(final IOCallback runnable)
-   {
+   public void executeOnCompletion(final IOCallback runnable) {
       // There are no executeOnCompletion calls while using the DummyOperationContext
       // However we keep the code here for correctness
       runnable.done();
    }
 
-   public void replicationDone()
-   {
+   public void replicationDone() {
    }
 
-   public void replicationLineUp()
-   {
+   public void replicationLineUp() {
    }
 
-   public void storeLineUp()
-   {
+   public void storeLineUp() {
    }
 
-   public void done()
-   {
+   public void done() {
    }
 
-   public void onError(final int errorCode, final String errorMessage)
-   {
+   public void onError(final int errorCode, final String errorMessage) {
    }
 
-   public void waitCompletion()
-   {
+   public void waitCompletion() {
    }
 
-   public boolean waitCompletion(final long timeout)
-   {
+   public boolean waitCompletion(final long timeout) {
       return true;
    }
 
-   public void pageSyncLineUp()
-   {
+   public void pageSyncLineUp() {
    }
 
-   public void pageSyncDone()
-   {
+   public void pageSyncDone() {
    }
 }

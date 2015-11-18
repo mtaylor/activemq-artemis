@@ -26,32 +26,27 @@ import org.apache.activemq.artemis.utils.XidCodecSupport;
 /**
  * It's public as other classes may want to unparse data on tools
  */
-public class XidEncoding implements EncodingSupport
-{
+public class XidEncoding implements EncodingSupport {
+
    public final Xid xid;
 
-   public XidEncoding(final Xid xid)
-   {
+   public XidEncoding(final Xid xid) {
       this.xid = xid;
    }
 
-   public XidEncoding(final byte[] data)
-   {
+   public XidEncoding(final byte[] data) {
       xid = XidCodecSupport.decodeXid(ActiveMQBuffers.wrappedBuffer(data));
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       throw new IllegalStateException("Non Supported Operation");
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       XidCodecSupport.encodeXid(xid, buffer);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return XidCodecSupport.getXidEncodeLength(xid);
    }
 }

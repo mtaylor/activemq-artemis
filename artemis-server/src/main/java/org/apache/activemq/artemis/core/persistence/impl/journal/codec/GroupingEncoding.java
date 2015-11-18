@@ -21,65 +21,55 @@ import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 
-public class GroupingEncoding implements EncodingSupport, GroupingInfo
-{
+public class GroupingEncoding implements EncodingSupport, GroupingInfo {
+
    public long id;
 
    public SimpleString groupId;
 
    public SimpleString clusterName;
 
-   public GroupingEncoding(final long id, final SimpleString groupId, final SimpleString clusterName)
-   {
+   public GroupingEncoding(final long id, final SimpleString groupId, final SimpleString clusterName) {
       this.id = id;
       this.groupId = groupId;
       this.clusterName = clusterName;
    }
 
-   public GroupingEncoding()
-   {
+   public GroupingEncoding() {
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return SimpleString.sizeofString(groupId) + SimpleString.sizeofString(clusterName);
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeSimpleString(groupId);
       buffer.writeSimpleString(clusterName);
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       groupId = buffer.readSimpleString();
       clusterName = buffer.readSimpleString();
    }
 
-   public long getId()
-   {
+   public long getId() {
       return id;
    }
 
-   public void setId(final long id)
-   {
+   public void setId(final long id) {
       this.id = id;
    }
 
-   public SimpleString getGroupId()
-   {
+   public SimpleString getGroupId() {
       return groupId;
    }
 
-   public SimpleString getClusterName()
-   {
+   public SimpleString getClusterName() {
       return clusterName;
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "GroupingEncoding [id=" + id + ", groupId=" + groupId + ", clusterName=" + clusterName + "]";
    }
 }

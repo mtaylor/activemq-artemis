@@ -22,22 +22,19 @@ import org.apache.activemq.artemis.core.paging.cursor.PagePosition;
 import org.apache.activemq.artemis.core.paging.cursor.impl.PagePositionImpl;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class CursorAckRecordEncoding implements EncodingSupport
-{
-   public CursorAckRecordEncoding(final long queueID, final PagePosition position)
-   {
+public class CursorAckRecordEncoding implements EncodingSupport {
+
+   public CursorAckRecordEncoding(final long queueID, final PagePosition position) {
       this.queueID = queueID;
       this.position = position;
    }
 
-   public CursorAckRecordEncoding()
-   {
+   public CursorAckRecordEncoding() {
       this.position = new PagePositionImpl();
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "CursorAckRecordEncoding [queueID=" + queueID + ", position=" + position + "]";
    }
 
@@ -45,20 +42,17 @@ public class CursorAckRecordEncoding implements EncodingSupport
 
    public PagePosition position;
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_LONG + DataConstants.SIZE_LONG + DataConstants.SIZE_INT;
    }
 
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeLong(queueID);
       buffer.writeLong(position.getPageNr());
       buffer.writeInt(position.getMessageNr());
    }
 
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       queueID = buffer.readLong();
       long pageNR = buffer.readLong();
       int messageNR = buffer.readInt();

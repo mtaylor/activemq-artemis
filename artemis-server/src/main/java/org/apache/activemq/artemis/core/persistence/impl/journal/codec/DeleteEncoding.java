@@ -20,14 +20,13 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class DeleteEncoding implements EncodingSupport
-{
+public class DeleteEncoding implements EncodingSupport {
+
    public byte recordType;
 
    public long id;
 
-   public DeleteEncoding(final byte recordType, final long id)
-   {
+   public DeleteEncoding(final byte recordType, final long id) {
       this.recordType = recordType;
       this.id = id;
    }
@@ -36,8 +35,7 @@ public class DeleteEncoding implements EncodingSupport
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#getEncodeSize()
     */
    @Override
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return DataConstants.SIZE_BYTE + DataConstants.SIZE_LONG;
    }
 
@@ -45,8 +43,7 @@ public class DeleteEncoding implements EncodingSupport
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#encode(org.apache.activemq.artemis.api.core.ActiveMQBuffer)
     */
    @Override
-   public void encode(ActiveMQBuffer buffer)
-   {
+   public void encode(ActiveMQBuffer buffer) {
       buffer.writeByte(recordType);
       buffer.writeLong(id);
    }
@@ -55,8 +52,7 @@ public class DeleteEncoding implements EncodingSupport
     * @see org.apache.activemq.artemis.core.journal.EncodingSupport#decode(org.apache.activemq.artemis.api.core.ActiveMQBuffer)
     */
    @Override
-   public void decode(ActiveMQBuffer buffer)
-   {
+   public void decode(ActiveMQBuffer buffer) {
       recordType = buffer.readByte();
       id = buffer.readLong();
    }

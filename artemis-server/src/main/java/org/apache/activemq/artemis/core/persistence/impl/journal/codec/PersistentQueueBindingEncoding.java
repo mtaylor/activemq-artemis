@@ -22,8 +22,8 @@ import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.persistence.QueueBindingInfo;
 import org.apache.activemq.artemis.utils.DataConstants;
 
-public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBindingInfo
-{
+public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBindingInfo {
+
    public long id;
 
    public SimpleString name;
@@ -36,13 +36,11 @@ public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBin
 
    public SimpleString user;
 
-   public PersistentQueueBindingEncoding()
-   {
+   public PersistentQueueBindingEncoding() {
    }
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "PersistentQueueBindingEncoding [id=" + id +
          ", name=" +
          name +
@@ -61,8 +59,7 @@ public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBin
                                          final SimpleString address,
                                          final SimpleString filterString,
                                          final SimpleString user,
-                                         final boolean autoCreated)
-   {
+                                         final boolean autoCreated) {
       this.name = name;
       this.address = address;
       this.filterString = filterString;
@@ -70,63 +67,50 @@ public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBin
       this.autoCreated = autoCreated;
    }
 
-   public long getId()
-   {
+   public long getId() {
       return id;
    }
 
-   public void setId(final long id)
-   {
+   public void setId(final long id) {
       this.id = id;
    }
 
-   public SimpleString getAddress()
-   {
+   public SimpleString getAddress() {
       return address;
    }
 
-   public void replaceQueueName(SimpleString newName)
-   {
+   public void replaceQueueName(SimpleString newName) {
       this.name = newName;
    }
 
-   public SimpleString getFilterString()
-   {
+   public SimpleString getFilterString() {
       return filterString;
    }
 
-   public SimpleString getQueueName()
-   {
+   public SimpleString getQueueName() {
       return name;
    }
 
-   public SimpleString getUser()
-   {
+   public SimpleString getUser() {
       return user;
    }
 
-   public boolean isAutoCreated()
-   {
+   public boolean isAutoCreated() {
       return autoCreated;
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       name = buffer.readSimpleString();
       address = buffer.readSimpleString();
       filterString = buffer.readNullableSimpleString();
 
       String metadata = buffer.readNullableSimpleString().toString();
-      if (metadata != null)
-      {
+      if (metadata != null) {
          String[] elements = metadata.split(";");
-         for (String element : elements)
-         {
+         for (String element : elements) {
             String[] keyValuePair = element.split("=");
-            if (keyValuePair.length == 2)
-            {
-               if (keyValuePair[0].equals("user"))
-               {
+            if (keyValuePair.length == 2) {
+               if (keyValuePair[0].equals("user")) {
                   user = SimpleString.toSimpleString(keyValuePair[1]);
                }
             }
@@ -136,8 +120,7 @@ public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBin
       autoCreated = buffer.readBoolean();
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       buffer.writeSimpleString(name);
       buffer.writeSimpleString(address);
       buffer.writeNullableSimpleString(filterString);
@@ -145,15 +128,13 @@ public class PersistentQueueBindingEncoding implements EncodingSupport, QueueBin
       buffer.writeBoolean(autoCreated);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return SimpleString.sizeofString(name) + SimpleString.sizeofString(address) +
          SimpleString.sizeofNullableString(filterString) + DataConstants.SIZE_BOOLEAN +
          SimpleString.sizeofNullableString(createMetadata());
    }
 
-   private SimpleString createMetadata()
-   {
+   private SimpleString createMetadata() {
       StringBuilder metadata = new StringBuilder();
       metadata.append("user=").append(user).append(";");
       return SimpleString.toSimpleString(metadata.toString());

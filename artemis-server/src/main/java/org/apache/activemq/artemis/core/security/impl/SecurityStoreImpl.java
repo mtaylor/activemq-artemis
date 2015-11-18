@@ -125,7 +125,7 @@ public class SecurityStoreImpl implements SecurityStore, HierarchicalRepositoryC
          boolean userIsValid = false;
 
          if (securityManager instanceof ActiveMQSecurityManager2) {
-            userIsValid = ((ActiveMQSecurityManager2)securityManager).validateUser(user, password, certificates);
+            userIsValid = ((ActiveMQSecurityManager2) securityManager).validateUser(user, password, certificates);
          }
          else {
             userIsValid = securityManager.validateUser(user, password);

@@ -23,42 +23,36 @@ import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.utils.DataConstants;
 import org.apache.activemq.artemis.utils.XidCodecSupport;
 
-public class HeuristicCompletionEncoding implements EncodingSupport
-{
+public class HeuristicCompletionEncoding implements EncodingSupport {
+
    public Xid xid;
 
    public boolean isCommit;
 
    @Override
-   public String toString()
-   {
+   public String toString() {
       return "HeuristicCompletionEncoding [xid=" + xid + ", isCommit=" + isCommit + "]";
    }
 
-   public HeuristicCompletionEncoding(final Xid xid, final boolean isCommit)
-   {
+   public HeuristicCompletionEncoding(final Xid xid, final boolean isCommit) {
       this.xid = xid;
       this.isCommit = isCommit;
    }
 
-   public HeuristicCompletionEncoding()
-   {
+   public HeuristicCompletionEncoding() {
    }
 
-   public void decode(final ActiveMQBuffer buffer)
-   {
+   public void decode(final ActiveMQBuffer buffer) {
       xid = XidCodecSupport.decodeXid(buffer);
       isCommit = buffer.readBoolean();
    }
 
-   public void encode(final ActiveMQBuffer buffer)
-   {
+   public void encode(final ActiveMQBuffer buffer) {
       XidCodecSupport.encodeXid(xid, buffer);
       buffer.writeBoolean(isCommit);
    }
 
-   public int getEncodeSize()
-   {
+   public int getEncodeSize() {
       return XidCodecSupport.getXidEncodeLength(xid) + DataConstants.SIZE_BOOLEAN;
    }
 }

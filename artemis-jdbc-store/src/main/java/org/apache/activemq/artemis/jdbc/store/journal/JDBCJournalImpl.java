@@ -45,8 +45,8 @@ import org.apache.activemq.artemis.core.journal.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 
-public class JDBCJournalImpl implements Journal
-{
+public class JDBCJournalImpl implements Journal {
+
    // Sync Delay in ms
    public static final int SYNC_DELAY = 500;
 
@@ -78,8 +78,7 @@ public class JDBCJournalImpl implements Journal
 
    private final ReadWriteLock journalLock = new ReentrantReadWriteLock();
 
-   public JDBCJournalImpl(String jdbcUrl, Properties jdbcConnectionProperties, String tableName) throws SQLException
-   {
+   public JDBCJournalImpl(String jdbcUrl, Properties jdbcConnectionProperties, String tableName) throws SQLException {
       this.tableName = tableName;
       this.jdbcUrl = jdbcUrl;
       this.jdbcConnectionProperties = jdbcConnectionProperties;
@@ -88,24 +87,20 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void start() throws Exception
-   {
+   public void start() throws Exception {
       List<Driver> drivers = Collections.list(DriverManager.getDrivers());
-      if (drivers.size() == 1)
-      {
+      if (drivers.size() == 1) {
          dbDriver = drivers.get(0);
          connection = dbDriver.connect(jdbcUrl, jdbcConnectionProperties);
       }
-      else
-      {
+      else {
          String error = drivers.isEmpty() ? "No DB driver found on class path" : "Too many DB drivers on class path";
          throw new RuntimeException(error);
       }
 
       // If JOURNAL table doesn't exist then create it
       ResultSet rs = connection.getMetaData().getTables(null, null, tableName, null);
-      if (!rs.next())
-      {
+      if (!rs.next()) {
          Statement statement = connection.createStatement();
          String s = JDBCJournalRecord.createTableSQL(tableName);
          statement.executeUpdate(JDBCJournalRecord.createTableSQL(tableName));
@@ -122,39 +117,32 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public synchronized void stop() throws Exception
-   {
-      if (started)
-      {
+   public synchronized void stop() throws Exception {
+      if (started) {
          syncTimer.cancel();
          sync();
-         try
-         {
-            if (dbIsDerby())
-            {
+         try {
+            if (dbIsDerby()) {
                DriverManager.getConnection("jdbc:derby:;shutdown=true");
             }
          }
-         catch (SQLException e)
-         {
+         catch (SQLException e) {
             // Correct result from a derby shutdown is an exception with error code 50000
-            if (e.getErrorCode() != 50000) throw e;
+            if (e.getErrorCode() != 50000)
+               throw e;
          }
-         finally
-         {
+         finally {
             connection.close();
          }
          started = false;
       }
    }
 
-   private boolean dbIsDerby()
-   {
+   private boolean dbIsDerby() {
       return true;
    }
 
-   public void destroy() throws Exception
-   {
+   public void destroy() throws Exception {
       stop();
       connection.setAutoCommit(false);
       Statement statement = connection.createStatement();
@@ -162,27 +150,23 @@ public class JDBCJournalImpl implements Journal
       connection.commit();
    }
 
-   public int sync() throws SQLException
-   {
+   public int sync() throws SQLException {
       List<JDBCJournalRecord> recordRef = records;
       records = new ArrayList<JDBCJournalRecord>();
 
-      for (JDBCJournalRecord record : recordRef)
-      {
+      for (JDBCJournalRecord record : recordRef) {
          record.storeLineUp();
          record.writeRecord(insertJournalRecords);
       }
 
       boolean success = false;
-      try
-      {
+      try {
          connection.setAutoCommit(false);
          insertJournalRecords.executeBatch();
          connection.commit();
          success = true;
       }
-      catch (SQLException e)
-      {
+      catch (SQLException e) {
          connection.rollback();
          e.printStackTrace();
       }
@@ -191,15 +175,11 @@ public class JDBCJournalImpl implements Journal
    }
 
    // TODO Use an executor.
-   private void executeCallbacks(final List<JDBCJournalRecord> records, final boolean result)
-   {
-      Runnable r = new Runnable()
-      {
+   private void executeCallbacks(final List<JDBCJournalRecord> records, final boolean result) {
+      Runnable r = new Runnable() {
          @Override
-         public void run()
-         {
-            for (JDBCJournalRecord record : records)
-            {
+         public void run() {
+            for (JDBCJournalRecord record : records) {
                record.complete(result);
             }
          }
@@ -208,22 +188,18 @@ public class JDBCJournalImpl implements Journal
       t.start();
    }
 
-   private void appendRecord(JDBCJournalRecord record) throws SQLException
-   {
-      try
-      {
+   private void appendRecord(JDBCJournalRecord record) throws SQLException {
+      try {
          journalLock.writeLock().lock();
          records.add(record);
       }
-      finally
-      {
+      finally {
          journalLock.writeLock().unlock();
       }
    }
 
    @Override
-   public void appendAddRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception
-   {
+   public void appendAddRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -232,8 +208,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendAddRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception
-   {
+   public void appendAddRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -242,8 +217,11 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendAddRecord(long id, byte recordType, EncodingSupport record, boolean sync, IOCompletion completionCallback) throws Exception
-   {
+   public void appendAddRecord(long id,
+                               byte recordType,
+                               EncodingSupport record,
+                               boolean sync,
+                               IOCompletion completionCallback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -253,8 +231,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendUpdateRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception
-   {
+   public void appendUpdateRecord(long id, byte recordType, byte[] record, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -263,8 +240,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendUpdateRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception
-   {
+   public void appendUpdateRecord(long id, byte recordType, EncodingSupport record, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -273,8 +249,11 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendUpdateRecord(long id, byte recordType, EncodingSupport record, boolean sync, IOCompletion completionCallback) throws Exception
-   {
+   public void appendUpdateRecord(long id,
+                                  byte recordType,
+                                  EncodingSupport record,
+                                  boolean sync,
+                                  IOCompletion completionCallback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -284,16 +263,14 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendDeleteRecord(long id, boolean sync) throws Exception
-   {
+   public void appendDeleteRecord(long id, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD);
       r.setSync(sync);
       appendRecord(r);
    }
 
    @Override
-   public void appendDeleteRecord(long id, boolean sync, IOCompletion completionCallback) throws Exception
-   {
+   public void appendDeleteRecord(long id, boolean sync, IOCompletion completionCallback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD);
       r.setSync(sync);
       r.setIoCompletion(completionCallback);
@@ -301,8 +278,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendAddRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception
-   {
+   public void appendAddRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD_TX);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -311,8 +287,10 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendAddRecordTransactional(long txID, long id, byte recordType, EncodingSupport record) throws Exception
-   {
+   public void appendAddRecordTransactional(long txID,
+                                            long id,
+                                            byte recordType,
+                                            EncodingSupport record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.ADD_RECORD_TX);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -321,8 +299,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendUpdateRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception
-   {
+   public void appendUpdateRecordTransactional(long txID, long id, byte recordType, byte[] record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD_TX);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -331,8 +308,10 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendUpdateRecordTransactional(long txID, long id, byte recordType, EncodingSupport record) throws Exception
-   {
+   public void appendUpdateRecordTransactional(long txID,
+                                               long id,
+                                               byte recordType,
+                                               EncodingSupport record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.UPDATE_RECORD_TX);
       r.setUserRecordType(recordType);
       r.setRecord(record);
@@ -341,8 +320,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendDeleteRecordTransactional(long txID, long id, byte[] record) throws Exception
-   {
+   public void appendDeleteRecordTransactional(long txID, long id, byte[] record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
       r.setRecord(record);
       r.setTxId(txID);
@@ -350,8 +328,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendDeleteRecordTransactional(long txID, long id, EncodingSupport record) throws Exception
-   {
+   public void appendDeleteRecordTransactional(long txID, long id, EncodingSupport record) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
       r.setRecord(record);
       r.setTxId(txID);
@@ -359,24 +336,21 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendDeleteRecordTransactional(long txID, long id) throws Exception
-   {
+   public void appendDeleteRecordTransactional(long txID, long id) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(id, JDBCJournalRecord.DELETE_RECORD_TX);
       r.setTxId(txID);
       appendRecord(r);
    }
 
    @Override
-   public void appendCommitRecord(long txID, boolean sync) throws Exception
-   {
+   public void appendCommitRecord(long txID, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
       r.setTxId(txID);
       appendRecord(r);
    }
 
    @Override
-   public void appendCommitRecord(long txID, boolean sync, IOCompletion callback) throws Exception
-   {
+   public void appendCommitRecord(long txID, boolean sync, IOCompletion callback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
       r.setTxId(txID);
       r.setIoCompletion(callback);
@@ -384,8 +358,10 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendCommitRecord(long txID, boolean sync, IOCompletion callback, boolean lineUpContext) throws Exception
-   {
+   public void appendCommitRecord(long txID,
+                                  boolean sync,
+                                  IOCompletion callback,
+                                  boolean lineUpContext) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.COMMIT_RECORD);
       r.setTxId(txID);
       r.setStoreLineUp(lineUpContext);
@@ -394,8 +370,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync) throws Exception
-   {
+   public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
       r.setTxId(txID);
       r.setTxData(transactionData);
@@ -404,8 +379,10 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendPrepareRecord(long txID, EncodingSupport transactionData, boolean sync, IOCompletion callback) throws Exception
-   {
+   public void appendPrepareRecord(long txID,
+                                   EncodingSupport transactionData,
+                                   boolean sync,
+                                   IOCompletion callback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
       r.setTxId(txID);
       r.setTxData(transactionData);
@@ -415,8 +392,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendPrepareRecord(long txID, byte[] transactionData, boolean sync) throws Exception
-   {
+   public void appendPrepareRecord(long txID, byte[] transactionData, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
       r.setTxId(txID);
       r.setTxData(transactionData);
@@ -425,8 +401,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendRollbackRecord(long txID, boolean sync) throws Exception
-   {
+   public void appendRollbackRecord(long txID, boolean sync) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.ROLLBACK_RECORD);
       r.setTxId(txID);
       r.setSync(sync);
@@ -434,8 +409,7 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public void appendRollbackRecord(long txID, boolean sync, IOCompletion callback) throws Exception
-   {
+   public void appendRollbackRecord(long txID, boolean sync, IOCompletion callback) throws Exception {
       JDBCJournalRecord r = new JDBCJournalRecord(0, JDBCJournalRecord.PREPARE_RECORD);
       r.setTxId(txID);
       r.setSync(sync);
@@ -444,20 +418,16 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public JournalLoadInformation load(LoaderCallback reloadManager) throws Exception
-   {
+   public JournalLoadInformation load(LoaderCallback reloadManager) throws Exception {
       JournalLoadInformation jli = new JournalLoadInformation();
       JDBCJournalReaderCallback jrc = new JDBCJournalReaderCallback(reloadManager);
       JDBCJournalRecord r;
 
-      try (ResultSet rs = selectJournalRecords.executeQuery())
-      {
+      try (ResultSet rs = selectJournalRecords.executeQuery()) {
          int noRecords = 0;
-         while (rs.next())
-         {
+         while (rs.next()) {
             r = JDBCJournalRecord.readRecord(rs);
-            switch (r.getRecordType())
-            {
+            switch (r.getRecordType()) {
                case JDBCJournalRecord.ADD_RECORD:
                   jrc.onReadAddRecord(r.toRecordInfo());
                   break;
@@ -497,41 +467,37 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public JournalLoadInformation loadInternalOnly() throws Exception
-   {
+   public JournalLoadInformation loadInternalOnly() throws Exception {
       return null;
    }
 
    @Override
-   public JournalLoadInformation loadSyncOnly(JournalState state) throws Exception
-   {
+   public JournalLoadInformation loadSyncOnly(JournalState state) throws Exception {
       return null;
    }
 
    @Override
-   public void lineUpContext(IOCompletion callback)
-   {
+   public void lineUpContext(IOCompletion callback) {
       callback.storeLineUp();
    }
 
    @Override
-   public JournalLoadInformation load(List<RecordInfo> committedRecords, List<PreparedTransactionInfo> preparedTransactions, TransactionFailureCallback transactionFailure) throws Exception
-   {
+   public JournalLoadInformation load(List<RecordInfo> committedRecords,
+                                      List<PreparedTransactionInfo> preparedTransactions,
+                                      TransactionFailureCallback transactionFailure) throws Exception {
       return load(committedRecords, preparedTransactions, transactionFailure, true);
    }
 
    public synchronized JournalLoadInformation load(final List<RecordInfo> committedRecords,
                                                    final List<PreparedTransactionInfo> preparedTransactions,
                                                    final TransactionFailureCallback failureCallback,
-                                                   final boolean fixBadTX) throws Exception
-   {
+                                                   final boolean fixBadTX) throws Exception {
       JDBCJournalLoaderCallback lc = new JDBCJournalLoaderCallback(committedRecords, preparedTransactions, failureCallback, fixBadTX);
       return load(lc);
    }
 
    @Override
-   public int getAlignment() throws Exception
-   {
+   public int getAlignment() throws Exception {
       return 0;
    }
 
@@ -549,84 +515,70 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public int getUserVersion()
-   {
+   public int getUserVersion() {
       return USER_VERSION;
    }
 
    @Override
-   public void perfBlast(int pages)
-   {
+   public void perfBlast(int pages) {
 
    }
 
    @Override
-   public void runDirectJournalBlast() throws Exception
-   {
+   public void runDirectJournalBlast() throws Exception {
 
    }
 
    @Override
-   public Map<Long, JournalFile> createFilesForBackupSync(long[] fileIds) throws Exception
-   {
+   public Map<Long, JournalFile> createFilesForBackupSync(long[] fileIds) throws Exception {
       return null;
    }
 
-   public final void synchronizationLock()
-   {
+   public final void synchronizationLock() {
       journalLock.writeLock().lock();
    }
 
-   public final void synchronizationUnlock()
-   {
+   public final void synchronizationUnlock() {
       journalLock.writeLock().unlock();
    }
 
    @Override
-   public void forceMoveNextFile() throws Exception
-   {
+   public void forceMoveNextFile() throws Exception {
 
    }
 
    @Override
-   public JournalFile[] getDataFiles()
-   {
+   public JournalFile[] getDataFiles() {
       return new JournalFile[0];
    }
 
    @Override
-   public SequentialFileFactory getFileFactory()
-   {
+   public SequentialFileFactory getFileFactory() {
       return null;
    }
 
    @Override
-   public int getFileSize()
-   {
+   public int getFileSize() {
       return 0;
    }
 
    @Override
-   public void scheduleCompactAndBlock(int timeout) throws Exception
-   {
+   public void scheduleCompactAndBlock(int timeout) throws Exception {
 
    }
 
    @Override
-   public void replicationSyncPreserveOldFiles()
-   {
+   public void replicationSyncPreserveOldFiles() {
 
    }
 
    @Override
-   public void replicationSyncFinished()
-   {
+   public void replicationSyncFinished() {
 
    }
 
    @Override
-   public boolean isStarted()
-   {
+   public boolean isStarted() {
       return started;
    }
 

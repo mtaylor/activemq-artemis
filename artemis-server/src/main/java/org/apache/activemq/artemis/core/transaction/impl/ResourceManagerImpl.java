@@ -196,6 +196,7 @@ public class ResourceManagerImpl implements ResourceManager {
             }
          }
       }
+
       synchronized void setFuture(final Future<?> future) {
          this.future = future;
       }
@@ -209,7 +210,6 @@ public class ResourceManagerImpl implements ResourceManager {
       }
 
    }
-
 
    private static final class HeuristicCompletionHolder {
 

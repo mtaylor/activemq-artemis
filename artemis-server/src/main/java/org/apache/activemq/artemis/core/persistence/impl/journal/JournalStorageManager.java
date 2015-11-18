@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.activemq.artemis.core.persistence.impl.journal;
 
 import java.io.File;
@@ -81,78 +98,42 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
    @Override
    protected void init(Configuration config, IOCriticalErrorListener criticalErrorListener) {
 
-      if (config.getJournalType() != JournalType.NIO && config.getJournalType() != JournalType.ASYNCIO)
-      {
+      if (config.getJournalType() != JournalType.NIO && config.getJournalType() != JournalType.ASYNCIO) {
          throw ActiveMQMessageBundle.BUNDLE.invalidJournal();
       }
 
+      SequentialFileFactory bindingsFF = new NIOSequentialFileFactory(config.getBindingsLocation(), criticalErrorListener, config.getJournalMaxIO_NIO());
 
-      SequentialFileFactory bindingsFF = new NIOSequentialFileFactory(config.getBindingsLocation(),
-                                                                      criticalErrorListener,
-                                                                      config.getJournalMaxIO_NIO());
-
-      Journal localBindings = new JournalImpl(1024 * 1024,
-                                              2,
-                                              config.getJournalCompactMinFiles(),
-                                              config.getJournalCompactPercentage(),
-                                              bindingsFF,
-                                              "activemq-bindings",
-                                              "bindings",
-                                              1);
+      Journal localBindings = new JournalImpl(1024 * 1024, 2, config.getJournalCompactMinFiles(), config.getJournalCompactPercentage(), bindingsFF, "activemq-bindings", "bindings", 1);
       bindingsJournal = localBindings;
       originalBindingsJournal = localBindings;
 
-      if (config.getJournalType() == JournalType.ASYNCIO)
-      {
+      if (config.getJournalType() == JournalType.ASYNCIO) {
          ActiveMQServerLogger.LOGGER.journalUseAIO();
 
-         journalFF = new AIOSequentialFileFactory(config.getJournalLocation(),
-                                                  config.getJournalBufferSize_AIO(),
-                                                  config.getJournalBufferTimeout_AIO(),
-                                                  config.getJournalMaxIO_AIO(),
-                                                  config.isLogJournalWriteRate(),
-                                                  criticalErrorListener);
+         journalFF = new AIOSequentialFileFactory(config.getJournalLocation(), config.getJournalBufferSize_AIO(), config.getJournalBufferTimeout_AIO(), config.getJournalMaxIO_AIO(), config.isLogJournalWriteRate(), criticalErrorListener);
       }
-      else if (config.getJournalType() == JournalType.NIO)
-      {
+      else if (config.getJournalType() == JournalType.NIO) {
          ActiveMQServerLogger.LOGGER.journalUseNIO();
-         journalFF = new NIOSequentialFileFactory(config.getJournalLocation(),
-                                                  true,
-                                                  config.getJournalBufferSize_NIO(),
-                                                  config.getJournalBufferTimeout_NIO(),
-                                                  config.getJournalMaxIO_NIO(),
-                                                  config.isLogJournalWriteRate(),
-                                                  criticalErrorListener);
+         journalFF = new NIOSequentialFileFactory(config.getJournalLocation(), true, config.getJournalBufferSize_NIO(), config.getJournalBufferTimeout_NIO(), config.getJournalMaxIO_NIO(), config.isLogJournalWriteRate(), criticalErrorListener);
       }
-      else
-      {
+      else {
          throw ActiveMQMessageBundle.BUNDLE.invalidJournalType2(config.getJournalType());
       }
 
-      Journal localMessage = new JournalImpl(config.getJournalFileSize(),
-                                             config.getJournalMinFiles(),
-                                             config.getJournalCompactMinFiles(),
-                                             config.getJournalCompactPercentage(),
-                                             journalFF,
-                                             "activemq-data",
-                                             "amq",
-                                             config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO()
-                                                : config.getJournalMaxIO_NIO());
+      Journal localMessage = new JournalImpl(config.getJournalFileSize(), config.getJournalMinFiles(), config.getJournalCompactMinFiles(), config.getJournalCompactPercentage(), journalFF, "activemq-data", "amq", config.getJournalType() == JournalType.ASYNCIO ? config.getJournalMaxIO_AIO() : config.getJournalMaxIO_NIO());
       messageJournal = localMessage;
       originalMessageJournal = localMessage;
 
       largeMessagesDirectory = config.getLargeMessagesDirectory();
-      largeMessagesFactory = new NIOSequentialFileFactory(config.getLargeMessagesLocation(), false, criticalErrorListener,
-                                                          1);
+      largeMessagesFactory = new NIOSequentialFileFactory(config.getLargeMessagesLocation(), false, criticalErrorListener, 1);
 
       perfBlastPages = config.getJournalPerfBlastPages();
 
-      if (config.getPageMaxConcurrentIO() != 1)
-      {
+      if (config.getPageMaxConcurrentIO() != 1) {
          pageMaxConcurrentIO = new Semaphore(config.getPageMaxConcurrentIO());
       }
-      else
-      {
+      else {
          pageMaxConcurrentIO = null;
       }
       replicationHandler = new FileJournalReplicationHandler();
@@ -162,17 +143,13 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
     * Assumption is that this is only called with a writeLock on the StorageManager.
     */
    @Override
-   protected void performCachedLargeMessageDeletes()
-   {
-      for (Long largeMsgId : largeMessagesToDelete)
-      {
+   protected void performCachedLargeMessageDeletes() {
+      for (Long largeMsgId : largeMessagesToDelete) {
          SequentialFile msg = createFileForLargeMessage(largeMsgId, LargeMessageExtension.DURABLE);
-         try
-         {
+         try {
             msg.delete();
          }
-         catch (Exception e)
-         {
+         catch (Exception e) {
             ActiveMQServerLogger.LOGGER.journalErrorDeletingMessage(e, largeMsgId);
          }
          replicationHandler.largeMessageDelete(largeMsgId);
@@ -181,20 +158,17 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
    }
 
    @Override
-   public void pageClosed(final SimpleString storeName, final int pageNumber)
-   {
+   public void pageClosed(final SimpleString storeName, final int pageNumber) {
       replicationHandler.pageClosed(storeName, pageNumber);
    }
 
    @Override
-   public void pageDeleted(final SimpleString storeName, final int pageNumber)
-   {
+   public void pageDeleted(final SimpleString storeName, final int pageNumber) {
       replicationHandler.pageDeleted(storeName, pageNumber);
    }
 
    @Override
-   public void pageWrite(final PagedMessage message, final int pageNumber)
-   {
+   public void pageWrite(final PagedMessage message, final int pageNumber) {
       replicationHandler.pageWrite(message, pageNumber);
    }
 
@@ -208,38 +182,32 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
    }
 
    @Override
-   public void stopReplication()
-   {
+   public void stopReplication() {
       replicationHandler.stopReplication();
    }
 
    public void addBytesToLargeMessage(final SequentialFile file,
-                                      final long messageId, final byte[] bytes) throws Exception
-   {
+                                      final long messageId,
+                                      final byte[] bytes) throws Exception {
       readLock();
-      try
-      {
+      try {
          file.position(file.size());
          file.writeDirect(ByteBuffer.wrap(bytes), false);
          replicationHandler.largeMessageWrite(messageId, bytes);
       }
-      finally
-      {
+      finally {
          readUnLock();
       }
    }
 
    @Override
-   public LargeServerMessage createLargeMessage(final long id, final MessageInternal message) throws Exception
-   {
+   public LargeServerMessage createLargeMessage(final long id, final MessageInternal message) throws Exception {
       readLock();
-      try
-      {
+      try {
          replicationHandler.largeMessageBegin(id);
          return generateLargeMessageFromInteralMessage(id, message);
       }
-      finally
-      {
+      finally {
          readUnLock();
       }
    }
@@ -257,72 +225,55 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
    }
 
    @Override
-   public ByteBuffer allocateDirectBuffer(int size)
-   {
+   public ByteBuffer allocateDirectBuffer(int size) {
       return journalFF.allocateDirectBuffer(size);
    }
 
    @Override
-   public void freeDirectBuffer(ByteBuffer buffer)
-   {
+   public void freeDirectBuffer(ByteBuffer buffer) {
       journalFF.releaseBuffer(buffer);
    }
 
    // This should be accessed from this package only
-   void deleteLargeMessageFile(final LargeServerMessage largeServerMessage) throws ActiveMQException
-   {
-      if (largeServerMessage.getPendingRecordID() < 0)
-      {
-         try
-         {
+   void deleteLargeMessageFile(final LargeServerMessage largeServerMessage) throws ActiveMQException {
+      if (largeServerMessage.getPendingRecordID() < 0) {
+         try {
             // The delete file happens asynchronously
             // And the client won't be waiting for the actual file to be deleted.
             // We set a temporary record (short lived) on the journal
             // to avoid a situation where the server is restarted and pending large message stays on forever
             largeServerMessage.setPendingRecordID(storePendingLargeMessage(largeServerMessage.getMessageID()));
          }
-         catch (Exception e)
-         {
+         catch (Exception e) {
             throw new ActiveMQInternalErrorException(e.getMessage(), e);
          }
       }
       final SequentialFile file = largeServerMessage.getFile();
-      if (file == null)
-      {
+      if (file == null) {
          return;
       }
 
-      if (largeServerMessage.isDurable() && replicationHandler.isReplicated())
-      {
+      if (largeServerMessage.isDurable() && replicationHandler.isReplicated()) {
          readLock();
-         try
-         {
-            if (replicationHandler.isReplicated() && replicationHandler.isSynchronizing())
-            {
-               synchronized (largeMessagesToDelete)
-               {
+         try {
+            if (replicationHandler.isReplicated() && replicationHandler.isSynchronizing()) {
+               synchronized (largeMessagesToDelete) {
                   largeMessagesToDelete.add(Long.valueOf(largeServerMessage.getMessageID()));
                   confirmLargeMessage(largeServerMessage);
                }
                return;
             }
          }
-         finally
-         {
+         finally {
             readUnLock();
          }
       }
-      Runnable deleteAction = new Runnable()
-      {
-         public void run()
-         {
-            try
-            {
+      Runnable deleteAction = new Runnable() {
+         public void run() {
+            try {
                readLock();
-               try
-               {
-                  if (replicationHandler.isReplicated())
-                  {
+               try {
+                  if (replicationHandler.isReplicated()) {
                      replicationHandler.largeMessageDelete(largeServerMessage.getMessageID());
                   }
                   file.delete();
@@ -330,44 +281,35 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
                   // The confirm could only be done after the actual delete is done
                   confirmLargeMessage(largeServerMessage);
                }
-               finally
-               {
+               finally {
                   readUnLock();
                }
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                ActiveMQServerLogger.LOGGER.journalErrorDeletingMessage(e, largeServerMessage.getMessageID());
             }
          }
 
       };
 
-      if (executor == null)
-      {
+      if (executor == null) {
          deleteAction.run();
       }
-      else
-      {
+      else {
          executor.execute(deleteAction);
       }
    }
 
-   SequentialFile createFileForLargeMessage(final long messageID, final boolean durable)
-   {
-      if (durable)
-      {
+   SequentialFile createFileForLargeMessage(final long messageID, final boolean durable) {
+      if (durable) {
          return createFileForLargeMessage(messageID, LargeMessageExtension.DURABLE);
       }
-      else
-      {
+      else {
          return createFileForLargeMessage(messageID, LargeMessageExtension.TEMPORARY);
       }
    }
 
-
-   public SequentialFile createFileForLargeMessage(final long messageID, LargeMessageExtension extension)
-   {
+   public SequentialFile createFileForLargeMessage(final long messageID, LargeMessageExtension extension) {
       return largeMessagesFactory.createSequentialFile(messageID + extension.getExtension());
    }
 
@@ -378,19 +320,14 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
 
    // Private ----------------------------------------------------------------------------------
 
-   private void checkAndCreateDir(final File dir, final boolean create)
-   {
-      if (!dir.exists())
-      {
-         if (create)
-         {
-            if (!dir.mkdirs())
-            {
+   private void checkAndCreateDir(final File dir, final boolean create) {
+      if (!dir.exists()) {
+         if (create) {
+            if (!dir.mkdirs()) {
                throw new IllegalStateException("Failed to create directory " + dir);
             }
          }
-         else
-         {
+         else {
             throw ActiveMQMessageBundle.BUNDLE.cannotCreateDir(dir.getAbsolutePath());
          }
       }
@@ -402,26 +339,23 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
     * @return
     * @throws Exception
     */
-   public LargeServerMessage parseLargeMessage(final Map<Long, ServerMessage> messages, final ActiveMQBuffer buff) throws Exception
-   {
+   public LargeServerMessage parseLargeMessage(final Map<Long, ServerMessage> messages,
+                                               final ActiveMQBuffer buff) throws Exception {
       LargeServerMessage largeMessage = createLargeMessage();
 
       LargeMessageEncoding messageEncoding = new LargeMessageEncoding(largeMessage);
 
       messageEncoding.decode(buff);
 
-      if (largeMessage.containsProperty(Message.HDR_ORIG_MESSAGE_ID))
-      {
+      if (largeMessage.containsProperty(Message.HDR_ORIG_MESSAGE_ID)) {
          // for compatibility: couple with old behaviour, copying the old file to avoid message loss
          long originalMessageID = largeMessage.getLongProperty(Message.HDR_ORIG_MESSAGE_ID);
 
          SequentialFile currentFile = createFileForLargeMessage(largeMessage.getMessageID(), true);
 
-         if (!currentFile.exists())
-         {
+         if (!currentFile.exists()) {
             SequentialFile linkedFile = createFileForLargeMessage(originalMessageID, true);
-            if (linkedFile.exists())
-            {
+            if (linkedFile.exists()) {
                linkedFile.copyTo(currentFile);
                linkedFile.close();
             }
@@ -433,13 +367,10 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
       return largeMessage;
    }
 
-   private void cleanupIncompleteFiles() throws Exception
-   {
-      if (largeMessagesFactory != null)
-      {
+   private void cleanupIncompleteFiles() throws Exception {
+      if (largeMessagesFactory != null) {
          List<String> tmpFiles = largeMessagesFactory.listFiles("tmp");
-         for (String tmpFile : tmpFiles)
-         {
+         for (String tmpFile : tmpFiles) {
             SequentialFile file = largeMessagesFactory.createSequentialFile(tmpFile);
             file.delete();
          }
@@ -497,7 +428,6 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
     * data. For details see the Javadoc of
     * {@link #startReplication(ReplicationManager, PagingManager, String, boolean)}.
     * <p>
-    *
     */
    private class FileJournalReplicationHandler {
 
@@ -523,20 +453,18 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
        * @throws ActiveMQException
        */
       private void startReplication(ReplicationManager replicationManager,
-                                   PagingManager pagingManager,
-                                   String nodeID,
-                                   final boolean autoFailBack,
-                                   long initialReplicationSyncTimeout) throws Exception {
+                                    PagingManager pagingManager,
+                                    String nodeID,
+                                    final boolean autoFailBack,
+                                    long initialReplicationSyncTimeout) throws Exception {
          if (!started) {
             throw new IllegalStateException("JournalStorageManager must be started...");
          }
          assert replicationManager != null;
 
-         if (!(messageJournal instanceof JournalImpl) || !(bindingsJournal instanceof JournalImpl))
-         {
+         if (!(messageJournal instanceof JournalImpl) || !(bindingsJournal instanceof JournalImpl)) {
             throw ActiveMQMessageBundle.BUNDLE.notJournalImpl();
          }
-
 
          // We first do a compact without any locks, to avoid copying unnecessary data over the network.
          // We do this without holding the storageManager lock, so the journal stays open while compact is being done
@@ -550,12 +478,10 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
          // and we send the current messages while more state is coming
          Map<Long, Pair<String, Long>> pendingLargeMessages = null;
 
-         try
-         {
+         try {
             Map<SimpleString, Collection<Integer>> pageFilesToSync;
             storageManagerLock.writeLock().lock();
-            try
-            {
+            try {
                if (isReplicated())
                   throw new ActiveMQIllegalStateException("already replicating");
                replicator = replicationManager;
@@ -564,37 +490,30 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
                originalMessageJournal.synchronizationLock();
                originalBindingsJournal.synchronizationLock();
 
-               try
-               {
+               try {
                   originalBindingsJournal.replicationSyncPreserveOldFiles();
                   originalMessageJournal.replicationSyncPreserveOldFiles();
 
                   pagingManager.lock();
-                  try
-                  {
+                  try {
                      pagingManager.disableCleanup();
-                     messageFiles =
-                        prepareJournalForCopy(originalMessageJournal, JournalContent.MESSAGES, nodeID, autoFailBack);
-                     bindingsFiles =
-                        prepareJournalForCopy(originalBindingsJournal, JournalContent.BINDINGS, nodeID, autoFailBack);
+                     messageFiles = prepareJournalForCopy(originalMessageJournal, JournalContent.MESSAGES, nodeID, autoFailBack);
+                     bindingsFiles = prepareJournalForCopy(originalBindingsJournal, JournalContent.BINDINGS, nodeID, autoFailBack);
                      pageFilesToSync = getPageInformationForSync(pagingManager);
                      pendingLargeMessages = recoverPendingLargeMessages();
                   }
-                  finally
-                  {
+                  finally {
                      pagingManager.unlock();
                   }
                }
-               finally
-               {
+               finally {
                   originalMessageJournal.synchronizationUnlock();
                   originalBindingsJournal.synchronizationUnlock();
                }
                bindingsJournal = new ReplicatedJournal(((byte) 0), originalBindingsJournal, replicator);
                messageJournal = new ReplicatedJournal((byte) 1, originalMessageJournal, replicator);
             }
-            finally
-            {
+            finally {
                storageManagerLock.writeLock().unlock();
             }
 
@@ -612,18 +531,15 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
                   performCachedLargeMessageDeletes();
                }
             }
-            finally
-            {
+            finally {
                storageManagerLock.writeLock().unlock();
             }
          }
-         catch (Exception e)
-         {
+         catch (Exception e) {
             stopReplication();
             throw e;
          }
-         finally
-         {
+         finally {
             pagingManager.resumeCleanup();
             // Re-enable compact and reclaim of journal files
             originalBindingsJournal.replicationSyncFinished();
@@ -652,21 +568,17 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
          return datafiles;
       }
 
-      private void stopReplication()
-      {
+      private void stopReplication() {
          storageManagerLock.writeLock().lock();
-         try
-         {
+         try {
             if (replicator == null)
                return;
             bindingsJournal = originalBindingsJournal;
             messageJournal = originalMessageJournal;
-            try
-            {
+            try {
                replicator.stop();
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                ActiveMQServerLogger.LOGGER.errorStoppingReplicationManager(e);
             }
             replicator = null;
@@ -675,28 +587,23 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
             // This method should not be called under normal circumstances
             performCachedLargeMessageDeletes();
          }
-         finally
-         {
+         finally {
             storageManagerLock.writeLock().unlock();
          }
       }
 
-      private boolean isReplicated()
-      {
+      private boolean isReplicated() {
          return replicator != null;
       }
-
 
       /**
        * @param pagingManager
        * @return
        * @throws Exception
        */
-      private Map<SimpleString, Collection<Integer>> getPageInformationForSync(PagingManager pagingManager) throws Exception
-      {
+      private Map<SimpleString, Collection<Integer>> getPageInformationForSync(PagingManager pagingManager) throws Exception {
          Map<SimpleString, Collection<Integer>> info = new HashMap<SimpleString, Collection<Integer>>();
-         for (SimpleString storeName : pagingManager.getStoreNames())
-         {
+         for (SimpleString storeName : pagingManager.getStoreNames()) {
             PagingStore store = pagingManager.getPageStore(storeName);
             info.put(storeName, store.getCurrentIds());
             store.forceAnotherPage();
@@ -708,10 +615,9 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
        * @param pageFilesToSync
        * @throws Exception
        */
-      private void sendPagesToBackup(Map<SimpleString, Collection<Integer>> pageFilesToSync, PagingManager manager) throws Exception
-      {
-         for (Map.Entry<SimpleString, Collection<Integer>> entry : pageFilesToSync.entrySet())
-         {
+      private void sendPagesToBackup(Map<SimpleString, Collection<Integer>> pageFilesToSync,
+                                     PagingManager manager) throws Exception {
+         for (Map.Entry<SimpleString, Collection<Integer>> entry : pageFilesToSync.entrySet()) {
             if (!started)
                return;
             PagingStore store = manager.getPageStore(entry.getKey());
@@ -719,11 +625,9 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
          }
       }
 
-      private void sendLargeMessageFiles(final Map<Long, Pair<String, Long>> pendingLargeMessages) throws Exception
-      {
+      private void sendLargeMessageFiles(final Map<Long, Pair<String, Long>> pendingLargeMessages) throws Exception {
          Iterator<Map.Entry<Long, Pair<String, Long>>> iter = pendingLargeMessages.entrySet().iterator();
-         while (started && iter.hasNext())
-         {
+         while (started && iter.hasNext()) {
             Map.Entry<Long, Pair<String, Long>> entry = iter.next();
             String fileName = entry.getValue().getA();
             final long id = entry.getKey();
@@ -735,23 +639,18 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
          }
       }
 
-      private long getLargeMessageIdFromFilename(String filename)
-      {
+      private long getLargeMessageIdFromFilename(String filename) {
          return Long.parseLong(filename.split("\\.")[0]);
       }
 
-      private void largeMessageDelete(long largeMsgId)
-      {
-         if (isReplicated())
-         {
+      private void largeMessageDelete(long largeMsgId) {
+         if (isReplicated()) {
             replicator.largeMessageDelete(largeMsgId);
          }
       }
 
-      private void pageWrite(final PagedMessage message, final int pageNumber)
-      {
-         if (isReplicated())
-         {
+      private void pageWrite(final PagedMessage message, final int pageNumber) {
+         if (isReplicated()) {
             // Note: (https://issues.jboss.org/browse/HORNETQ-1059)
             // We have to replicate durable and non-durable messages on paging
             // since acknowledgments are written using the page-position.
@@ -759,45 +658,35 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
             // The ACKs would be done to wrong positions, and the backup would be a mess
 
             readLock();
-            try
-            {
+            try {
                replicator.pageWrite(message, pageNumber);
             }
-            finally
-            {
+            finally {
                readUnLock();
             }
          }
       }
 
-      private void pageDeleted(final SimpleString storeName, final int pageNumber)
-      {
-         if (isReplicated())
-         {
+      private void pageDeleted(final SimpleString storeName, final int pageNumber) {
+         if (isReplicated()) {
             readLock();
-            try
-            {
+            try {
                replicator.pageDeleted(storeName, pageNumber);
             }
-            finally
-            {
+            finally {
                readUnLock();
             }
          }
       }
 
-      private void pageClosed(final SimpleString storeName, final int pageNumber)
-      {
-         if (replicationHandler.isReplicated())
-         {
+      private void pageClosed(final SimpleString storeName, final int pageNumber) {
+         if (replicationHandler.isReplicated()) {
             readLock();
-            try
-            {
+            try {
                if (replicationHandler.isReplicated())
                   replicator.pageClosed(storeName, pageNumber);
             }
-            finally
-            {
+            finally {
                readUnLock();
             }
          }

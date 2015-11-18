@@ -660,7 +660,7 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
       return securityMatch;
    }
 
-   private Pair<SecuritySettingPlugin,Map<String,String>> parseSecuritySettingPlugins(Node item) {
+   private Pair<SecuritySettingPlugin, Map<String, String>> parseSecuritySettingPlugins(Node item) {
       final String clazz = item.getAttributes().getNamedItem("class-name").getNodeValue();
       final Map<String, String> settings = new HashMap<>();
       NodeList children = item.getChildNodes();

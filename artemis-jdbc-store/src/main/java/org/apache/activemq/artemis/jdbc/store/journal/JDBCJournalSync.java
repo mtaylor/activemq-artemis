@@ -20,24 +20,20 @@ package org.apache.activemq.artemis.jdbc.store.journal;
 import java.sql.SQLException;
 import java.util.TimerTask;
 
-public class JDBCJournalSync extends TimerTask
-{
+public class JDBCJournalSync extends TimerTask {
+
    private final JDBCJournalImpl journal;
 
-   public JDBCJournalSync(JDBCJournalImpl journal)
-   {
+   public JDBCJournalSync(JDBCJournalImpl journal) {
       this.journal = journal;
    }
 
    @Override
-   public void run()
-   {
-      try
-      {
+   public void run() {
+      try {
          journal.sync();
       }
-      catch (SQLException e)
-      {
+      catch (SQLException e) {
          e.printStackTrace();
       }
    }

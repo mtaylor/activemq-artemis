@@ -191,6 +191,7 @@ public final class SharedStoreBackupActivation extends Activation {
    }
 
    private class FailbackChecker implements Runnable {
+
       BackupTopologyListener backupListener;
 
       FailbackChecker() {
