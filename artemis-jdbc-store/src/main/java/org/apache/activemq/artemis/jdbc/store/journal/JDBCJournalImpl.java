@@ -34,7 +34,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.activemq.artemis.core.io.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.journal.IOCompletion;
 import org.apache.activemq.artemis.core.journal.Journal;
@@ -42,6 +41,7 @@ import org.apache.activemq.artemis.core.journal.JournalLoadInformation;
 import org.apache.activemq.artemis.core.journal.LoaderCallback;
 import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
+import org.apache.activemq.artemis.core.journal.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
 
@@ -536,13 +536,14 @@ public class JDBCJournalImpl implements Journal
    }
 
    @Override
-   public int getNumberOfRecords() throws SQLException
-   {
+   public int getNumberOfRecords() {
       int count = 0;
-      try (ResultSet rs = countJournalRecords.executeQuery())
-      {
+      try (ResultSet rs = countJournalRecords.executeQuery()) {
          rs.next();
          count = rs.getInt(1);
+      }
+      catch (SQLException e) {
+         return -1;
       }
       return count;
    }
