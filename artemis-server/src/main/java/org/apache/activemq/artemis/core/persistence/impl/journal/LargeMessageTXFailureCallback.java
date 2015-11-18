@@ -31,10 +31,10 @@ import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalR
 
 public class LargeMessageTXFailureCallback implements TransactionFailureCallback
 {
-   private JournalStorageManager journalStorageManager;
+   private AbstractJournalStorageManager journalStorageManager;
    private final Map<Long, ServerMessage> messages;
 
-   public LargeMessageTXFailureCallback(JournalStorageManager journalStorageManager, final Map<Long, ServerMessage> messages)
+   public LargeMessageTXFailureCallback(AbstractJournalStorageManager journalStorageManager, final Map<Long, ServerMessage> messages)
    {
       super();
       this.journalStorageManager = journalStorageManager;
