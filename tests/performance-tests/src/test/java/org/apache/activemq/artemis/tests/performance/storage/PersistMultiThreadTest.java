@@ -52,8 +52,8 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
    @Test
    public void testMultipleWrites() throws Exception {
       ActiveMQServer server = createServer(true);
-      server.getConfiguration().setJournalFileSize(20 * 1024 * 1024);
-      server.getConfiguration().setJournalMinFiles(10);
+      server.getConfiguration().setJournalFileSize(10 * 1024 * 1024);
+      server.getConfiguration().setJournalMinFiles(2);
       server.getConfiguration().setJournalType(JournalType.ASYNCIO);
 
       server.start();
@@ -63,7 +63,7 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       long msgID = storage.generateID();
       System.out.println("msgID=" + msgID);
 
-      int NUMBER_OF_THREADS = 100;
+      int NUMBER_OF_THREADS = 20;
       int NUMBER_OF_MESSAGES = 5000;
 
       MyThread[] threads = new MyThread[NUMBER_OF_THREADS];
