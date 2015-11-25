@@ -123,20 +123,23 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
             align.countDown();
             start.await();
             for (int i = 0; i < numberOfMessages; i++) {
-               ServerMessage message = new ServerMessageImpl(storage.generateID(), 10 * 1024);
-               message.setPagingStore(fakePagingStore);
-               int count = message.incrementRefCount();
-
-               message.getBodyBuffer().writeBytes(new byte[5 * 1024]);
-               message.putStringProperty("hello", "hello1");
 
                OperationContext ctx = storage.getContext();
-               ctx.waitCompletion();
+
+
                long txID = storage.generateID();
 
-               storage.storeMessageTransactional(txID, message);
+               for (int msgI = 0; msgI < 10; msgI++) {
+                  ServerMessage message = new ServerMessageImpl(storage.generateID(), 10 * 1024);
+                  message.setPagingStore(fakePagingStore);
 
-               message.decrementRefCount();
+                  message.getBodyBuffer().writeBytes(new byte[104]);
+                  message.putStringProperty("hello", "hello1");
+
+                  storage.storeMessageTransactional(txID, message);
+
+                  message.decrementRefCount();
+               }
 
                storage.commit(txID);
 
