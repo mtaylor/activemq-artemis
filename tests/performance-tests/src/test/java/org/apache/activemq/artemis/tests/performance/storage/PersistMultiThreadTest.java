@@ -31,7 +31,6 @@ import org.apache.activemq.artemis.core.paging.cursor.PageCursorProvider;
 import org.apache.activemq.artemis.core.paging.impl.Page;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
 import org.apache.activemq.artemis.core.persistence.StorageManager;
-import org.apache.activemq.artemis.core.persistence.impl.journal.OperationContextImpl;
 import org.apache.activemq.artemis.core.replication.ReplicationManager;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.JournalType;
@@ -63,7 +62,7 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       long msgID = storage.generateID();
       System.out.println("msgID=" + msgID);
 
-      int NUMBER_OF_THREADS = 20;
+      int NUMBER_OF_THREADS = 50;
       int NUMBER_OF_MESSAGES = 5000;
 
       MyThread[] threads = new MyThread[NUMBER_OF_THREADS];
@@ -92,6 +91,7 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
 
 
       for (MyThread t : threads) {
+         t.join();
          Assert.assertEquals(0, t.errors.get());
       }
 
@@ -132,23 +132,47 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
 
                long txID = storage.generateID();
 
+               long messageID[] = new long[10];
+
                for (int msgI = 0; msgI < 10; msgI++) {
-                  ServerMessage message = new ServerMessageImpl(storage.generateID(), 10 * 1024);
+                  long id = storage.generateID();
+
+                  messageID[msgI] = id;
+
+                  ServerMessage message = new ServerMessageImpl(id, 10 * 1024);
                   message.setPagingStore(fakePagingStore);
 
                   message.getBodyBuffer().writeBytes(new byte[104]);
                   message.putStringProperty("hello", "hello1");
 
                   storage.storeMessageTransactional(txID, message);
+                  storage.storeReferenceTransactional(txID, 1, id);
 
                   message.decrementRefCount();
                }
 
                storage.commit(txID);
+               ctx.waitCompletion();
+
+               for (long id : messageID) {
+                  storage.storeAcknowledge(1, id);
+               }
+
+               ctx.waitCompletion();
+
+               for (long id : messageID) {
+                  storage.storeAcknowledge(1, id);
+               }
+
+               ctx.waitCompletion();
+
+               for (long id : messageID) {
+                  storage.deleteMessage(id);
+               }
+
+               ctx.waitCompletion();
+
             }
-
-
-            ctx.waitCompletion();
          }
          catch (Exception e) {
             e.printStackTrace();
