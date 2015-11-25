@@ -34,6 +34,7 @@ import org.apache.activemq.artemis.core.persistence.StorageManager;
 import org.apache.activemq.artemis.core.persistence.impl.journal.OperationContextImpl;
 import org.apache.activemq.artemis.core.replication.ReplicationManager;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.JournalType;
 import org.apache.activemq.artemis.core.server.RouteContextList;
 import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
@@ -53,6 +54,7 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       ActiveMQServer server = createServer(true);
       server.getConfiguration().setJournalFileSize(20 * 1024 * 1024);
       server.getConfiguration().setJournalMinFiles(10);
+      server.getConfiguration().setJournalType(JournalType.ASYNCIO);
 
       server.start();
 
@@ -122,9 +124,10 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
          try {
             align.countDown();
             start.await();
-            for (int i = 0; i < numberOfMessages; i++) {
 
-               OperationContext ctx = storage.getContext();
+            OperationContext ctx = storage.getContext();
+
+            for (int i = 0; i < numberOfMessages; i++) {
 
 
                long txID = storage.generateID();
@@ -142,9 +145,10 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
                }
 
                storage.commit(txID);
-
-               ctx.waitCompletion();
             }
+
+
+            ctx.waitCompletion();
          }
          catch (Exception e) {
             e.printStackTrace();
