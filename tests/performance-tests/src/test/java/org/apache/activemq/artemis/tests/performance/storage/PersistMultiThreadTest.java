@@ -17,50 +17,42 @@
 
 package org.apache.activemq.artemis.tests.performance.storage;
 
-import java.io.File;
-import java.util.Collection;
-import java.util.List;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.naming.InitialContext;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.activemq.artemis.api.core.SimpleString;
-import org.apache.activemq.artemis.core.paging.PagingManager;
-import org.apache.activemq.artemis.core.paging.PagingStore;
-import org.apache.activemq.artemis.core.paging.cursor.PageCursorProvider;
-import org.apache.activemq.artemis.core.paging.impl.Page;
-import org.apache.activemq.artemis.core.persistence.OperationContext;
-import org.apache.activemq.artemis.core.persistence.StorageManager;
-import org.apache.activemq.artemis.core.replication.ReplicationManager;
+import org.apache.activemq.artemis.core.config.ConnectorServiceConfiguration;
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.JournalType;
-import org.apache.activemq.artemis.core.server.RouteContextList;
-import org.apache.activemq.artemis.core.server.ServerMessage;
-import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
-import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
-import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
-import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class PersistMultiThreadTest extends ActiveMQTestBase {
 
-   FakePagingStore fakePagingStore = new FakePagingStore();
+   ConnectionFactory cf;
+
+   Destination destination;
 
    @Test
    public void testMultipleWrites() throws Exception {
+
       ActiveMQServer server = createServer(true);
       server.getConfiguration().setJournalFileSize(10 * 1024 * 1024);
       server.getConfiguration().setJournalMinFiles(2);
       server.getConfiguration().setJournalType(JournalType.ASYNCIO);
 
+      // TODO Setup Acceptors
+
       server.start();
-
-      StorageManager storage = server.getStorageManager();
-
-      long msgID = storage.generateID();
-      System.out.println("msgID=" + msgID);
 
       int NUMBER_OF_THREADS = 50;
       int NUMBER_OF_MESSAGES = 5000;
@@ -70,9 +62,22 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       final CountDownLatch alignFlag = new CountDownLatch(NUMBER_OF_THREADS);
       final CountDownLatch startFlag = new CountDownLatch(1);
       final CountDownLatch finishFlag = new CountDownLatch(NUMBER_OF_THREADS);
+      final CountDownLatch messageConsumed = new CountDownLatch(NUMBER_OF_MESSAGES * NUMBER_OF_THREADS);
+
+      InitialContext initialContext = new InitialContext();
+
+      cf = (ConnectionFactory) initialContext.lookup("ConnectionFactory");
+
+      destination = (Destination) initialContext.lookup("queue/performanceQueue");
+
+      Connection connection = cf.createConnection();
+
+      Session consumerSession = connection.createSession(true, Session.SESSION_TRANSACTED);
+
+      consumerSession.setMessageListener(new MyMessageConsumer(messageConsumed));
 
       for (int i = 0; i < threads.length; i++) {
-         threads[i] = new MyThread("writer::" + i, storage, NUMBER_OF_MESSAGES, alignFlag, startFlag, finishFlag);
+         threads[i] = new MyThread("writer::" + i, NUMBER_OF_MESSAGES, alignFlag, startFlag, finishFlag);
       }
 
       for (MyThread t : threads) {
@@ -87,8 +92,9 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       // I'm using a countDown to avoid measuring time spent on thread context from join.
       // i.e. i want to measure as soon as the loops are done
       finishFlag.await();
-      long endtime = System.currentTimeMillis();
+      messageConsumed.await();
 
+      long endtime = System.currentTimeMillis();
 
       for (MyThread t : threads) {
          t.join();
@@ -96,13 +102,23 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       }
 
       System.out.println("Time:: " + (endtime - startTime));
+   }
 
+   class MyMessageConsumer implements MessageListener {
+
+      private final CountDownLatch messageConsumed;
+
+      public MyMessageConsumer(CountDownLatch messageConsumed) {
+         this.messageConsumed = messageConsumed;
+      }
+      @Override
+      public void onMessage(Message message) {
+         messageConsumed.countDown();
+      }
    }
 
    class MyThread extends Thread
    {
-
-      final StorageManager storage;
       final int numberOfMessages;
       final AtomicInteger errors = new AtomicInteger(0);
 
@@ -110,10 +126,9 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
       final CountDownLatch start;
       final CountDownLatch finish;
 
-      MyThread(String name, StorageManager storage, int numberOfMessages, CountDownLatch align, CountDownLatch start, CountDownLatch finish)
+      MyThread(String name, int numberOfMessages, CountDownLatch align, CountDownLatch start, CountDownLatch finish)
       {
          super(name);
-         this.storage = storage;
          this.numberOfMessages = numberOfMessages;
          this.align = align;
          this.start = start;
@@ -122,56 +137,19 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
 
       public void run() {
          try {
+
+            Connection connection = cf.createConnection();
+
+            Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
+
+            MessageProducer producer = session.createProducer(destination);
+
             align.countDown();
             start.await();
 
-            OperationContext ctx = storage.getContext();
-
             for (int i = 0; i < numberOfMessages; i++) {
-
-
-               long txID = storage.generateID();
-
-               long messageID[] = new long[10];
-
-               for (int msgI = 0; msgI < 10; msgI++) {
-                  long id = storage.generateID();
-
-                  messageID[msgI] = id;
-
-                  ServerMessage message = new ServerMessageImpl(id, 10 * 1024);
-                  message.setPagingStore(fakePagingStore);
-
-                  message.getBodyBuffer().writeBytes(new byte[104]);
-                  message.putStringProperty("hello", "hello1");
-
-                  storage.storeMessageTransactional(txID, message);
-                  storage.storeReferenceTransactional(txID, 1, id);
-
-                  message.decrementRefCount();
-               }
-
-               storage.commit(txID);
-               ctx.waitCompletion();
-
-               for (long id : messageID) {
-                  storage.storeAcknowledge(1, id);
-               }
-
-               ctx.waitCompletion();
-
-               for (long id : messageID) {
-                  storage.storeAcknowledge(1, id);
-               }
-
-               ctx.waitCompletion();
-
-               for (long id : messageID) {
-                  storage.deleteMessage(id);
-               }
-
-               ctx.waitCompletion();
-
+               producer.send(session.createTextMessage("Test Message"));
+               session.commit();
             }
          }
          catch (Exception e) {
@@ -181,199 +159,6 @@ public class PersistMultiThreadTest extends ActiveMQTestBase {
          finally {
             finish.countDown();
          }
-
-      }
-
-   }
-
-   class FakePagingStore implements PagingStore {
-
-      @Override
-      public SimpleString getAddress() {
-         return null;
-      }
-
-      @Override
-      public int getNumberOfPages() {
-         return 0;
-      }
-
-      @Override
-      public int getCurrentWritingPage() {
-         return 0;
-      }
-
-      @Override
-      public SimpleString getStoreName() {
-         return null;
-      }
-
-      @Override
-      public File getFolder() {
-         return null;
-      }
-
-      @Override
-      public AddressFullMessagePolicy getAddressFullMessagePolicy() {
-         return null;
-      }
-
-      @Override
-      public long getFirstPage() {
-         return 0;
-      }
-
-      @Override
-      public long getPageSizeBytes() {
-         return 0;
-      }
-
-      @Override
-      public long getAddressSize() {
-         return 0;
-      }
-
-      @Override
-      public long getMaxSize() {
-         return 0;
-      }
-
-      @Override
-      public void applySetting(AddressSettings addressSettings) {
-
-      }
-
-      @Override
-      public boolean isPaging() {
-         return false;
-      }
-
-      @Override
-      public void sync() throws Exception {
-
-      }
-
-      @Override
-      public void ioSync() throws Exception {
-
-      }
-
-      @Override
-      public boolean page(ServerMessage message,
-                          Transaction tx,
-                          RouteContextList listCtx,
-                          ReentrantReadWriteLock.ReadLock readLock) throws Exception {
-         return false;
-      }
-
-      @Override
-      public Page createPage(int page) throws Exception {
-         return null;
-      }
-
-      @Override
-      public boolean checkPageFileExists(int page) throws Exception {
-         return false;
-      }
-
-      @Override
-      public PagingManager getPagingManager() {
-         return null;
-      }
-
-      @Override
-      public PageCursorProvider getCursorProvider() {
-         return null;
-      }
-
-      @Override
-      public void processReload() throws Exception {
-
-      }
-
-      @Override
-      public Page depage() throws Exception {
-         return null;
-      }
-
-      @Override
-      public void forceAnotherPage() throws Exception {
-
-      }
-
-      @Override
-      public Page getCurrentPage() {
-         return null;
-      }
-
-      @Override
-      public boolean startPaging() throws Exception {
-         return false;
-      }
-
-      @Override
-      public void stopPaging() throws Exception {
-
-      }
-
-      @Override
-      public void addSize(int size) {
-
-      }
-
-      @Override
-      public boolean checkMemory(Runnable runnable) {
-         return false;
-      }
-
-      @Override
-      public boolean lock(long timeout) {
-         return false;
-      }
-
-      @Override
-      public void unlock() {
-
-      }
-
-      @Override
-      public void flushExecutors() {
-
-      }
-
-      @Override
-      public Collection<Integer> getCurrentIds() throws Exception {
-         return null;
-      }
-
-      @Override
-      public void sendPages(ReplicationManager replicator, Collection<Integer> pageIds) throws Exception {
-
-      }
-
-      @Override
-      public void disableCleanup() {
-
-      }
-
-      @Override
-      public void enableCleanup() {
-
-      }
-
-      @Override
-      public void start() throws Exception {
-
-      }
-
-      @Override
-      public void stop() throws Exception {
-
-      }
-
-      @Override
-      public boolean isStarted() {
-         return false;
       }
    }
 }
