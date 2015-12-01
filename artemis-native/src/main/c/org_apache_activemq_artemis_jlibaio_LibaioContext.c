@@ -63,6 +63,9 @@ struct io_control {
 int dumbWriteHandler = 0;
 char dumbPath[PATH_MAX];
 
+#define ONE_MEGA 1048576l
+void * oneMegaBuffer = 0;
+
 
 jclass submitClass = NULL;
 jmethodID errorMethod = NULL;
@@ -121,6 +124,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     } else {
+        if (posix_memalign(&oneMegaBuffer, 512, ONE_MEGA) != 0)
+        {
+            fprintf(stderr, "Could not allocate the 1 Mega Buffer for initializing files\n");
+            return JNI_ERR;
+        }
+        memset(oneMegaBuffer, 0, ONE_MEGA);
 
         sprintf (dumbPath, "%s/artemisJLHandler_XXXXXX", P_tmpdir);
         dumbWriteHandler = mkstemp (dumbPath);
@@ -218,6 +227,8 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         return;
     } else {
         closeDumbHandlers();
+
+        free(oneMegaBuffer);
 
         // delete global references so the GC can collect them
         if (runtimeExceptionClass != NULL) {
@@ -757,17 +768,34 @@ JNIEXPORT void JNICALL Java_org_apache_activemq_artemis_jlibaio_LibaioContext_fa
 JNIEXPORT void JNICALL Java_org_apache_activemq_artemis_jlibaio_LibaioContext_fill
   (JNIEnv * env, jclass clazz, jint fd, jlong size)
 {
-    void * preAllocBuffer = 0;
-    if (posix_memalign(&preAllocBuffer, 512, size) != 0)
+    if (size % ONE_MEGA == 0)
     {
-          throwOutOfMemoryError(env);
-          return;
+        lseek (fd, 0, SEEK_SET);
+        jlong blocks = size / ONE_MEGA;
+        for (int i = 0; i < blocks; i++)
+        {
+            if (write(fd, oneMegaBuffer, ONE_MEGA) < 0)
+            {
+                throwIOException(env, "Cannot initialize file");
+            }
+        }
+        lseek (fd, 0, SEEK_SET);
     }
-    memset(preAllocBuffer, 0, size);
-    lseek (fd, 0, SEEK_SET);
-    write(fd, preAllocBuffer, size);
-    lseek (fd, 0, SEEK_SET);
-    free (preAllocBuffer);
+    else
+    {
+        fprintf (stderr, "WARNING!!! This is a test and we were not supposed to se this allocation happening!\n");
+        void * preAllocBuffer = 0;
+        if (posix_memalign(&preAllocBuffer, 512, size) != 0)
+        {
+              throwOutOfMemoryError(env);
+              return;
+        }
+        memset(preAllocBuffer, 0, size);
+        lseek (fd, 0, SEEK_SET);
+        write(fd, preAllocBuffer, size);
+        lseek (fd, 0, SEEK_SET);
+        free (preAllocBuffer);
+    }
 }
 
 JNIEXPORT void JNICALL Java_org_apache_activemq_artemis_jlibaio_LibaioContext_memsetBuffer
