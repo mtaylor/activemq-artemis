@@ -71,7 +71,7 @@ public class JournalFilesRepository {
 
    private final int maxAIO;
 
-   private final int minFiles;
+   private volatile int minFiles;
 
    private final int fileSize;
 
@@ -357,9 +357,8 @@ public class JournalFilesRepository {
          ActiveMQJournalLogger.LOGGER.deletingFile(file);
          file.getFile().delete();
       }
-      else if (!checkDelete || (freeFilesCount.get() + dataFiles.size() + 1 + openedFiles.size() < minFiles)) {
+      else if (!checkDelete || (freeFilesCount.get() + dataFiles.size() + openedFiles.size() <= minFiles)) {
          // Re-initialise it
-
          if (JournalFilesRepository.trace) {
             JournalFilesRepository.trace("Adding free file " + file);
          }
@@ -552,11 +551,17 @@ public class JournalFilesRepository {
       }
    }
 
-   private JournalFile createFile0(final boolean keepOpened,
+   private synchronized JournalFile createFile0(final boolean keepOpened,
                                    final boolean multiAIO,
                                    final boolean init,
                                    final boolean tmpCompact,
                                    final long fileIdPreSet) throws Exception {
+
+      int noFiles = freeFilesCount.get() + dataFiles.size() + openedFiles.size() +1;
+      if (minFiles < noFiles) {
+         minFiles = noFiles;
+      }
+
       long fileID = fileIdPreSet != -1 ? fileIdPreSet : generateFileID();
 
       final String fileName = createFileName(tmpCompact, fileID);
