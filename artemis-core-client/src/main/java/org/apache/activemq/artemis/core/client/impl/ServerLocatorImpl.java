@@ -35,7 +35,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -249,7 +251,8 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
             }
          });
 
-         globalThreadPool = Executors.newCachedThreadPool(factory);
+         globalThreadPool = new ThreadPoolExecutor(ActiveMQClient.globalThreadCorePoolSize, ActiveMQClient.globalThreadMaxPoolSize,
+                                                   60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), factory);
       }
 
       return globalThreadPool;
@@ -264,11 +267,8 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
             }
          });
 
-         globalScheduledThreadPool = Executors.newScheduledThreadPool(ActiveMQClient.DEFAULT_SCHEDULED_THREAD_POOL_MAX_SIZE,
-
-               factory);
+         globalScheduledThreadPool = Executors.newScheduledThreadPool(ActiveMQClient.globalScheduledThreadPoolSize, factory);
       }
-
       return globalScheduledThreadPool;
    }
 
@@ -408,8 +408,6 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
       connectionLoadBalancingPolicyClassName = ActiveMQClient.DEFAULT_CONNECTION_LOAD_BALANCING_POLICY_CLASS_NAME;
 
       useGlobalPools = ActiveMQClient.DEFAULT_USE_GLOBAL_POOLS;
-
-      scheduledThreadPoolMaxSize = ActiveMQClient.DEFAULT_SCHEDULED_THREAD_POOL_MAX_SIZE;
 
       threadPoolMaxSize = ActiveMQClient.DEFAULT_THREAD_POOL_MAX_SIZE;
 

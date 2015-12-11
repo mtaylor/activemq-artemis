@@ -34,6 +34,23 @@ import java.net.URI;
  */
 public final class ActiveMQClient {
 
+   public static int globalThreadCorePoolSize;
+
+   public static int globalThreadMaxPoolSize;
+
+   public static int globalScheduledThreadPoolSize;
+
+   static {
+      globalThreadCorePoolSize = Integer.valueOf(System.getProperty(ActiveMQClient.THREAD_POOL_CORE_SIZE_PROPERTY_KEY,
+                                                                    "" + ActiveMQClient.DEFAULT_GLOBAL_THREAD_POOL_CORE_SIZE));
+
+      globalThreadMaxPoolSize = Integer.valueOf(System.getProperty(ActiveMQClient.THREAD_POOL_MAX_SIZE_PROPERTY_KEY,
+                                                                   "" + ActiveMQClient.DEFAULT_GLOBAL_THREAD_POOL_MAX_SIZE));
+
+      globalScheduledThreadPoolSize = Integer.valueOf(System.getProperty(ActiveMQClient.SCHEDULED_THREAD_POOL_SIZE_PROPERTY_KEY,
+                                                                         "" + ActiveMQClient.DEFAULT_GLOBAL_SCHEDULED_THREAD_POOL_MAX_SIZE));
+   }
+
    public static final String DEFAULT_CONNECTION_LOAD_BALANCING_POLICY_CLASS_NAME = RoundRobinConnectionLoadBalancingPolicy.class.getCanonicalName();
 
    public static final long DEFAULT_CLIENT_FAILURE_CHECK_PERIOD = ActiveMQDefaultConfiguration.getDefaultClientFailureCheckPeriod();
@@ -102,7 +119,11 @@ public final class ActiveMQClient {
 
    public static final int DEFAULT_THREAD_POOL_MAX_SIZE = -1;
 
-   public static final int DEFAULT_SCHEDULED_THREAD_POOL_MAX_SIZE = 5;
+   public static final int DEFAULT_GLOBAL_THREAD_POOL_MAX_SIZE = Integer.MAX_VALUE;
+
+   public static final int DEFAULT_GLOBAL_THREAD_POOL_CORE_SIZE = 500;
+
+   public static final int DEFAULT_GLOBAL_SCHEDULED_THREAD_POOL_MAX_SIZE = 5;
 
    public static final boolean DEFAULT_CACHE_LARGE_MESSAGE_CLIENT = false;
 
@@ -113,6 +134,12 @@ public final class ActiveMQClient {
    public static final boolean DEFAULT_HA = false;
 
    public static final String DEFAULT_CORE_PROTOCOL = "CORE";
+
+   public static final String THREAD_POOL_MAX_SIZE_PROPERTY_KEY = "activemq.artemis.client.global.thread.pool.max.size";
+
+   public static final String THREAD_POOL_CORE_SIZE_PROPERTY_KEY = "activemq.artemis.client.global.thread.pool.core.size";
+
+   public static final String SCHEDULED_THREAD_POOL_SIZE_PROPERTY_KEY = "activemq.artemis.client.global.scheduled.thread.pool.core.size";
 
    /**
     * Creates an ActiveMQConnectionFactory;
