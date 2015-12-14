@@ -623,6 +623,7 @@ public class RemotingServiceImpl implements RemotingService, ConnectionLifeCycle
             if (ActiveMQServerLogger.LOGGER.isTraceEnabled()) {
                ActiveMQServerLogger.LOGGER.trace("ConnectionID = " + connectionID + " was already closed, so ignoring packet");
             }
+            buffer.byteBuf().release();
          }
       }
    }
