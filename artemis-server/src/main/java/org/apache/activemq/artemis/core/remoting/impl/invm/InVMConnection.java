@@ -23,11 +23,15 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffers;
 import org.apache.activemq.artemis.api.core.ActiveMQInterruptedException;
 import org.apache.activemq.artemis.api.core.TransportConfiguration;
+import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
 import org.apache.activemq.artemis.core.security.ActiveMQPrincipal;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
@@ -38,6 +42,8 @@ import org.apache.activemq.artemis.spi.core.remoting.ReadyListener;
 import org.apache.activemq.artemis.utils.UUIDGenerator;
 
 public class InVMConnection implements Connection {
+
+   private static final ByteBufAllocator ALLOCATOR = new PooledByteBufAllocator(false);
 
    private static final boolean isTrace = ActiveMQServerLogger.LOGGER.isTraceEnabled();
 
@@ -83,6 +89,7 @@ public class InVMConnection implements Connection {
                          final ConnectionLifeCycleListener listener,
                          final Executor executor,
                          final ActiveMQPrincipal defaultActiveMQPrincipal) {
+
       this.serverID = serverID;
 
       this.handler = handler;
@@ -156,20 +163,24 @@ public class InVMConnection implements Connection {
                      final boolean flush,
                      final boolean batch,
                      final ChannelFutureListener futureListener) {
-      final ActiveMQBuffer copied = buffer.copy(0, buffer.capacity());
 
-      copied.setIndex(buffer.readerIndex(), buffer.writerIndex());
+
+      final ByteBuf buf= ALLOCATOR.heapBuffer(buffer.capacity());
+      buf.writeBytes(buffer.byteBuf(), 0, buffer.capacity());
+
+      //final ActiveMQBuffer copied = buffer.copy(0, buffer.capacity());
+      buf.setIndex(buffer.readerIndex(), buffer.writerIndex());
 
       try {
          executor.execute(new Runnable() {
             public void run() {
                try {
                   if (!closed) {
-                     copied.readInt(); // read and discard
+                     buf.readInt(); // read and discard
                      if (isTrace) {
                         ActiveMQServerLogger.LOGGER.trace(InVMConnection.this + "::Sending inVM packet");
                      }
-                     handler.bufferReceived(id, copied);
+                     handler.bufferReceived(id, new ChannelBufferWrapper(buf, true));
                      if (futureListener != null) {
                         // TODO BEFORE MERGE: (is null a good option here?)
                         futureListener.operationComplete(null);
