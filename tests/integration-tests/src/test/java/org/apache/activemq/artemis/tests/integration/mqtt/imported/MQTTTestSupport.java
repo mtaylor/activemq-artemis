@@ -23,12 +23,15 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.security.ProtectionDomain;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.artemis.api.core.TransportConfiguration;
@@ -37,6 +40,11 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
+import org.fusesource.hawtdispatch.internal.DispatcherConfig;
+import org.fusesource.hawtdispatch.internal.GlobalDispatchQueue;
+import org.fusesource.hawtdispatch.internal.HawtDispatchQueue;
+import org.fusesource.hawtdispatch.internal.HawtDispatcher;
+import org.fusesource.hawtdispatch.internal.TimerThread;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.Tracer;
 import org.fusesource.mqtt.codec.MQTTFrame;
@@ -65,6 +73,7 @@ public class MQTTTestSupport extends ActiveMQTestBase {
    public static final int AT_LEAST_ONCE = 1;
    public static final int EXACTLY_ONCE = 2;
 
+   private List<MQTT> clients = new ArrayList<>();
    @Rule
    public TestName name = new TestName();
 
@@ -107,6 +116,8 @@ public class MQTTTestSupport extends ActiveMQTestBase {
    @Override
    @After
    public void tearDown() throws Exception {
+      shutdownDispatch();
+
       System.clearProperty("javax.net.ssl.trustStore");
       System.clearProperty("javax.net.ssl.trustStorePassword");
       System.clearProperty("javax.net.ssl.trustStoreType");
@@ -115,6 +126,22 @@ public class MQTTTestSupport extends ActiveMQTestBase {
       System.clearProperty("javax.net.ssl.keyStoreType");
       stopBroker();
       super.tearDown();
+   }
+
+   /* Bug in fuse mqtt client 1.21 means that the dispatcher is not getting shutdown properly.  For now we manually
+   shutdown. */
+   private void shutdownDispatch() {
+      try {
+         for (HawtDispatchQueue queue : HawtDispatcher.queues.keySet()) {
+            queue.getDispatcher().shutdown();
+            GlobalDispatchQueue q = queue.isGlobalDispatchQueue();
+            if (q != null) {
+               q.shutdown();
+            }
+         }
+      }
+      catch (Exception e) {
+      }
    }
 
    public void startBroker() throws Exception {
@@ -280,6 +307,8 @@ public class MQTTTestSupport extends ActiveMQTestBase {
       }
       mqtt.setCleanSession(clean);
       mqtt.setHost("localhost", port);
+
+      clients.add(mqtt);
       return mqtt;
    }
 
@@ -297,6 +326,9 @@ public class MQTTTestSupport extends ActiveMQTestBase {
       SSLContext ctx = SSLContext.getInstance("TLS");
       ctx.init(new KeyManager[0], new TrustManager[]{new DefaultTrustManager()}, new SecureRandom());
       mqtt.setSslContext(ctx);
+
+      clients.add(mqtt);
+
       return mqtt;
    }
 
