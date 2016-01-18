@@ -43,6 +43,7 @@ import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.core.journal.TransactionFailureCallback;
 import org.apache.activemq.artemis.core.journal.impl.JournalFile;
+import org.apache.activemq.artemis.jdbc.store.JDBCUtils;
 import org.apache.derby.jdbc.AutoloadedDriver;
 
 public class JDBCJournalImpl implements Journal {
@@ -78,8 +79,6 @@ public class JDBCJournalImpl implements Journal {
 
    private final ReadWriteLock journalLock = new ReentrantReadWriteLock();
 
-   private boolean isDerby = false;
-
    public JDBCJournalImpl(String jdbcUrl, String tableName) {
       this.tableName = tableName;
       this.jdbcUrl = jdbcUrl;
@@ -89,42 +88,10 @@ public class JDBCJournalImpl implements Journal {
 
    @Override
    public void start() throws Exception {
-      // Load Database driver, sets Derby Autoloaded Driver as lowest priority.
-      List<Driver> drivers = Collections.list(DriverManager.getDrivers());
-      if (drivers.size() <= 2 && drivers.size() > 0) {
-         dbDriver = drivers.get(0);
-         isDerby = dbDriver instanceof AutoloadedDriver;
-
-         if (drivers.size() > 1 && isDerby) {
-            dbDriver = drivers.get(1);
-         }
-
-         if (isDerby) {
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-               @Override
-               public void run() {
-                  try {
-                     DriverManager.getConnection("jdbc:derby:;shutdown=true");
-                  }
-                  catch (Exception e) {
-                  }
-               }
-            });
-         }
-      }
-      else {
-         String error = drivers.isEmpty() ? "No DB driver found on class path" : "Too many DB drivers on class path, not sure which to use";
-         throw new RuntimeException(error);
-      }
-
+      dbDriver = JDBCUtils.getDriver();
       connection = dbDriver.connect(jdbcUrl, new Properties());
 
-      // If JOURNAL table doesn't exist then create it
-      ResultSet rs = connection.getMetaData().getTables(null, null, tableName, null);
-      if (!rs.next()) {
-         Statement statement = connection.createStatement();
-         statement.executeUpdate(JDBCJournalRecord.createTableSQL(tableName));
-      }
+      JDBCUtils.createTableIfNotExists(connection, tableName, JDBCJournalRecord.createTableSQL(tableName));
 
       insertJournalRecords = connection.prepareStatement(JDBCJournalRecord.insertRecordsSQL(tableName));
       selectJournalRecords = connection.prepareStatement(JDBCJournalRecord.selectRecordsSQL(tableName));
