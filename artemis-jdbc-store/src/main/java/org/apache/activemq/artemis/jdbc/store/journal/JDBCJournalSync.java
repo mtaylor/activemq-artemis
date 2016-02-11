@@ -21,16 +21,16 @@ import java.util.TimerTask;
 
 public class JDBCJournalSync extends TimerTask {
 
-   private final JDBCJournalImpl journal;
+   private final JDBCWriter writer;
 
-   public JDBCJournalSync(JDBCJournalImpl journal) {
-      this.journal = journal;
+   public JDBCJournalSync(JDBCWriter writer) {
+      this.writer = writer;
    }
 
    @Override
    public void run() {
-      if (journal.isStarted()) {
-         journal.sync();
+      if (writer.isStarted()) {
+         writer.sync();
       }
    }
 }

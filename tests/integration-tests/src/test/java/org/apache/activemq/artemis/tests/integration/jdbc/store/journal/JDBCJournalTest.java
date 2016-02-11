@@ -25,6 +25,7 @@ import org.apache.activemq.artemis.core.journal.IOCompletion;
 import org.apache.activemq.artemis.core.journal.PreparedTransactionInfo;
 import org.apache.activemq.artemis.core.journal.RecordInfo;
 import org.apache.activemq.artemis.jdbc.store.journal.JDBCJournalImpl;
+import org.apache.activemq.artemis.tests.unit.core.server.group.impl.SystemPropertyOverrideTest;
 import org.apache.activemq.artemis.tests.util.ThreadLeakCheckRule;
 import org.junit.After;
 import org.junit.Before;
@@ -55,13 +56,15 @@ public class JDBCJournalTest {
 
    @Test
    public void testInsertRecords() throws Exception {
-      int noRecords = 10;
+      long time = System.currentTimeMillis();
+      int noRecords = 10000;
       for (int i = 0; i < noRecords; i++) {
          journal.appendAddRecord(i, (byte) 1, new byte[0], true);
       }
 
-      Thread.sleep(3000);
+      Thread.sleep(2000);
       assertEquals(noRecords, journal.getNumberOfRecords());
+      System.out.println("Time: " + (System.currentTimeMillis() - time));
    }
 
    @Test
@@ -88,7 +91,7 @@ public class JDBCJournalTest {
       for (int i = 0; i < noRecords; i++) {
          journal.appendAddRecord(1, (byte) 1, new FakeEncodingSupportImpl(new byte[0]), true, completion);
       }
-      journal.sync();
+      //journal.sync();
 
       done.await(5, TimeUnit.SECONDS);
       assertEquals(done.getCount(), 0);
