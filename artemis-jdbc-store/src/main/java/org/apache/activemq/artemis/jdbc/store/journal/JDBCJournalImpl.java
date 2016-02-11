@@ -51,7 +51,7 @@ public class JDBCJournalImpl implements Journal {
 
 
    public static final int NO_WRITERS = 5;
-   
+
    private static int USER_VERSION = 1;
 
    private final String tableName;

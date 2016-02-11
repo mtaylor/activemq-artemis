@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -34,6 +35,8 @@ public class JDBCWriter {
 
    // Sync Delay in ms
    public static final int SYNC_DELAY = 5;
+
+   private static final AtomicInteger SYNC_RUN = new AtomicInteger(0);
 
    private Connection connection;
 
@@ -140,6 +143,8 @@ public class JDBCWriter {
    }
 
    public int sync() {
+      SYNC_RUN.addAndGet(1);
+
       if (!started)
          return 0;
 
@@ -161,6 +166,7 @@ public class JDBCWriter {
                case JDBCJournalRecord.DELETE_RECORD:
                   // Standard SQL Delete Record, Non transactional delete
                   deletedRecords.add(record.getId());
+                  //record.writeRecord(insertJournalRecords);
                   record.writeDeleteRecord(deleteJournalRecords);
                   break;
                case JDBCJournalRecord.ROLLBACK_RECORD:
@@ -196,8 +202,12 @@ public class JDBCWriter {
          connection.setAutoCommit(false);
 
          insertJournalRecords.executeBatch();
-         deleteJournalRecords.executeBatch();
-         deleteJournalTxRecords.executeBatch();
+
+         if (SYNC_RUN.intValue() > 1000) {
+            deleteJournalRecords.executeBatch();
+            deleteJournalTxRecords.executeBatch();
+            SYNC_RUN.set(0);
+         }
 
          connection.commit();
 
