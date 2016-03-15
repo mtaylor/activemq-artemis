@@ -91,6 +91,7 @@ import org.apache.activemq.artemis.core.security.SecurityAuth;
 import org.apache.activemq.artemis.core.security.SecurityStore;
 import org.apache.activemq.artemis.core.security.impl.SecurityStoreImpl;
 import org.apache.activemq.artemis.core.server.ActivateCallback;
+import org.apache.activemq.artemis.core.server.ActivationFailureListener;
 import org.apache.activemq.artemis.core.server.ActiveMQComponent;
 import org.apache.activemq.artemis.core.server.ActiveMQMessageBundle;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
@@ -244,6 +245,8 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    private final ReusableLatch activationLatch = new ReusableLatch(0);
 
    private final Set<ActivateCallback> activateCallbacks = new ConcurrentHashSet<>();
+
+   private final Set<ActivationFailureListener> activationFailureListeners = new ConcurrentHashSet<>();
 
    private volatile GroupingHandler groupingHandler;
 
@@ -1276,13 +1279,19 @@ public class ActiveMQServerImpl implements ActiveMQServer {
 
    @Override
    public Queue deployQueue(final SimpleString address,
-                            final SimpleString queueName,
+                            final SimpleString resourceName,
                             final SimpleString filterString,
                             final boolean durable,
                             final boolean temporary) throws Exception {
-      ActiveMQServerLogger.LOGGER.deployQueue(queueName);
 
-      return createQueue(address, queueName, filterString, null, durable, temporary, true, false, false);
+      if (resourceName.toString().toLowerCase().startsWith("jms.topic")) {
+         ActiveMQServerLogger.LOGGER.deployTopic(resourceName);
+      }
+      else {
+         ActiveMQServerLogger.LOGGER.deployQueue(resourceName);
+      }
+
+      return createQueue(address, resourceName, filterString, null, durable, temporary, true, false, false);
    }
 
    @Override
@@ -1347,6 +1356,23 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    @Override
    public void unregisterActivateCallback(final ActivateCallback callback) {
       activateCallbacks.remove(callback);
+   }
+
+   @Override
+   public void registerActivationFailureListener(final ActivationFailureListener listener) {
+      activationFailureListeners.add(listener);
+   }
+
+   @Override
+   public void unregisterActivationFailureListener(final ActivationFailureListener listener) {
+      activationFailureListeners.remove(listener);
+   }
+
+   @Override
+   public void callActivationFailureListeners(final Exception e) {
+      for (ActivationFailureListener listener : activationFailureListeners) {
+         listener.activationFailed(e);
+      }
    }
 
    @Override
@@ -1781,15 +1807,15 @@ public class ActiveMQServerImpl implements ActiveMQServer {
 
       JournalLoadInformation[] journalInfo = new JournalLoadInformation[2];
 
-      List<QueueBindingInfo> queueBindingInfos = new ArrayList();
+      List<QueueBindingInfo> queueBindingInfos = new ArrayList<>();
 
-      List<GroupingInfo> groupingInfos = new ArrayList();
+      List<GroupingInfo> groupingInfos = new ArrayList<>();
 
       journalInfo[0] = storageManager.loadBindingJournal(queueBindingInfos, groupingInfos);
 
       recoverStoredConfigs();
 
-      Map<Long, QueueBindingInfo> queueBindingInfosMap = new HashMap();
+      Map<Long, QueueBindingInfo> queueBindingInfosMap = new HashMap<>();
 
       journalLoader.initQueues(queueBindingInfosMap, queueBindingInfos);
 
