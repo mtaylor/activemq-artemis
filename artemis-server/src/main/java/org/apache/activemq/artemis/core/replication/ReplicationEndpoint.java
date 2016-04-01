@@ -432,7 +432,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       SequentialFile channel1;
       switch (msg.getFileType()) {
          case LARGE_MESSAGE: {
-            ReplicatedLargeMessage largeMessage = lookupLargeMessage(id, false);
+            ReplicatedLargeMessage largeMessage = lookupLargeMessage(id, false, false);
             if (!(largeMessage instanceof LargeServerMessageInSync)) {
                ActiveMQServerLogger.LOGGER.largeMessageIncompatible();
                return;
@@ -533,7 +533,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
    }
 
    private void handleLargeMessageEnd(final ReplicationLargeMessageEndMessage packet) {
-      final ReplicatedLargeMessage message = lookupLargeMessage(packet.getMessageId(), true);
+      final ReplicatedLargeMessage message = lookupLargeMessage(packet.getMessageId(), true, false);
       if (message != null) {
          executor.execute(new Runnable() {
             @Override
@@ -553,13 +553,13 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
     * @param packet
     */
    private void handleLargeMessageWrite(final ReplicationLargeMessageWriteMessage packet) throws Exception {
-      ReplicatedLargeMessage message = lookupLargeMessage(packet.getMessageId(), false);
+      ReplicatedLargeMessage message = lookupLargeMessage(packet.getMessageId(), false, true);
       if (message != null) {
          message.addBytes(packet.getBody());
       }
    }
 
-   private ReplicatedLargeMessage lookupLargeMessage(final long messageId, final boolean delete) {
+   private ReplicatedLargeMessage lookupLargeMessage(final long messageId, final boolean delete, final boolean createIfNotExists) {
       ReplicatedLargeMessage message;
 
       if (delete) {
@@ -568,8 +568,14 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       else {
          message = largeMessages.get(messageId);
          if (message == null) {
-            // No warnings if it's a delete, as duplicate deletes may be sent repeatedly.
-            ActiveMQServerLogger.LOGGER.largeMessageNotAvailable(messageId);
+            if (createIfNotExists) {
+               createLargeMessage(messageId, false);
+               message = largeMessages.get(messageId);
+            }
+            else {
+               // No warnings if it's a delete, as duplicate deletes may be sent repeatedly.
+               ActiveMQServerLogger.LOGGER.largeMessageNotAvailable(messageId);
+            }
          }
       }
 
