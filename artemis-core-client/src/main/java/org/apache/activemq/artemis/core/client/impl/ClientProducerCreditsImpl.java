@@ -17,7 +17,6 @@
 package org.apache.activemq.artemis.core.client.impl;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
-import org.apache.activemq.artemis.api.core.ActiveMQInterruptedException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.client.ActiveMQClientLogger;
 import org.apache.activemq.artemis.core.client.ActiveMQClientMessageBundle;
@@ -64,7 +63,6 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       semaphore = new Semaphore(0, false);
    }
 
-   @Override
    public void init(SessionContext sessionContext) {
       // We initial request twice as many credits as we request in subsequent requests
       // This allows the producer to keep sending as more arrive, minimising pauses
@@ -75,8 +73,7 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       this.sessionContext.linkFlowControl(address, this);
    }
 
-   @Override
-   public void acquireCredits(final int credits) throws ActiveMQException {
+   public void acquireCredits(final int credits) throws InterruptedException, ActiveMQException {
       checkCredits(credits);
 
       boolean tryAcquire;
@@ -94,10 +91,6 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
                   // better getting a "null" string than a NPE
                   ActiveMQClientLogger.LOGGER.outOfCreditOnFlowControl("" + address);
                }
-            }
-            catch (InterruptedException interrupted) {
-               Thread.currentThread().interrupt();
-               throw new ActiveMQInterruptedException(interrupted);
             }
             finally {
                this.blocked = false;
@@ -124,7 +117,6 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       }
    }
 
-   @Override
    public boolean isBlocked() {
       return blocked;
    }
@@ -133,7 +125,6 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       return semaphore.availablePermits();
    }
 
-   @Override
    public void receiveCredits(final int credits) {
       synchronized (this) {
          arriving -= credits;
@@ -142,14 +133,12 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       semaphore.release(credits);
    }
 
-   @Override
    public void receiveFailCredits(final int credits) {
       serverRespondedWithFail = true;
       // receive credits like normal to keep the sender from blocking
       receiveCredits(credits);
    }
 
-   @Override
    public synchronized void reset() {
       // Any pendingCredits credits from before failover won't arrive, so we re-initialise
 
@@ -165,7 +154,6 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       checkCredits(Math.max(windowSize * 2, beforeFailure));
    }
 
-   @Override
    public void close() {
       // Closing a producer that is blocking should make it return
       closed = true;
@@ -173,17 +161,14 @@ public class ClientProducerCreditsImpl implements ClientProducerCredits {
       semaphore.release(Integer.MAX_VALUE / 2);
    }
 
-   @Override
    public synchronized void incrementRefCount() {
       refCount++;
    }
 
-   @Override
    public synchronized int decrementRefCount() {
       return --refCount;
    }
 
-   @Override
    public synchronized void releaseOutstanding() {
       semaphore.drainPermits();
    }

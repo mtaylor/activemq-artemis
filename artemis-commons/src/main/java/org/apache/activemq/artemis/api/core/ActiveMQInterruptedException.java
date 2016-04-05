@@ -26,8 +26,4 @@ public final class ActiveMQInterruptedException extends RuntimeException {
    public ActiveMQInterruptedException(Throwable cause) {
       super(cause);
    }
-
-   public ActiveMQInterruptedException(String message) {
-      super(message);
-   }
 }

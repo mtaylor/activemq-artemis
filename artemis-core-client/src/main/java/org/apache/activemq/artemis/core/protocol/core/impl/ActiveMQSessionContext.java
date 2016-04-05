@@ -153,10 +153,6 @@ public class ActiveMQSessionContext extends SessionContext {
       }
    }
 
-   public int getReconnectID() {
-      return sessionChannel.getReconnectID();
-   }
-
    private final CommandConfirmationHandler confirmationHandler = new CommandConfirmationHandler() {
       public void commandConfirmed(final Packet packet) {
          if (packet.getType() == PacketImpl.SESS_SEND) {
@@ -394,17 +390,16 @@ public class ActiveMQSessionContext extends SessionContext {
                                     boolean sendBlocking,
                                     boolean lastChunk,
                                     byte[] chunk,
-                                    int reconnectID,
                                     SendAcknowledgementHandler messageHandler) throws ActiveMQException {
       final boolean requiresResponse = lastChunk && sendBlocking;
       final SessionSendContinuationMessage chunkPacket = new SessionSendContinuationMessage(msgI, chunk, !lastChunk, requiresResponse, messageBodySize, messageHandler);
 
       if (requiresResponse) {
          // When sending it blocking, only the last chunk will be blocking.
-         sessionChannel.sendBlocking(chunkPacket, reconnectID, PacketImpl.NULL_RESPONSE);
+         sessionChannel.sendBlocking(chunkPacket, PacketImpl.NULL_RESPONSE);
       }
       else {
-         sessionChannel.send(chunkPacket, reconnectID);
+         sessionChannel.send(chunkPacket);
       }
 
       return chunkPacket.getPacketSize();

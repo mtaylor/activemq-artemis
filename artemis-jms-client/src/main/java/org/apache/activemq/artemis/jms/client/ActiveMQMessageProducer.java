@@ -35,7 +35,6 @@ import javax.jms.Topic;
 import javax.jms.TopicPublisher;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
-import org.apache.activemq.artemis.api.core.ActiveMQInterruptedException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.ClientProducer;
@@ -476,11 +475,6 @@ public class ActiveMQMessageProducer implements MessageProducer, QueueSender, To
          else {
             clientProducer.send(address, coreMessage);
          }
-      }
-      catch (ActiveMQInterruptedException e) {
-         JMSException jmsException = new JMSException(e.getMessage());
-         jmsException.initCause(e);
-         throw jmsException;
       }
       catch (ActiveMQException e) {
          throw JMSExceptionHelper.convertFromActiveMQException(e);
