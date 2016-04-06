@@ -114,19 +114,24 @@ public class SharedNothingLiveActivation extends LiveActivation {
       return new ChannelHandler() {
          @Override
          public void handlePacket(Packet packet) {
-            if (packet.getType() == PacketImpl.BACKUP_REGISTRATION) {
-               BackupRegistrationMessage msg = (BackupRegistrationMessage) packet;
-               ClusterConnection clusterConnection = acceptorUsed.getClusterConnection();
-               try {
-                  startReplication(channel.getConnection(), clusterConnection, getPair(msg.getConnector(), true), msg.isFailBackRequest());
+            try {
+               if (packet.getType() == PacketImpl.BACKUP_REGISTRATION) {
+                  BackupRegistrationMessage msg = (BackupRegistrationMessage) packet;
+                  ClusterConnection clusterConnection = acceptorUsed.getClusterConnection();
+                  try {
+                     startReplication(channel.getConnection(), clusterConnection, getPair(msg.getConnector(), true), msg.isFailBackRequest());
+                  }
+                  catch (ActiveMQAlreadyReplicatingException are) {
+                     channel.send(new BackupReplicationStartFailedMessage(BackupReplicationStartFailedMessage.BackupRegistrationProblem.ALREADY_REPLICATING));
+                  }
+                  catch (ActiveMQException e) {
+                     ActiveMQServerLogger.LOGGER.debug("Failed to process backup registration packet", e);
+                     channel.send(new BackupReplicationStartFailedMessage(BackupReplicationStartFailedMessage.BackupRegistrationProblem.EXCEPTION));
+                  }
                }
-               catch (ActiveMQAlreadyReplicatingException are) {
-                  channel.send(new BackupReplicationStartFailedMessage(BackupReplicationStartFailedMessage.BackupRegistrationProblem.ALREADY_REPLICATING));
-               }
-               catch (ActiveMQException e) {
-                  ActiveMQServerLogger.LOGGER.debug("Failed to process backup registration packet", e);
-                  channel.send(new BackupReplicationStartFailedMessage(BackupReplicationStartFailedMessage.BackupRegistrationProblem.EXCEPTION));
-               }
+            }
+            catch (Throwable e) {
+               ActiveMQServerLogger.LOGGER.warn(e.getMessage(), e);
             }
          }
       };
