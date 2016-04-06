@@ -111,12 +111,14 @@ import org.apache.activemq.artemis.core.transaction.TransactionOperation;
 import org.apache.activemq.artemis.core.transaction.TransactionOperationAbstract;
 import org.apache.activemq.artemis.core.transaction.TransactionPropertyIndexes;
 import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
+import org.apache.activemq.artemis.journal.ActiveMQJournalLogger;
 import org.apache.activemq.artemis.utils.ActiveMQThreadFactory;
 import org.apache.activemq.artemis.utils.Base64;
 import org.apache.activemq.artemis.utils.ByteUtil;
 import org.apache.activemq.artemis.utils.DataConstants;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
 import org.apache.activemq.artemis.utils.IDGenerator;
+import org.apache.activemq.artemis.utils.ReusableLatch;
 import org.apache.activemq.artemis.utils.UUID;
 import org.apache.activemq.artemis.utils.XidCodecSupport;
 
@@ -138,7 +140,7 @@ import static org.apache.activemq.artemis.core.persistence.impl.journal.JournalR
  * Notice that, turning on and off replication (on the live server side) is _mostly_ a matter of
  * using {@link ReplicatedJournal}s instead of regular {@link JournalImpl}, and sync the existing
  * data. For details see the Javadoc of
- * {@link #startReplication(ReplicationManager, PagingManager, String, boolean)}.
+ * {@link JournalStorageManager#startReplication(ReplicationManager, PagingManager, String, boolean, long)}
  * <p>
  */
 public class JournalStorageManager implements StorageManager {
@@ -170,6 +172,8 @@ public class JournalStorageManager implements StorageManager {
          throw new InvalidParameterException("invalid byte: " + type);
       }
    }
+
+   private final ReusableLatch replicateSyncLatch = new ReusableLatch(0);
 
    private final SequentialFileFactory journalFF;
 
@@ -292,6 +296,13 @@ public class JournalStorageManager implements StorageManager {
       return replicator != null;
    }
 
+   @Override
+   public void waitReplicaSync(long timeout) throws Exception {
+      if (!replicateSyncLatch.await(timeout, TimeUnit.MILLISECONDS)) {
+         ActiveMQJournalLogger.LOGGER.timeoutOnSync();
+      }
+   }
+
    /**
     * Starts replication at the live-server side.
     * <p>
@@ -326,6 +337,21 @@ public class JournalStorageManager implements StorageManager {
          throw ActiveMQMessageBundle.BUNDLE.notJournalImpl();
       }
 
+
+      replicateSyncLatch.setCount(1);
+      try {
+         sendDataToReplica(replicationManager, pagingManager, nodeID, autoFailBack, initialReplicationSyncTimeout);
+      }
+      finally {
+         replicateSyncLatch.countDown();
+      }
+   }
+
+   private void sendDataToReplica(ReplicationManager replicationManager,
+                                  PagingManager pagingManager,
+                                  String nodeID,
+                                  boolean autoFailBack,
+                                  long initialReplicationSyncTimeout) throws Exception {
       // We first do a compact without any locks, to avoid copying unnecessary data over the network.
       // We do this without holding the storageManager lock, so the journal stays open while compact is being done
       originalMessageJournal.scheduleCompactAndBlock(-1);

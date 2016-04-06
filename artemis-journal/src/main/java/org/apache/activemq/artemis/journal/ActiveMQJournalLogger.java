@@ -241,6 +241,10 @@ public interface ActiveMQJournalLogger extends BasicLogger {
    @Message(id = 142034, value = "Exception on submitting write", format = Message.Format.MESSAGE_FORMAT)
    void errorSubmittingWrite(@Cause Throwable e);
 
+   @LogMessage(level = Logger.Level.WARN)
+   @Message(id = 142035, value = "A shutdown was issued and the replica sync could not be finished in time. You could increase ReplicatePolicy.InitialReplicationSyncTimeout to avoid this in the future.", format = Message.Format.MESSAGE_FORMAT)
+   void timeoutOnSync();
+
    @LogMessage(level = Logger.Level.ERROR)
    @Message(id = 144000, value = "Failed to delete file {0}", format = Message.Format.MESSAGE_FORMAT)
    void errorDeletingFile(Object e);
