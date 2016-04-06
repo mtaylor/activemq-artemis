@@ -18,6 +18,7 @@ package org.apache.activemq.artemis.core.remoting.impl.netty;
 
 import java.net.SocketAddress;
 import java.util.Deque;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.Semaphore;
@@ -112,6 +113,7 @@ public class NettyConnection implements Connection {
    }
 
    public void fireReady(final boolean ready) {
+      LinkedList<ReadyListener> readyToCall = null;
       synchronized (readyListeners) {
          this.ready = ready;
 
@@ -119,18 +121,30 @@ public class NettyConnection implements Connection {
             for (;;) {
                ReadyListener readyListener = readyListeners.poll();
                if (readyListener == null) {
-                  return;
+                  break;
                }
 
-               try {
-                  readyListener.readyForWriting();
+
+               if (readyToCall == null) {
+                  readyToCall = new LinkedList<>();
                }
-               catch (Throwable logOnly) {
-                  ActiveMQClientLogger.LOGGER.warn(logOnly.getMessage(), logOnly);
-               }
+
+               readyToCall.add(readyListener);
             }
          }
       }
+
+      if (readyToCall != null) {
+         for (ReadyListener readyListener : readyToCall) {
+            try {
+               readyListener.readyForWriting();
+            }
+            catch (Throwable logOnly) {
+               ActiveMQClientLogger.LOGGER.warn(logOnly.getMessage(), logOnly);
+            }
+         }
+      }
+
    }
 
    public void forceClose() {
