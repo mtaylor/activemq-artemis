@@ -1186,6 +1186,11 @@ public interface ActiveMQServerLogger extends BasicLogger {
       format = Message.Format.MESSAGE_FORMAT)
    void noProtocolManagerFound(String protocol, String host);
 
+   @Message(id = 222204, value = "Replication synchronization process timed out after waiting {0} milliseconds",
+      format = Message.Format.MESSAGE_FORMAT)
+   IllegalStateException replicationSynchronizationTimeout(long timeout);
+
+
    @LogMessage(level = Logger.Level.ERROR)
    @Message(id = 224000, value = "Failure in initialisation", format = Message.Format.MESSAGE_FORMAT)
    void initializationError(@Cause Throwable e);
