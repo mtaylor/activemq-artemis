@@ -136,9 +136,10 @@ public final class SharedNothingBackupActivation extends Activation {
 
          // nodeManager.startBackup();
 
+         replicationEndpoint.setBackupQuorum(backupQuorum);
+
          activeMQServer.getBackupManager().start();
 
-         replicationEndpoint.setBackupQuorum(backupQuorum);
          replicationEndpoint.setExecutor(activeMQServer.getExecutorFactory().getExecutor());
          EndpointConnector endpointConnector = new EndpointConnector();
 

@@ -31,6 +31,7 @@ import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.Replicatio
 import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.ReplicationStartSyncMessage;
 import org.apache.activemq.artemis.core.replication.ReplicationEndpoint;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.impl.SharedNothingBackupActivation;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 
@@ -120,7 +121,6 @@ public class BackupSyncDelay implements Interceptor {
       public volatile boolean deliver;
       private volatile boolean delivered;
       private boolean receivedUpToDate;
-      private boolean mustHold = true;
       private final byte typeToIntercept;
 
       public void addSubHandler(ReplicationEndpoint handler) {
@@ -155,10 +155,6 @@ public class BackupSyncDelay implements Interceptor {
          this.channel = channel;
       }
 
-      public void setHold(boolean hold) {
-         mustHold = hold;
-      }
-
       @Override
       public synchronized void handlePacket(Packet packet) {
          if (onHold != null && deliver) {
@@ -166,12 +162,12 @@ public class BackupSyncDelay implements Interceptor {
          }
 
          if (typeToIntercept == PacketImpl.REPLICATION_START_FINISH_SYNC) {
-            if (packet.getType() == PacketImpl.REPLICATION_START_FINISH_SYNC && mustHold) {
+            if (packet.getType() == PacketImpl.REPLICATION_START_FINISH_SYNC) {
                ReplicationStartSyncMessage syncMsg = (ReplicationStartSyncMessage) packet;
                if (syncMsg.isSynchronizationFinished() && !deliver) {
                   receivedUpToDate = true;
-                  assert onHold == null;
                   onHold = packet;
+                  ActiveMQServerLogger.LOGGER.info("Sending Replication response done");
                   PacketImpl response = new ReplicationResponseMessageV2(true);
                   channel.send(response);
                   return;

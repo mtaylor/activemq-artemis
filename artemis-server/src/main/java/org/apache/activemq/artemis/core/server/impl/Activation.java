@@ -51,7 +51,7 @@ public abstract class Activation implements Runnable {
    }
 
    /*
-   * allow the activation t ooverride this if it needs to tidy up after freezing the connection. its a different method as
+   * allow the activation to override this if it needs to tidy up after freezing the connection. its a different method as
    * its called outside of the lock that the previous method is.
    * */
    public void postConnectionFreeze() {
