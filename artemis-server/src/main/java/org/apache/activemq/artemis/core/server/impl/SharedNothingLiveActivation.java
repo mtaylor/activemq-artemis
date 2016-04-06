@@ -319,6 +319,14 @@ public class SharedNothingLiveActivation extends LiveActivation {
 
    @Override
    public void sendLiveIsStopping() {
+      try {
+         // We give some time to replicate sync to finish in case that's already happening
+         activeMQServer.getStorageManager().waitReplicaSync(replicatedPolicy.getInitialReplicationSyncTimeout());
+      }
+      catch (Exception e) {
+         ActiveMQServerLogger.LOGGER.warn(e.getMessage(), e);
+      }
+
       final ReplicationManager localReplicationManager = replicationManager;
 
       if (localReplicationManager != null) {

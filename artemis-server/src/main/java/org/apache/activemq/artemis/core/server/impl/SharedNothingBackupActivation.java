@@ -85,6 +85,7 @@ public final class SharedNothingBackupActivation extends Activation {
    }
 
    public void init() throws Exception {
+      backupSyncLatch.setCount(1);
       assert replicationEndpoint == null;
       activeMQServer.resetNodeManager();
       backupUpToDate = false;
@@ -183,6 +184,11 @@ public final class SharedNothingBackupActivation extends Activation {
             }
 
             activeMQServer.getThreadPool().execute(endpointConnector);
+
+            if (!waitForBackupSync(10, TimeUnit.MINUTES)) {
+               System.err.println("Couldn't get the replication sync to finish in time!!!!!");
+               new Exception("Trace couldn't get the replica to sync").printStackTrace();
+            }
             /**
              * Wait for a signal from the the quorum manager, at this point if replication has been successful we can
              * fail over or if there is an error trying to replicate (such as already replicating) we try the

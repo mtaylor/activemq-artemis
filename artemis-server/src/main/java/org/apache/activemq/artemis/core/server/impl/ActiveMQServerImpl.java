@@ -571,6 +571,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
     * @param criticalIOError whether we have encountered an IO error with the journal etc
     */
    void stop(boolean failoverOnServerShutdown, final boolean criticalIOError, boolean restarting) {
+
       synchronized (this) {
          if (state == SERVER_STATE.STOPPED || state == SERVER_STATE.STOPPING) {
             return;

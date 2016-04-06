@@ -73,6 +73,10 @@ public interface StorageManager extends IDGenerator, ActiveMQComponent {
 
    void lineUpContext();
 
+   /** It will wait the {@link org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager#sendDataToReplica(ReplicationManager, PagingManager, String, boolean, long)} to finish.
+    * or any data that needs to be sent to the replica before the server is gone. */
+   void waitReplicaSync(long timeout) throws Exception;
+
    /**
     * It just creates an OperationContext without associating it
     */
