@@ -167,7 +167,7 @@ public class BackupSyncDelay implements Interceptor {
                if (syncMsg.isSynchronizationFinished() && !deliver) {
                   receivedUpToDate = true;
                   onHold = packet;
-                  ActiveMQServerLogger.LOGGER.info("Sending Replication response done");
+                  ActiveMQServerLogger.LOGGER.debug("Sending Replication response done");
                   PacketImpl response = new ReplicationResponseMessageV2(true);
                   channel.send(response);
                   return;
