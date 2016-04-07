@@ -305,7 +305,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
          for (Page page : map.values()) {
             try {
                page.sync();
-               page.close();
+               page.close(false);
             }
             catch (Exception e) {
                ActiveMQServerLogger.LOGGER.errorClosingPageOnReplication(e);
@@ -697,7 +697,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
             }
          }
          else {
-            page.close();
+            page.close(false);
          }
       }
 
