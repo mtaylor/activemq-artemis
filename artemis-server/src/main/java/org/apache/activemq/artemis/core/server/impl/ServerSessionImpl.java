@@ -85,6 +85,7 @@ import org.apache.activemq.artemis.utils.TypedProperties;
 import org.apache.activemq.artemis.utils.UUID;
 import org.apache.activemq.artemis.utils.json.JSONArray;
 import org.apache.activemq.artemis.utils.json.JSONObject;
+import org.jboss.logging.Logger;
 
 /**
  * Server side Session implementation
@@ -92,7 +93,8 @@ import org.apache.activemq.artemis.utils.json.JSONObject;
 public class ServerSessionImpl implements ServerSession, FailureListener {
    // Constants -----------------------------------------------------------------------------
 
-   private static final boolean isTrace = ActiveMQServerLogger.LOGGER.isTraceEnabled();
+   private static final Logger logger = Logger.getLogger(ServerSessionImpl.class);
+   private static final boolean isTrace = logger.isTraceEnabled();
 
    // Static -------------------------------------------------------------------------------
 
@@ -759,7 +761,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
 
    public synchronized void commit() throws Exception {
       if (isTrace) {
-         ActiveMQServerLogger.LOGGER.trace("Calling commit");
+         logger.trace("Calling commit");
       }
       try {
          if (tx != null) {
@@ -829,7 +831,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          Transaction theTx = resourceManager.removeTransaction(xid);
 
          if (isTrace) {
-            ActiveMQServerLogger.LOGGER.trace("XAcommit into " + theTx + ", xid=" + xid);
+            logger.trace("XAcommit into " + theTx + ", xid=" + xid);
          }
 
          if (theTx == null) {
@@ -843,7 +845,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
             }
             else {
                if (isTrace) {
-                  ActiveMQServerLogger.LOGGER.trace("XAcommit into " + theTx + ", xid=" + xid + " cannot find it");
+                  logger.trace("XAcommit into " + theTx + ", xid=" + xid + " cannot find it");
                }
 
                throw new ActiveMQXAException(XAException.XAER_NOTA, "Cannot find xid in resource manager: " + xid);
@@ -978,7 +980,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       else {
          Transaction theTx = resourceManager.removeTransaction(xid);
          if (isTrace) {
-            ActiveMQServerLogger.LOGGER.trace("xarollback into " + theTx);
+            logger.trace("xarollback into " + theTx);
          }
 
          if (theTx == null) {
@@ -992,7 +994,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
             }
             else {
                if (isTrace) {
-                  ActiveMQServerLogger.LOGGER.trace("xarollback into " + theTx + ", xid=" + xid + " forcing a rollback regular");
+                  logger.trace("xarollback into " + theTx + ", xid=" + xid + " forcing a rollback regular");
                }
 
                try {
@@ -1011,7 +1013,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          else {
             if (theTx.getState() == Transaction.State.SUSPENDED) {
                if (isTrace) {
-                  ActiveMQServerLogger.LOGGER.trace("xarollback into " + theTx + " sending tx back as it was suspended");
+                  logger.trace("xarollback into " + theTx + " sending tx back as it was suspended");
                }
 
                // Put it back
@@ -1047,7 +1049,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       tx = newTransaction(xid);
 
       if (isTrace) {
-         ActiveMQServerLogger.LOGGER.trace("xastart into tx= " + tx);
+         logger.trace("xastart into tx= " + tx);
       }
 
       boolean added = resourceManager.putTransaction(xid, tx);
@@ -1077,14 +1079,14 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       }
 
       if (isTrace) {
-         ActiveMQServerLogger.LOGGER.trace("xastart into tx= " + tx);
+         logger.trace("xastart into tx= " + tx);
       }
    }
 
    public synchronized void xaSuspend() throws Exception {
 
       if (isTrace) {
-         ActiveMQServerLogger.LOGGER.trace("xasuspend on " + this.tx);
+         logger.trace("xasuspend on " + this.tx);
       }
 
       if (tx == null) {
@@ -1116,7 +1118,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          Transaction theTx = resourceManager.getTransaction(xid);
 
          if (isTrace) {
-            ActiveMQServerLogger.LOGGER.trace("xaprepare into " + ", xid=" + xid + ", tx= " + tx);
+            logger.trace("xaprepare into " + ", xid=" + xid + ", tx= " + tx);
          }
 
          if (theTx == null) {
@@ -1234,7 +1236,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       LargeServerMessage largeMsg = storageManager.createLargeMessage(id, message);
 
       if (ActiveMQServerLogger.LOGGER.isTraceEnabled()) {
-         ActiveMQServerLogger.LOGGER.trace("sendLarge::" + largeMsg);
+         logger.trace("sendLarge::" + largeMsg);
       }
 
       if (currentLargeMessage != null) {
@@ -1273,7 +1275,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       }
 
       if (isTrace) {
-         ActiveMQServerLogger.LOGGER.trace("send(message=" + message + ", direct=" + direct + ") being called");
+         logger.trace("send(message=" + message + ", direct=" + direct + ") being called");
       }
 
       if (message.getAddress() == null) {
@@ -1295,6 +1297,11 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
                                  final long messageBodySize,
                                  final byte[] body,
                                  final boolean continues) throws Exception {
+
+      if (isTrace) {
+         logger.trace("sendContinuations(packetSize=" + packetSize + ", messageBodySize=" + messageBodySize + ", body.length=" + body.length + ", continues=" + continues + ") on message=" + currentLargeMessage);
+      }
+
       if (currentLargeMessage == null) {
          throw ActiveMQMessageBundle.BUNDLE.largeMessageNotInitialised();
       }

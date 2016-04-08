@@ -504,12 +504,18 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
    }
 
    private void handleLargeMessageEnd(final ReplicationLargeMessageEndMessage packet) {
+      if (isTrace) {
+         logger.trace("handleLargeMessageEnd on " + packet.getMessageId());
+      }
       final ReplicatedLargeMessage message = lookupLargeMessage(packet.getMessageId(), true, false);
       if (message != null) {
          executor.execute(new Runnable() {
             @Override
             public void run() {
                try {
+                  if (isTrace) {
+                     logger.trace("Deleting message " + packet.getMessageId() + " on the executor @ handleLargeMessageEnd");
+                  }
                   message.deleteFile();
                }
                catch (Exception e) {
@@ -562,7 +568,9 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
    private void handleLargeMessageBegin(final ReplicationLargeMessageBeginMessage packet) {
       final long id = packet.getMessageId();
       createLargeMessage(id, false);
-      ActiveMQServerLogger.LOGGER.trace("Receiving Large Message " + id + " on backup");
+      if (isTrace) {
+         logger.trace("Receiving Large Message " + id + " on backup");
+      }
    }
 
    private void createLargeMessage(final long id, boolean liveToBackupSync) {

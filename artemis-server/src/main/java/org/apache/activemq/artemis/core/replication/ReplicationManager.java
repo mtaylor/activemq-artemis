@@ -588,7 +588,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
 
          ActiveMQServerLogger.LOGGER.info("sending Sycnrhonization towards " + nodeID);
          synchronizationIsFinishedAcknowledgement.countUp();
-         sendReplicatePacket(new ReplicationStartSyncMessage(nodeID));
+         sendReplicatePacket(new ReplicationStartSyncMessage(nodeID), false);
          try {
             if (!synchronizationIsFinishedAcknowledgement.await(initialReplicationSyncTimeout)) {
                ActiveMQServerLogger.LOGGER.replicationSynchronizationTimeout(initialReplicationSyncTimeout);

@@ -87,6 +87,14 @@ public abstract class SessionContinuationMessage extends PacketImpl {
    }
 
    @Override
+   public String toString() {
+      return this.getClass().getSimpleName() + "{" +
+         "body.length=" + body.length +
+         ", continues=" + continues +
+         '}';
+   }
+
+   @Override
    public boolean equals(Object obj) {
       if (this == obj)
          return true;

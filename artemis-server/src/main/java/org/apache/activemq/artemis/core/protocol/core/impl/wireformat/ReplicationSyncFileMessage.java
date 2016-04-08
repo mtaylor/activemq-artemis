@@ -27,7 +27,7 @@ import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageM
 import org.apache.activemq.artemis.core.protocol.core.impl.PacketImpl;
 
 /**
- * Message is used to sync {@link org.apache.activemq.artemis.core.journal.SequentialFile}s to a backup server. The {@link FileType} controls
+ * Message is used to syn files to a backup server. The {@link FileType} controls
  * which extra information is sent.
  */
 public final class ReplicationSyncFileMessage extends PacketImpl {
@@ -238,7 +238,17 @@ public final class ReplicationSyncFileMessage extends PacketImpl {
 
    @Override
    public String toString() {
-      return ReplicationSyncFileMessage.class.getSimpleName() + "(" + fileType +
-         (journalType != null ? ", " + journalType : "") + ", id=" + fileId + ")";
+      if (byteBuffer != null) {
+         return ReplicationSyncFileMessage.class.getSimpleName() + "(" + fileType +
+            (journalType != null ? ", " + journalType : "") + ", id=" + fileId + "byteBuffer.readable=" + byteBuffer.remaining() + ")";
+      }
+      else if (byteArray != null) {
+         return ReplicationSyncFileMessage.class.getSimpleName() + "(" + fileType +
+            (journalType != null ? ", " + journalType : "") + ", id=" + fileId + "byteArray.length" + byteArray.length + ")";
+      }
+      else {
+         return ReplicationSyncFileMessage.class.getSimpleName() + "(" + fileType +
+            (journalType != null ? ", " + journalType : "") + ", id=" + fileId + "byteArray=null)";
+      }
    }
 }

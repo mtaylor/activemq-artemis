@@ -31,6 +31,7 @@ import org.apache.activemq.artemis.api.core.client.FailoverEventType;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.impl.SharedNothingBackupActivation;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnection;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
@@ -171,7 +172,7 @@ public class RaceOnSyncLargeMessageOverReplication2Test extends ActiveMQTestBase
          name = "InterruptSync",
          targetClass = "org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager",
          targetMethod = "sendLargeMessageFiles",
-         targetLocation = "ENTRY",
+         targetLocation = "EXIT",
          action = "org.apache.activemq.artemis.tests.extras.byteman.RaceOnSyncLargeMessageOverReplication2Test.syncLargeMessage();")})
    public void testSendLargeMessage() throws Exception {
 
@@ -210,6 +211,9 @@ public class RaceOnSyncLargeMessageOverReplication2Test extends ActiveMQTestBase
       startBackup();
 
       Assert.assertTrue(flagSyncArrived.await(10, TimeUnit.SECONDS));
+      flagSyncWait.countDown();
+      Assert.assertTrue(((SharedNothingBackupActivation)backupServer.getActivation()).waitForBackupSync(10, TimeUnit.SECONDS));
+
 
       flagWait.countDown();
 
@@ -218,8 +222,6 @@ public class RaceOnSyncLargeMessageOverReplication2Test extends ActiveMQTestBase
       flag15Wait.countDown();
 
       t.join(5000);
-
-      flagSyncWait.countDown();
 
       System.out.println("Thread joined");
 

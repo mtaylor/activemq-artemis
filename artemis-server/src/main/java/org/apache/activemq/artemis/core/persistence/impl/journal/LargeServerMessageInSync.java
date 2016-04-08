@@ -26,8 +26,12 @@ import org.apache.activemq.artemis.core.persistence.StorageManager.LargeMessageE
 import org.apache.activemq.artemis.core.replication.ReplicatedLargeMessage;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.LargeServerMessage;
+import org.jboss.logging.Logger;
 
 public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
+
+   private final Logger logger = Logger.getLogger(LargeServerMessageInSync.class);
+   private final boolean isTrace = logger.isTraceEnabled();
 
    private final LargeServerMessage mainLM;
    private final StorageManager storageManager;
@@ -44,26 +48,66 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
    }
 
    public synchronized void joinSyncedData(ByteBuffer buffer) throws Exception {
-      if (deleted)
+      if (deleted) {
+         if (isTrace) {
+            logger.trace("joinSyncedData was ignored on " + mainLM + " as a previous delete was called");
+         }
          return;
+      }
       SequentialFile mainSeqFile = mainLM.getFile();
       if (!mainSeqFile.isOpen()) {
          mainSeqFile.open();
       }
-      if (appendFile != null) {
-         appendFile.close();
-         appendFile.open();
-         for (;;) {
-            buffer.rewind();
-            int bytesRead = appendFile.read(buffer);
-            if (bytesRead > 0)
-               mainSeqFile.writeDirect(buffer, false);
-            if (bytesRead < buffer.capacity()) {
-               break;
+
+      if (isTrace) {
+         logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + " ");
+      }
+
+
+      try {
+         mainSeqFile.position(mainSeqFile.size());
+         if (appendFile != null) {
+            if (!appendFile.isOpen()) {
+               appendFile.open();
+            }
+            appendFile.position(0);
+
+            for (;;) {
+               buffer.rewind();
+               int bytesRead = appendFile.read(buffer);
+
+               if (isTrace) {
+                  logger.trace("appending " + bytesRead + " bytes on mainSeqFile");
+               }
+
+               if (bytesRead > 0) {
+                  mainSeqFile.writeDirect(buffer, false);
+               }
+
+               if (bytesRead < buffer.capacity()) {
+                  logger.trace("Interrupting reading as the whole thing was sent on " + mainLM);
+                  break;
+               }
+            }
+            deleteAppendFile();
+         }
+         else {
+            if (isTrace) {
+               logger.trace("joinSyncedData, appendFile is null, ignoring joinSyncedData on " + mainLM);
             }
          }
-         deleteAppendFile();
       }
+      catch (Throwable e) {
+         logger.warn("Error while sincing data on largeMessageInSync::" + mainLM);
+      }
+
+
+      if (isTrace) {
+         logger.trace("joinedSyncData on " + mainLM + " finished with " + mainSeqFile.size());
+      }
+
+
+
       syncDone = true;
    }
 
@@ -120,11 +164,16 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
 
    @Override
    public synchronized void addBytes(byte[] bytes) throws Exception {
-      if (deleted)
-         return;
       if (syncDone) {
+         // this should never happen
+         logger.warn("AddBytes was called on a complete LargeServerMessageinSync during replication, something is wrong with your codebase (perhaps you have mixed up jars on  your system) Original LargeMessage:" + mainLM);
+         // If this happened we would at least complete the operation just a recovery mechanism
          mainLM.addBytes(bytes);
          return;
+      }
+
+      if (isTrace) {
+         logger.trace("addBytes(bytes.length=" + bytes.length + ") on message=" + mainLM);
       }
 
       if (appendFile == null) {
