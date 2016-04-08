@@ -319,6 +319,8 @@ public class SharedNothingLiveActivation extends LiveActivation {
 
    @Override
    public void sendLiveIsStopping() {
+
+      new Exception("SendLiveIsStopping, waiting for " + replicatedPolicy.getInitialReplicationSyncTimeout()).printStackTrace();
       try {
          // We give some time to replicate sync to finish in case that's already happening
          activeMQServer.getStorageManager().waitReplicaSync(replicatedPolicy.getInitialReplicationSyncTimeout());

@@ -32,11 +32,14 @@ import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.MessageHandler;
 import org.apache.activemq.artemis.api.jms.ActiveMQJMSConstants;
+import org.jboss.logging.Logger;
 
 /**
  * ActiveMQ Artemis implementation of a JMS MessageConsumer.
  */
 public final class ActiveMQMessageConsumer implements QueueReceiver, TopicSubscriber {
+
+   private final Logger logger = Logger.getLogger(ActiveMQMessageConsumer.class);
 
    private final ClientConsumer consumer;
 
@@ -201,7 +204,13 @@ public final class ActiveMQMessageConsumer implements QueueReceiver, TopicSubscr
             boolean needSession = ackMode == Session.CLIENT_ACKNOWLEDGE || ackMode == ActiveMQJMSConstants.INDIVIDUAL_ACKNOWLEDGE;
             jmsMsg = ActiveMQMessage.createMessage(coreMessage, needSession ? session.getCoreSession() : null);
 
-            jmsMsg.doBeforeReceive();
+            try {
+               jmsMsg.doBeforeReceive();
+            }
+            catch (IndexOutOfBoundsException ioob) {
+               logger.warn("Received IOOB on " + jmsMsg.getCoreMessage().toString());
+               throw ioob;
+            }
 
             // We Do the ack after doBeforeRecive, as in the case of large messages, this may fail so we don't want messages redelivered
             // https://issues.jboss.org/browse/JBPAPP-6110
