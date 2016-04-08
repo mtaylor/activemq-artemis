@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -366,13 +367,24 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
             journal.synchronizationUnlock();
          }
       }
+
       ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
+      LinkedList<Long> messageIDToRecreate = new LinkedList<>();
+
       for (Entry<Long, ReplicatedLargeMessage> entry : largeMessages.entrySet()) {
          ReplicatedLargeMessage lm = entry.getValue();
          if (lm instanceof LargeServerMessageInSync) {
             LargeServerMessageInSync lmSync = (LargeServerMessageInSync) lm;
             lmSync.joinSyncedData(buffer);
+            messageIDToRecreate.add(entry.getKey());
          }
+      }
+
+      // We need to replace inSync message IDs for regular ones
+      // otherwise we will still be writing towards the old file
+      for (Long idToRecreate : messageIDToRecreate) {
+         largeMessages.remove(idToRecreate);
+         createLargeMessage(idToRecreate, false);
       }
 
       journalsHolder = null;
@@ -564,7 +576,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
 
       msg.setDurable(true);
       msg.setMessageID(id);
-      largeMessages.put(id, msg);
+      largeMessages.putIfAbsent(id, msg);
    }
 
    /**
