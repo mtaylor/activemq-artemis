@@ -756,9 +756,10 @@ public interface ActiveMQServerLogger extends BasicLogger {
       format = Message.Format.MESSAGE_FORMAT)
    void broadcastGroupClosed(@Cause Exception e);
 
+
    @LogMessage(level = Logger.Level.WARN)
-   @Message(id = 222109, value = "NodeID={0} is not available on the topology. Retrying the connection to that node now", format = Message.Format.MESSAGE_FORMAT)
-   void nodeNotAvailable(String targetNodeID);
+   @Message(id = 222109, value = "Timed out waiting for write lock on consumer. Check the Thread dump", format = Message.Format.MESSAGE_FORMAT)
+   void timeoutLockingConsumer();
 
    @LogMessage(level = Logger.Level.WARN)
    @Message(id = 222110, value = "no queue IDs defined!,  originalMessage  = {0}, copiedMessage = {1}, props={2}",
@@ -885,7 +886,7 @@ public interface ActiveMQServerLogger extends BasicLogger {
 
    @LogMessage(level = Logger.Level.WARN)
    @Message(id = 222137, value = "Unable to announce backup, retrying", format = Message.Format.MESSAGE_FORMAT)
-   void errorAnnouncingBackup();
+   void errorAnnouncingBackup(@Cause Throwable e);
 
    @LogMessage(level = Logger.Level.WARN)
    @Message(id = 222138, value = "Local Member is not set at on ClusterConnection {0}", format = Message.Format.MESSAGE_FORMAT)
@@ -1478,4 +1479,9 @@ public interface ActiveMQServerLogger extends BasicLogger {
    @LogMessage(level = Logger.Level.DEBUG)
    @Message(id = 224070, value = "Received Interrupt Exception whilst waiting for component to shutdown: {0}", format = Message.Format.MESSAGE_FORMAT)
    void interruptWhilstStoppingComponent(String componentClassName);
+
+   @LogMessage(level = Logger.Level.INFO)
+   @Message(id = 224072, value = "libaio was found but the filesystem does not support AIO. Switching the configuration into NIO. Journal path: {0}", format = Message.Format.MESSAGE_FORMAT)
+   void switchingNIOonPath(String journalPath);
+
 }
