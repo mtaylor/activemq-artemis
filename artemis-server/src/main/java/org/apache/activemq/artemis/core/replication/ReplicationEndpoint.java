@@ -285,6 +285,9 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
    }
 
    public synchronized void stop() throws Exception {
+
+      logger.info("Stopping Replication Endpoint", new Exception("trace"));
+
       if (!started) {
          return;
       }
@@ -352,6 +355,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
    }
 
    private void finishSynchronization(String liveID) throws Exception {
+      logger.info("Finishing synchronization", new Exception("trace"));
       for (JournalContent jc : EnumSet.allOf(JournalContent.class)) {
          Journal journal = journalsHolder.remove(jc);
          journal.synchronizationLock();

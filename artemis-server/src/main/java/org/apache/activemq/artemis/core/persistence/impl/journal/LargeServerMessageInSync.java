@@ -59,13 +59,12 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
          mainSeqFile.open();
       }
 
-      if (isTrace) {
-         logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + ", appendFile size = " + appendFile.size());
-      }
-
-
       try {
          if (appendFile != null) {
+            if (isTrace) {
+               logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + ", appendFile size = " + appendFile.size());
+            }
+
             appendFile.close();
             appendFile.open();
 
