@@ -81,6 +81,7 @@ import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.cluster.qourum.SharedNothingBackupQuorum;
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl;
 import org.apache.activemq.artemis.core.server.impl.SharedNothingBackupActivation;
+import org.apache.activemq.artemis.utils.ReusableLatch;
 import org.jboss.logging.Logger;
 
 /**
@@ -103,6 +104,8 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
 
    private Journal[] journals;
    private final JournalLoadInformation[] journalLoadInformation = new JournalLoadInformation[2];
+
+   private final ReusableLatch backupSyncLatch = new ReusableLatch(0);
 
    /**
     * Files reserved in each journal for synchronization of existing data from the 'live' server.
@@ -284,6 +287,10 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       }
    }
 
+   public boolean waitForBackupSync(long timeout, TimeUnit unit) throws InterruptedException {
+      return backupSyncLatch.await(timeout, unit);
+   }
+
    public synchronized void stop() throws Exception {
 
       logger.info("Stopping Replication Endpoint", new Exception("trace"));
@@ -291,6 +298,12 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       if (!started) {
          return;
       }
+
+      if (logger.isDebugEnabled() && backupSyncLatch.getCount() > 1) {
+         logger.debug("backup has started, we will wait some time to sync finish");
+      }
+
+      waitForBackupSync(5, TimeUnit.MINUTES);
 
       // Channel may be null if there isn't a connection to a live server
       if (channel != null) {
@@ -394,6 +407,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       journalsHolder = null;
       backupQuorum.liveIDSet(liveID);
       activation.setRemoteBackupUpToDate();
+      this.backupSyncLatch.countDown();
       ActiveMQServerLogger.LOGGER.backupServerSynched(server);
       return;
    }
@@ -460,10 +474,15 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
     */
    private ReplicationResponseMessageV2 handleStartReplicationSynchronization(final ReplicationStartSyncMessage packet) throws Exception {
 
-      ActiveMQServerLogger.LOGGER.info("Receiving handleStartReplicationSynchronization::");
       ReplicationResponseMessageV2 replicationResponseMessage = new ReplicationResponseMessageV2();
-      if (!started)
+      if (!started) {
+         ActiveMQServerLogger.LOGGER.debug("Receiving handleStartReplicationSynchronization:: but it was ignored as the replication endpoint had status=stopped");
          return replicationResponseMessage;
+      }
+
+      backupSyncLatch.setCount(1);
+
+      ActiveMQServerLogger.LOGGER.info("Receiving handleStartReplicationSynchronization::");
 
       if (packet.isSynchronizationFinished()) {
          ActiveMQServerLogger.LOGGER.info("Responding the nodeID finish on replication");
