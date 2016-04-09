@@ -60,17 +60,14 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
       }
 
       if (isTrace) {
-         logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + " ");
+         logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + ", appendFile size = " + appendFile.size());
       }
 
 
       try {
-         mainSeqFile.position(mainSeqFile.size());
          if (appendFile != null) {
-            if (!appendFile.isOpen()) {
-               appendFile.open();
-            }
-            appendFile.position(0);
+            appendFile.close();
+            appendFile.open();
 
             for (;;) {
                buffer.rewind();
