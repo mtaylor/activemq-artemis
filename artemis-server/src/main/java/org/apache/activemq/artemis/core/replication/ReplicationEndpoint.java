@@ -453,7 +453,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       }
 
       if (data == null) {
-         channel1.close();
+//         channel1.close();
          return;
       }
 

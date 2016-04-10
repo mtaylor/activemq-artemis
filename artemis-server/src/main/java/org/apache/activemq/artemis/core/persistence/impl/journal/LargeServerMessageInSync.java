@@ -67,6 +67,7 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
 
             appendFile.close();
             appendFile.open();
+            appendFile.position(0);
 
             for (;;) {
                buffer.rewind();
@@ -125,6 +126,9 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
 
    @Override
    public synchronized void releaseResources() {
+      if (isTrace) {
+         logger.warn("release resources called on " + mainLM, new Exception("trace"));
+      }
       mainLM.releaseResources();
       if (appendFile != null && appendFile.isOpen()) {
          try {
