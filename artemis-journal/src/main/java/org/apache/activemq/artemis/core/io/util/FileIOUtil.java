@@ -47,7 +47,7 @@ public class FileIOUtil {
          for (;;) {
             // The buffer is reused...
             // We need to make sure we clear the limits and the buffer before reusing it
-            buffer.rewind();
+            buffer.clear();
             int bytesRead = from.read(buffer);
 
             if (isTrace) {
