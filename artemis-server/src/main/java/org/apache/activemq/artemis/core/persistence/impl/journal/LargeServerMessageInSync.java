@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.core.io.SequentialFile;
+import org.apache.activemq.artemis.core.io.util.FileIOUtil;
 import org.apache.activemq.artemis.core.persistence.StorageManager;
 import org.apache.activemq.artemis.core.persistence.StorageManager.LargeMessageExtension;
 import org.apache.activemq.artemis.core.replication.ReplicatedLargeMessage;
@@ -65,27 +66,7 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
                logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + ", appendFile size = " + appendFile.size());
             }
 
-            appendFile.close();
-            appendFile.open();
-            appendFile.position(0);
-
-            for (;;) {
-               buffer.rewind();
-               int bytesRead = appendFile.read(buffer);
-
-               if (isTrace) {
-                  logger.trace("appending " + bytesRead + " bytes on mainSeqFile");
-               }
-
-               if (bytesRead > 0) {
-                  mainSeqFile.writeDirect(buffer, false);
-               }
-
-               if (bytesRead < buffer.capacity()) {
-                  logger.trace("Interrupting reading as the whole thing was sent on " + mainLM);
-                  break;
-               }
-            }
+            FileIOUtil.copyData(appendFile, mainSeqFile, buffer);
             deleteAppendFile();
          }
          else {
