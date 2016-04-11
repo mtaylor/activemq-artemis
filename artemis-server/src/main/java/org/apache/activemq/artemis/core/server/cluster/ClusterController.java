@@ -256,7 +256,9 @@ public class ClusterController implements ActiveMQComponent {
     * @throws InterruptedException
     */
    public void awaitConnectionToReplicationCluster() throws InterruptedException {
-      replicationClusterConnectedLatch.await();
+      if (replicationClusterConnectedLatch.await(3, TimeUnit.MINUTES)) {
+         ActiveMQServerLogger.LOGGER.trace("Failed to get cluster connection");
+      }
    }
 
    /**
@@ -405,11 +407,18 @@ public class ClusterController implements ActiveMQComponent {
             serverLocator.connect();
             if (serverLocator == replicationLocator) {
                replicationClusterConnectedLatch.countDown();
+               ActiveMQServerLogger.LOGGER.trace("Cluster Connection Connected");
             }
          }
          catch (ActiveMQException e) {
-            if (!started)
+            if (!started) {
+               if (serverLocator == replicationLocator)
+                  ActiveMQServerLogger.LOGGER.trace("Server not started do not attempt another connection", e);
                return;
+            }
+            if (serverLocator == replicationLocator)
+               ActiveMQServerLogger.LOGGER.trace("Connection to server timed out" + serverLocator, e);
+
             server.getScheduledPool().schedule(this, serverLocator.getRetryInterval(), TimeUnit.MILLISECONDS);
          }
       }

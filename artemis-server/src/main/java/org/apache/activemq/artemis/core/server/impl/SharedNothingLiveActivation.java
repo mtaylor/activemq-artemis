@@ -88,6 +88,7 @@ public class SharedNothingLiveActivation extends LiveActivation {
             //set for when we failback
             replicatedPolicy.getReplicaPolicy().setReplicatedPolicy(replicatedPolicy);
             activeMQServer.setHAPolicy(replicatedPolicy.getReplicaPolicy());
+            ActiveMQServerLogger.LOGGER.trace("Failback: Setting Activation as backup");
             return;
          }
 

@@ -27,6 +27,7 @@ import org.apache.activemq.artemis.core.persistence.StorageManager;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.utils.DataConstants;
 import org.apache.activemq.artemis.utils.IDGenerator;
+import org.jboss.logging.Logger;
 
 /**
  * An ID generator that allocates a batch of IDs of size {@link #checkpointSize} and records the ID
@@ -36,6 +37,7 @@ import org.apache.activemq.artemis.utils.IDGenerator;
  */
 public final class BatchingIDGenerator implements IDGenerator {
 
+   private static final Logger logger = Logger.getLogger(BatchingIDGenerator.class);
    private final AtomicLong counter;
 
    private final long checkpointSize;
@@ -71,8 +73,13 @@ public final class BatchingIDGenerator implements IDGenerator {
          while (iterRecord.hasNext()) {
             Long record = iterRecord.next();
             if (iterRecord.hasNext()) {
-               // we don't want to remove the last record
-               deleteID(record.longValue());
+               try {
+                  // we don't want to remove the last record
+                  deleteID(record.longValue());
+               }
+               catch (Exception e) {
+                  logger.warn(e.getMessage(), e);
+               }
             }
          }
          cleanupRecords.clear(); // help GC

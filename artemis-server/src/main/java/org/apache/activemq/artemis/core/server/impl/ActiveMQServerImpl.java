@@ -131,11 +131,15 @@ import org.apache.activemq.artemis.utils.OrderedExecutorFactory;
 import org.apache.activemq.artemis.utils.ReusableLatch;
 import org.apache.activemq.artemis.utils.SecurityFormatter;
 import org.apache.activemq.artemis.utils.VersionLoader;
+import org.jboss.logging.Logger;
 
 /**
  * The ActiveMQ Artemis server implementation
  */
 public class ActiveMQServerImpl implements ActiveMQServer {
+
+   private static final Logger logger = Logger.getLogger(ActiveMQServerImpl.class);
+   private static final boolean isTrace = logger.isTraceEnabled();
 
    /**
     * JMS Topics (which are outside of the scope of the core API) will require a dumb subscription
@@ -571,8 +575,15 @@ public class ActiveMQServerImpl implements ActiveMQServer {
     * @param criticalIOError whether we have encountered an IO error with the journal etc
     */
    void stop(boolean failoverOnServerShutdown, final boolean criticalIOError, boolean restarting) {
+
+      if (isTrace) {
+         logger.trace("failoverOnServerShutdown " + failoverOnServerShutdown + ", " + criticalIOError + ", " + restarting);
+      }
       synchronized (this) {
          if (state == SERVER_STATE.STOPPED || state == SERVER_STATE.STOPPING) {
+            if (isTrace) {
+               logger.trace("Not stopping the server because state = " + state);
+            }
             return;
          }
          state = SERVER_STATE.STOPPING;
@@ -832,6 +843,9 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    }
 
    static void stopComponent(ActiveMQComponent component) {
+      if (isTrace) {
+         logger.trace("stopComponent(" + component + ")");
+      }
       try {
          if (component != null) {
             component.stop();
