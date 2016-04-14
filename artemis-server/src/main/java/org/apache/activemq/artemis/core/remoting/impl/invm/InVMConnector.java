@@ -22,11 +22,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient;
 import org.apache.activemq.artemis.core.server.ActiveMQComponent;
-import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.ActiveMQMessageBundle;
+import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.spi.core.remoting.AbstractConnector;
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor;
 import org.apache.activemq.artemis.spi.core.remoting.BufferHandler;
@@ -84,6 +87,15 @@ public class InVMConnector extends AbstractConnector {
 
    private final Executor closeExecutor;
 
+   private static ExecutorService threadPoolExecutor;
+
+   private static ExecutorService getInVMExecutor() {
+      if (threadPoolExecutor == null) {
+         threadPoolExecutor = Executors.newFixedThreadPool(ActiveMQClient.DEFAULT_GLOBAL_THREAD_POOL_MAX_SIZE);
+      }
+      return threadPoolExecutor;
+   }
+
    public InVMConnector(final Map<String, Object> configuration,
                         final BufferHandler handler,
                         final ConnectionLifeCycleListener listener,
@@ -99,7 +111,7 @@ public class InVMConnector extends AbstractConnector {
 
       this.closeExecutor = closeExecutor;
 
-      executorFactory = new OrderedExecutorFactory(threadPool);
+      executorFactory = new OrderedExecutorFactory(getInVMExecutor());
 
       InVMRegistry registry = InVMRegistry.instance;
 
