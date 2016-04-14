@@ -346,7 +346,9 @@ public final class SharedNothingBackupActivation extends Activation {
          }
       }
       catch (Exception e) {
-         logger.debug(e.getMessage(), e);
+         if (isTrace) {
+            logger.trace(e.getMessage() + ", serverStarted=" + activeMQServer.isStarted(), e);
+         }
          if ((e instanceof InterruptedException || e instanceof IllegalStateException) && !activeMQServer.isStarted())
             // do not log these errors if the server is being stopped.
             return;
@@ -458,8 +460,10 @@ public final class SharedNothingBackupActivation extends Activation {
     * @throws ActiveMQException
     */
    public void remoteFailOver(ReplicationLiveIsStoppingMessage.LiveStopping finalMessage) throws ActiveMQException {
-      if (isTrace) logger.trace("Remote fail-over, got message=" + finalMessage + ", backupUpToDate=" +
-                                           backupUpToDate);
+      if (isTrace) {
+         logger.trace("Remote fail-over, got message=" + finalMessage + ", backupUpToDate=" +
+                         backupUpToDate);
+      }
       if (!activeMQServer.getHAPolicy().isBackup() || activeMQServer.getHAPolicy().isSharedStore()) {
          throw new ActiveMQInternalErrorException();
       }

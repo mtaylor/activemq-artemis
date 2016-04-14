@@ -412,13 +412,8 @@ public class ClusterController implements ActiveMQComponent {
          }
          catch (ActiveMQException e) {
             if (!started) {
-               if (serverLocator == replicationLocator)
-                  ActiveMQServerLogger.LOGGER.trace("Server not started do not attempt another connection", e);
                return;
             }
-            if (serverLocator == replicationLocator)
-               ActiveMQServerLogger.LOGGER.trace("Connection to server timed out" + serverLocator, e);
-
             server.getScheduledPool().schedule(this, serverLocator.getRetryInterval(), TimeUnit.MILLISECONDS);
          }
       }
