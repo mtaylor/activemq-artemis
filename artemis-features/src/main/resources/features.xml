@@ -59,7 +59,6 @@
 		<feature>artemis-core</feature>
 		<bundle>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.qpid/0.32_1</bundle>
 		<bundle>wrap:mvn:org.apache.qpid/proton-j/0.10</bundle>
-		<bundle>wrap:mvn:org.apache.qpid/proton-jms/0.10</bundle>
 		<bundle>mvn:org.apache.activemq/artemis-proton-plug/${pom.version}</bundle>
 		<bundle>mvn:org.apache.activemq/artemis-amqp-protocol/${pom.version}</bundle>
 	</feature>
