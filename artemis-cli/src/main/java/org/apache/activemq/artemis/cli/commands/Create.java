@@ -579,7 +579,7 @@ public class Create extends InputAbstract {
 
       if (IS_WINDOWS) {
          write(BIN_ARTEMIS_CMD, null, false);
-         write(BIN_ARTEMIS_SERVICE_EXE);
+         //write(BIN_ARTEMIS_SERVICE_EXE);
          write(BIN_ARTEMIS_SERVICE_XML, filters, false);
          write(ETC_ARTEMIS_PROFILE_CMD, filters, false);
       }
@@ -626,17 +626,18 @@ public class Create extends InputAbstract {
       }
 
       if (IS_WINDOWS) {
-         service = new File(directory, BIN_ARTEMIS_SERVICE_EXE);
-         context.out.println("Or you can setup the broker as Windows service and run it in the background:");
-         context.out.println("");
-         context.out.println(String.format("   \"%s\" install", path(service, true)));
-         context.out.println(String.format("   \"%s\" start", path(service, true)));
-         context.out.println("");
-         context.out.println("   To stop the windows service:");
-         context.out.println(String.format("      \"%s\" stop", path(service, true)));
-         context.out.println("");
-         context.out.println("   To uninstall the windows service");
-         context.out.println(String.format("      \"%s\" uninstall", path(service, true)));
+         context.out.println("Note: Broker background service wrappers are not currently supported on Windows platforms.");
+//         service = new File(directory, BIN_ARTEMIS_SERVICE_EXE);
+//         context.out.println("Or you can setup the broker as Windows service and run it in the background:");
+//         context.out.println("");
+//         context.out.println(String.format("   \"%s\" install", path(service, true)));
+//         context.out.println(String.format("   \"%s\" start", path(service, true)));
+//         context.out.println("");
+//         context.out.println("   To stop the windows service:");
+//         context.out.println(String.format("      \"%s\" stop", path(service, true)));
+//         context.out.println("");
+//         context.out.println("   To uninstall the windows service");
+//         context.out.println(String.format("      \"%s\" uninstall", path(service, true)));
       }
 
       return null;
