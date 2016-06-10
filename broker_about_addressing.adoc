@@ -102,7 +102,7 @@ The prefix used can be configured on the Acceptor.
 
 ===== MQTT Clients
 
-MQTT is subscription based so //todo
+The MQTT protocol only supports subscription based messaging.  The protocol manager always create subscription queues for clients, even if the address creator originally specified queue semantics.  For example, when using the JMS client to create and send messages to a queue named "foo", a single Queue is created with address "jms.queue.foo", JMS and other protocols that support queue semantics would consume in a queue fashion from jms.queue.foo.  When an MQTT client subscribes to the address "jms.queue.foo", it will set up a separate subscription queue for this client.  Therefore, JMS -> MQTT would behave in publish/subscribe fashion.
 
 ===== STOMP Clients
 
