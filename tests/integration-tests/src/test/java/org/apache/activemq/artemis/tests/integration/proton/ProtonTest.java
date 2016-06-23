@@ -47,6 +47,8 @@ import org.apache.activemq.artemis.api.core.TransportConfiguration;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.Queue;
+import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
+import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.apache.activemq.artemis.utils.ByteUtil;
@@ -73,7 +75,8 @@ public class ProtonTest extends ActiveMQTestBase {
    public static Collection getParameters() {
 
       // these 3 are for comparison
-      return Arrays.asList(new Object[][]{{"AMQP", 0}, {"ActiveMQ (InVM)", 1}, {"ActiveMQ (Netty)", 2}, {"AMQP_ANONYMOUS", 3}});
+      //return Arrays.asList(new Object[][]{{"AMQP", 0}, {"ActiveMQ (InVM)", 1}, {"ActiveMQ (Netty)", 2}, {"AMQP_ANONYMOUS", 3}});
+      return Arrays.asList(new Object[][]{{"AMQP", 0}});
    }
 
    ConnectionFactory factory;
@@ -101,6 +104,7 @@ public class ProtonTest extends ActiveMQTestBase {
    public void setUp() throws Exception {
       super.setUp();
       disableCheckThread();
+
       server = this.createServer(true, true);
       HashMap<String, Object> params = new HashMap<>();
       params.put(TransportConstants.PORT_PROP_NAME, "5672");
@@ -108,6 +112,12 @@ public class ProtonTest extends ActiveMQTestBase {
       TransportConfiguration transportConfiguration = new TransportConfiguration(NETTY_ACCEPTOR_FACTORY, params);
 
       server.getConfiguration().getAcceptorConfigurations().add(transportConfiguration);
+
+      AddressSettings addressSettings = new AddressSettings();
+      addressSettings.setAddressFullMessagePolicy(AddressFullMessagePolicy.BLOCK);
+      addressSettings.setMaxSizeBytes(1 * 1024 * 1024);
+      server.getConfiguration().getAddressesSettings().put("#", addressSettings);
+
       server.start();
       server.createQueue(new SimpleString(coreAddress), new SimpleString(coreAddress), null, true, false);
       server.createQueue(new SimpleString(coreAddress + "1"), new SimpleString(coreAddress + "1"), null, true, false);
@@ -171,6 +181,37 @@ public class ProtonTest extends ActiveMQTestBase {
 
    }
 
+   @Test
+   public void testProducerWindowBlock() throws Throwable {
+
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      Destination destination = session.createQueue(address + "1");
+      MessageProducer p = session.createProducer(destination);
+
+      int messageSize = 10 * 1024;
+      byte[] payload = new byte[messageSize];
+      for (int i = 0; i < messageSize; i++) {
+         payload[i] = 0;
+      }
+
+      int noMessages = 1024;
+
+      try {
+         for (int i = 0; i < noMessages; i++) {
+            System.out.println("message no: " + i);
+            BytesMessage message = session.createBytesMessage();
+            message.writeBytes(payload);
+            p.send(message);
+         }
+      }
+      catch (Exception e) {
+         // We should get a JMS exception once the address is full
+      }
+
+      // Consume messages
+      // Check address is unblocked
+      // Send more messages
+   }
 
    @Test
    public void testReplyTo() throws Throwable {
@@ -194,7 +235,7 @@ public class ProtonTest extends ActiveMQTestBase {
       Assert.assertNotNull(message);
 
    }
-
+   
    @Test
       public void testReplyToNonJMS() throws Throwable {
 

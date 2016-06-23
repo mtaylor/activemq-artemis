@@ -84,4 +84,8 @@ public class ProtonClientReceiverContext extends AbstractProtonReceiverContext i
       return queues.poll(time, unit);
    }
 
+   @Override
+   public String address() {
+      return address;
+   }
 }

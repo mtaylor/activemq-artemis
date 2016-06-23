@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.message.Message;
@@ -58,7 +59,6 @@ import org.proton.plug.util.ByteUtil;
  * While it is still valid for debugging, for that reason the test will be ignored.
  * and will be kept here for debug purposes.
  */
-@Ignore // remove this to debug it
 @RunWith(Parameterized.class)
 public class ProtonTest extends AbstractJMSTest {
 

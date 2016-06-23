@@ -18,6 +18,7 @@ package org.proton.plug.context.server;
 
 import java.util.Map;
 
+import org.apache.activemq.artemis.core.paging.PagingStore;
 import org.apache.activemq.artemis.selector.filter.FilterException;
 import org.apache.activemq.artemis.selector.impl.SelectorParser;
 import org.apache.qpid.proton.amqp.DescribedType;
@@ -326,8 +327,13 @@ public class ProtonServerSenderContext extends AbstractProtonContextSender imple
          }
 
          synchronized (connection.getLock()) {
-            delivery.settle();
-            sender.offer(1);
+            try {
+               delivery.settle();
+               sender.offer(1);
+            }
+            catch (Exception e) {
+               log.error(e);
+            }
          }
 
       }

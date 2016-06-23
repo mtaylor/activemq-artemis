@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBuf;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.ProtonJMessage;
 import org.proton.plug.AMQPSessionCallback;
 import org.proton.plug.AMQPSessionContext;
@@ -72,6 +73,11 @@ public class MinimalSessionSPI implements AMQPSessionCallback {
 
    @Override
    public void createDurableQueue(String address, String queueName) throws Exception {
+
+   }
+
+   @Override
+   public void offerProducerCredit(String address, int credits, int threshold, Receiver receiver) throws Exception {
 
    }
 

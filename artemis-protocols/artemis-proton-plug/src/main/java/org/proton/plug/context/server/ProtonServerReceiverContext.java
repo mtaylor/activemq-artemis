@@ -50,6 +50,12 @@ public class ProtonServerReceiverContext extends AbstractProtonReceiverContext {
 
    @Override
    public void onFlow(int credits, boolean drain) {
+      try {
+         flow(credits);
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+      }
    }
 
    @Override
@@ -86,9 +92,9 @@ public class ProtonServerReceiverContext extends AbstractProtonReceiverContext {
             catch (Exception e) {
                throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorFindingTemporaryQueue(e.getMessage());
             }
+
          }
       }
-
       flow(numberOfCredits);
    }
 
@@ -117,12 +123,8 @@ public class ProtonServerReceiverContext extends AbstractProtonReceiverContext {
                receiver.advance();
 
                sessionSPI.serverSend(receiver, delivery, address, delivery.getMessageFormat(), buffer);
-               delivery.disposition(Accepted.getInstance());
-               delivery.settle();
 
-               if (receiver.getRemoteCredit() < numberOfCredits / 2) {
-                  flow(numberOfCredits);
-               }
+               flow(numberOfCredits, numberOfCredits / 2);
             }
          }
          finally {
