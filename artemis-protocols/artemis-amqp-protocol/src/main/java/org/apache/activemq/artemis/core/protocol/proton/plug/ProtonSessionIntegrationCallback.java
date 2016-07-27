@@ -351,7 +351,7 @@ public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, Se
       recoverContext();
 
       PagingStore store = manager.getServer().getPagingManager().getPageStore(message.getAddress());
-      if (store.isFull() && store.getAddressFullMessagePolicy() == AddressFullMessagePolicy.BLOCK) {
+      if (store.isRejectingMessages()) {
          ErrorCondition ec = new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "Address is full: " + message.getAddress());
          Rejected rejected = new Rejected();
          rejected.setError(ec);
