@@ -27,6 +27,7 @@ import org.apache.qpid.proton.amqp.transaction.Declared;
 import org.apache.qpid.proton.amqp.transaction.Discharge;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.jboss.logging.Logger;
@@ -46,85 +47,94 @@ public class ProtonTransactionHandler implements ProtonDeliveryHandler {
 
    final AMQPSessionCallback sessionSPI;
 
-   public ProtonTransactionHandler(AMQPSessionCallback sessionSPI) {
+   private final Link coordinatorLink;
+
+   private boolean started;
+
+   public ProtonTransactionHandler(AMQPSessionCallback sessionSPI, Link coordinatorLink) {
       this.sessionSPI = sessionSPI;
+      this.coordinatorLink = coordinatorLink;
+      this.started = true;
    }
 
    @Override
    public void onMessage(Delivery delivery) throws ActiveMQAMQPException {
-      ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(1024);
+      // If the coordinator is not started then drop deliveries
+      if (started) {
+         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(1024);
 
-      final Receiver receiver;
-      try {
-         receiver = ((Receiver) delivery.getLink());
+         final Receiver receiver;
+         try {
+            receiver = ((Receiver) delivery.getLink());
 
-         if (!delivery.isReadable()) {
-            return;
-         }
-
-         readDelivery(receiver, buffer);
-
-         receiver.advance();
-
-         MessageImpl msg = decodeMessageImpl(buffer);
-
-         Object action = ((AmqpValue) msg.getBody()).getValue();
-
-         if (action instanceof Declare) {
-            Binary txID = sessionSPI.getCurrentTXID();
-            Declared declared = new Declared();
-            declared.setTxnId(txID);
-            delivery.disposition(declared);
-            delivery.settle();
-         }
-         else if (action instanceof Discharge) {
-            Discharge discharge = (Discharge) action;
-            if (discharge.getFail()) {
-               try {
-                  sessionSPI.rollbackCurrentTX(true);
-               }
-               catch (Exception e) {
-                  throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorRollingbackCoordinator(e.getMessage());
-               }
+            if (!delivery.isReadable()) {
+               return;
             }
-            else {
-               try {
-                  sessionSPI.commitCurrentTX();
-               }
-               catch (Exception e) {
-                  throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorCommittingCoordinator(e.getMessage());
-               }
-            }
-            delivery.settle();
-         }
 
-      }
-      catch (Exception e) {
-         log.warn(e.getMessage(), e);
-         Rejected rejected = new Rejected();
-         ErrorCondition condition = new ErrorCondition();
-         condition.setCondition(Symbol.valueOf("failed"));
-         condition.setDescription(e.getMessage());
-         rejected.setError(condition);
-         delivery.disposition(rejected);
-      }
-      finally {
-         buffer.release();
+            readDelivery(receiver, buffer);
+
+            receiver.advance();
+
+            MessageImpl msg = decodeMessageImpl(buffer);
+
+            Object action = ((AmqpValue) msg.getBody()).getValue();
+
+            if (action instanceof Declare) {
+               Binary txID = sessionSPI.getCurrentTXID();
+               Declared declared = new Declared();
+               declared.setTxnId(txID);
+               delivery.disposition(declared);
+               delivery.settle();
+            }
+            else if (action instanceof Discharge) {
+               Discharge discharge = (Discharge) action;
+               if (discharge.getFail()) {
+                  try {
+                     sessionSPI.rollbackCurrentTX(true);
+                  }
+                  catch (Exception e) {
+                     throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorRollingbackCoordinator(e.getMessage());
+                  }
+               }
+               else {
+                  try {
+                     sessionSPI.commitCurrentTX();
+                  }
+                  catch (Exception e) {
+                     throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorCommittingCoordinator(e.getMessage());
+                  }
+               }
+               delivery.settle();
+            }
+
+         }
+         catch (Exception e) {
+            log.warn(e.getMessage(), e);
+            Rejected rejected = new Rejected();
+            ErrorCondition condition = new ErrorCondition();
+            condition.setCondition(Symbol.valueOf("failed"));
+            condition.setDescription(e.getMessage());
+            rejected.setError(condition);
+            delivery.disposition(rejected);
+         }
+         finally {
+            buffer.release();
+         }
       }
    }
 
    @Override
    public void onFlow(int credits, boolean drain) {
-
    }
 
    @Override
    public void close(boolean linkRemoteClose) throws ActiveMQAMQPException {
-      //noop
+      started = false;
+      coordinatorLink.close();
    }
 
    @Override
    public void close(ErrorCondition condition) throws ActiveMQAMQPException {
-      //noop
+      // no op
    }
 }

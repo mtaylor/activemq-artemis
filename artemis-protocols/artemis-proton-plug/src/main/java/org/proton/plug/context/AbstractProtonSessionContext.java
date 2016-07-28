@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
@@ -52,6 +53,8 @@ public abstract class AbstractProtonSessionContext extends ProtonInitializable i
    protected Map<Sender, AbstractProtonContextSender> senders = new HashMap<>();
 
    protected boolean closed = false;
+
+   private Link coordinatorLink;
 
    public AbstractProtonSessionContext(AMQPSessionCallback sessionSPI,
                                        AbstractConnectionContext connection,
@@ -137,6 +140,7 @@ public abstract class AbstractProtonSessionContext extends ProtonInitializable i
             log.warn(e.getMessage(), e);
          }
       }
+
       senders.clear();
       try {
          if (sessionSPI != null) {
@@ -158,5 +162,15 @@ public abstract class AbstractProtonSessionContext extends ProtonInitializable i
    @Override
    public void removeReceiver(Receiver receiver) {
       receivers.remove(receiver);
+   }
+
+   @Override
+   public Link getCoordinatorLink() {
+      return coordinatorLink;
+   }
+
+   @Override
+   public void setCoordinatorLink(Link coordinatorLink) {
+      this.coordinatorLink = coordinatorLink;
    }
 }

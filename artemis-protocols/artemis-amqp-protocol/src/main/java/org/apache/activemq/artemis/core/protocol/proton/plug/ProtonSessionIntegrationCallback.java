@@ -32,7 +32,6 @@ import org.apache.activemq.artemis.core.server.ServerConsumer;
 import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.ServerSession;
 import org.apache.activemq.artemis.core.server.impl.ServerConsumerImpl;
-import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
@@ -56,6 +55,7 @@ import org.proton.plug.AMQPSessionCallback;
 import org.proton.plug.AMQPSessionContext;
 import org.proton.plug.SASLResult;
 import org.proton.plug.context.ProtonPlugSender;
+import org.proton.plug.context.ProtonTransactionHandler;
 import org.proton.plug.sasl.PlainSASLResult;
 
 public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, SessionCallback {
@@ -77,6 +77,8 @@ public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, Se
    private final Executor closeExecutor;
 
    private final AtomicBoolean draining = new AtomicBoolean(false);
+
+   private ProtonTransactionHandler transactionHandler = null;
 
    public ProtonSessionIntegrationCallback(ActiveMQProtonConnectionCallback protonSPI,
                                            ProtonProtocolManager manager,
@@ -352,15 +354,32 @@ public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, Se
 
       PagingStore store = manager.getServer().getPagingManager().getPageStore(message.getAddress());
       if (store.isRejectingMessages()) {
-         ErrorCondition ec = new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "Address is full: " + message.getAddress());
-         Rejected rejected = new Rejected();
-         rejected.setError(ec);
-         delivery.disposition(rejected);
-         connection.flush();
+         // We drop pre-settled messages (and abort any associated Tx)
+         if (delivery.remotelySettled()) {
+            if (serverSession.getCurrentTransaction() != null) {
+               rollbackCurrentTX(false);
+
+               // Spec requires closure of coordinator link on rejection of presettled messages within a tx
+               AMQPSessionContext context = ((AMQPSessionContext) delivery.getLink().getSession().getContext());
+               ProtonTransactionHandler handler = (ProtonTransactionHandler) context.getCoordinatorLink().getContext();
+               handler.close(false);
+            }
+         }
+         else {
+            rejectMessage(delivery, message.getAddress());
+         }
       }
       else {
          serverSend(message, delivery, receiver);
       }
+   }
+
+   private void rejectMessage(Delivery delivery, SimpleString address) {
+      ErrorCondition ec = new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "Address is full: " + address);
+      Rejected rejected = new Rejected();
+      rejected.setError(ec);
+      delivery.disposition(rejected);
+      connection.flush();
    }
 
    private void serverSend(final ServerMessage message, final Delivery delivery, final Receiver receiver) throws Exception {

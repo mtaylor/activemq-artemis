@@ -68,6 +68,7 @@ import org.apache.activemq.transport.amqp.client.AmqpSession;
 import org.apache.qpid.jms.JmsConnectionFactory;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Properties;
+import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.message.ProtonJMessage;
 import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.junit.After;
@@ -315,6 +316,7 @@ public class ProtonTest extends ActiveMQTestBase {
       Assert.assertEquals(q.getMessageCount(), 0);
    }
 
+
    @Test
    public void testRollbackConsumer() throws Throwable {
 
@@ -460,7 +462,7 @@ public class ProtonTest extends ActiveMQTestBase {
 
       fillAddress(address + 1);
       AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
-      AmqpConnection amqpConnection = amqpConnection = client.connect();
+      AmqpConnection amqpConnection = client.connect();
       try {
          AmqpSession session = amqpConnection.createSession();
          AmqpSender sender = session.createSender(address + 1);
@@ -471,6 +473,45 @@ public class ProtonTest extends ActiveMQTestBase {
       finally {
          amqpConnection.close();
       }
+   }
+
+   @Test
+   public void testCoordinatorLinkIsClosedDuringRejectedPreSettledInTx() throws Throwable {
+      if (protocol != 0 && protocol != 3) return; // Only run this test for AMQP protocol
+      setAddressFullBlockPolicy();
+
+      // Create the link attach before filling the address to ensure the link is allocated credit.
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+
+      AmqpSession session = amqpConnection.createSession();
+      AmqpSender sender = session.createSender(address);
+      sender.setPresettle(true);
+
+      fillAddress(address);
+
+      final AmqpMessage message = new AmqpMessage();
+      byte[] payload = new byte[50 * 1024];
+      message.setBytes(payload);
+
+      Exception expectedException = null;
+      try {
+         session.begin();
+         sender.send(message);
+         session.commit();
+      }
+      catch (Exception e) {
+         expectedException = e;
+      }
+      finally {
+         amqpConnection.close();
+      }
+
+      EndpointState es = session.getTransactionContext().getCoordinator().getEndpoint().getLocalState();
+
+      assertNotNull(expectedException);
+      assertFalse(session.isInTransaction());
+      assertEquals(EndpointState.CLOSED, es);
    }
 
    /**

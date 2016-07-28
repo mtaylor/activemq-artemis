@@ -59,7 +59,8 @@ public class ProtonServerSessionContext extends AbstractProtonSessionContext {
    }
 
    public void addTransactionHandler(Coordinator coordinator, Receiver receiver) {
-      ProtonTransactionHandler transactionHandler = new ProtonTransactionHandler(sessionSPI);
+      ProtonTransactionHandler transactionHandler = new ProtonTransactionHandler(sessionSPI, receiver);
+      ((ProtonServerSessionContext) receiver.getSession().getContext()).setCoordinatorLink(receiver);
       receiver.setContext(transactionHandler);
       receiver.open();
       receiver.flow(100);

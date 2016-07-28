@@ -57,5 +57,4 @@ public interface AMQPConnectionContext {
     * @param numberOfBytes
     */
    void outputDone(int numberOfBytes);
-
 }

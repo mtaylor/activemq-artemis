@@ -16,6 +16,7 @@
  */
 package org.proton.plug;
 
+import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
 import org.proton.plug.exceptions.ActiveMQAMQPException;
@@ -31,4 +32,8 @@ public interface AMQPSessionContext {
    void removeSender(Sender sender) throws ActiveMQAMQPException;
 
    void removeReceiver(Receiver receiver);
+
+   Link getCoordinatorLink();
+
+   void setCoordinatorLink(Link link);
 }
