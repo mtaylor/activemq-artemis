@@ -16,15 +16,6 @@
  */
 package org.apache.activemq.artemis.tests.integration.rest;
 
-import org.apache.activemq.artemis.jms.client.ActiveMQDestination;
-import org.apache.activemq.artemis.jms.client.ActiveMQJMSConnectionFactory;
-import org.apache.activemq.artemis.rest.HttpHeaderProperty;
-import org.apache.activemq.artemis.tests.integration.rest.util.RestAMQConnection;
-import org.apache.activemq.artemis.tests.integration.rest.util.RestMessageContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
@@ -38,6 +29,15 @@ import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.Serializable;
 import java.io.StringReader;
+
+import org.apache.activemq.artemis.jms.client.ActiveMQDestination;
+import org.apache.activemq.artemis.jms.client.ActiveMQJMSConnectionFactory;
+import org.apache.activemq.artemis.rest.HttpHeaderProperty;
+import org.apache.activemq.artemis.tests.integration.rest.util.RestAMQConnection;
+import org.apache.activemq.artemis.tests.integration.rest.util.RestMessageContext;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class RestDeserializationTest extends RestTestBase {
 
@@ -59,14 +59,7 @@ public class RestDeserializationTest extends RestTestBase {
 
    @Test
    public void testWithoutBlackWhiteListQueue() throws Exception {
-      jmsServer.createQueue(false, "orders", null, true, (String[]) null);
-      File warFile = getResourceFile("/rest/rest-test.war", "rest-test.war");
-      deployWebApp("/restapp", warFile);
-      server.start();
-      String uri = server.getURI().toASCIIString();
-      System.out.println("Sever started with uri: " + uri);
-
-      restConnection = new RestAMQConnection(uri);
+      deployAndconfigureRESTService("rest-test.war");
 
       Order order = new Order();
       order.setName("Bill");
@@ -84,14 +77,7 @@ public class RestDeserializationTest extends RestTestBase {
 
    @Test
    public void testWithoutBlackWhiteListTopic() throws Exception {
-      jmsServer.createTopic(false, "ordersTopic", (String[]) null);
-      File warFile = getResourceFile("/rest/rest-test.war", "rest-test.war");
-      deployWebApp("/restapp", warFile);
-      server.start();
-      String uri = server.getURI().toASCIIString();
-      System.out.println("Sever started with uri: " + uri);
-
-      restConnection = new RestAMQConnection(uri);
+      deployAndconfigureRESTService("rest-test.war");
 
       RestMessageContext topicContext = restConnection.createTopicContext("ordersTopic");
       topicContext.initPullConsumers();
@@ -112,14 +98,8 @@ public class RestDeserializationTest extends RestTestBase {
 
    @Test
    public void testBlackWhiteListQueuePull() throws Exception {
-      jmsServer.createQueue(false, "orders", null, true, (String[]) null);
-      File warFile = getResourceFile("/rest/rest-test-bwlist.war", "rest-test-bwlist.war");
-      deployWebApp("/restapp", warFile);
-      server.start();
-      String uri = server.getURI().toASCIIString();
-      System.out.println("Sever started with uri: " + uri);
+      deployAndconfigureRESTService("rest-test-bwlist.war");
 
-      restConnection = new RestAMQConnection(uri);
       Order order = new Order();
       order.setName("Bill");
       order.setItem("iPhone4");
@@ -139,14 +119,8 @@ public class RestDeserializationTest extends RestTestBase {
 
    @Test
    public void testWithoutBlackWhiteListTopicPull() throws Exception {
-      jmsServer.createTopic(false, "ordersTopic", (String[]) null);
-      File warFile = getResourceFile("/rest/rest-test-bwlist.war", "rest-test-bwlist.war");
-      deployWebApp("/restapp", warFile);
-      server.start();
-      String uri = server.getURI().toASCIIString();
-      System.out.println("Sever started with uri: " + uri);
+      deployAndconfigureRESTService("rest-test-bwlist.war");
 
-      restConnection = new RestAMQConnection(uri);
       RestMessageContext topicContext = restConnection.createTopicContext("ordersTopic");
       topicContext.initPullConsumers();
 
@@ -165,6 +139,17 @@ public class RestDeserializationTest extends RestTestBase {
          String error = e.getMessage();
          assertTrue(error, error.contains("ClassNotFoundException"));
       }
+   }
+
+   private void deployAndconfigureRESTService(String warFileName) throws Exception {
+      jmsServer.createTopic(false, "ordersTopic", (String[]) null);
+      File warFile = getResourceFile("/rest/" + warFileName, warFileName);
+      deployWebApp("/restapp", warFile);
+      server.start();
+      String uri = server.getURI().toASCIIString();
+      System.out.println("Sever started with uri: " + uri);
+
+      restConnection = new RestAMQConnection(uri);
    }
 
    private Object xmlToObject(String xmlString) throws JAXBException {

@@ -57,7 +57,6 @@ public class MessageServiceManager {
    protected String configResourcePath;
    protected BindingRegistry registry;
 
-   private ConnectionFactoryOptions jmsOptions;
    private ClientSessionFactory consumerSessionFactory;
 
    public MessageServiceManager(ConnectionFactoryOptions jmsOptions) {
