@@ -757,10 +757,24 @@ properties for their resource adapters. There are two properties that you can co
 
 These properties, once specified, are eventually set on the corresponding internal factories.
 
+### Specifying black list and white list for Rest interface
 
+Apache Artemis Rest interface ([Rest](rest.md)) allows interactions between jms client and rest clients.
+It uses JMS ObjectMessage to wrap the actual user data between the 2 types of clients and deserialization
+is needed during this process. If you want to control the deserialization for Rest, you need to set the
+black/white lists for it separately as Apache Artemis Rest Interface is deployed as a web application.
+You need to put the black/white lists in its web.xml, as context parameters, as follows
 
+    <web-app>
+        <context-param>
+            <param-name>org.apache.activemq.artemis.jms.deserialization.whitelist</param-name>
+            <param-value>some.allowed.class</param-value>
+        </context-param>
+        <context-param>
+            <param-name>org.apache.activemq.artemis.jms.deserialization.blacklist</param-name>
+            <param-value>some.forbidden.class</param-value>
+        </context-param>
+    ...
+    </web-app>
 
-
-
-
-
+The param-value for each list is a comma separated string value representing the list.
