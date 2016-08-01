@@ -17,6 +17,7 @@
 package org.apache.activemq.artemis.rest.queue.push;
 
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
+import org.apache.activemq.artemis.jms.client.ConnectionFactoryOptions;
 import org.apache.activemq.artemis.rest.queue.push.xml.PushRegistration;
 
 public interface PushStrategy {
@@ -29,7 +30,7 @@ public interface PushStrategy {
     * @param message
     * @return {@code false} if unable to connect
     */
-   boolean push(ClientMessage message);
+   boolean push(ClientMessage message, ConnectionFactoryOptions jmsOptions);
 
    void setRegistration(PushRegistration reg);
 

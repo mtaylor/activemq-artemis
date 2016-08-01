@@ -17,6 +17,7 @@
 package org.apache.activemq.artemis.rest.queue.push;
 
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
+import org.apache.activemq.artemis.jms.client.ConnectionFactoryOptions;
 import org.apache.activemq.artemis.rest.queue.push.xml.XmlHttpHeader;
 import org.jboss.resteasy.client.ClientRequest;
 import org.jboss.resteasy.client.ClientResponse;
@@ -62,7 +63,7 @@ public class ActiveMQPushStrategy extends UriTemplateStrategy {
    }
 
    @Override
-   public boolean push(ClientMessage message) {
+   public boolean push(ClientMessage message, ConnectionFactoryOptions jmsOptions) {
       // we initialize lazily just in case target is in same VM
       if (!initialized) {
          try {
@@ -73,6 +74,6 @@ public class ActiveMQPushStrategy extends UriTemplateStrategy {
             throw new RuntimeException("Failed to initialize.", e);
          }
       }
-      return super.push(message);
+      return super.push(message, jmsOptions);
    }
 }

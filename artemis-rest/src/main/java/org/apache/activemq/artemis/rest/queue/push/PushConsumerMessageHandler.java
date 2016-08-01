@@ -45,7 +45,7 @@ public class PushConsumerMessageHandler implements MessageHandler {
       }
 
       ActiveMQRestLogger.LOGGER.debug(this + ": pushing " + clientMessage + " via " + pushConsumer.getStrategy());
-      boolean acknowledge = pushConsumer.getStrategy().push(clientMessage);
+      boolean acknowledge = pushConsumer.getStrategy().push(clientMessage, pushConsumer.getJmsOptions());
 
       if (acknowledge) {
          try {
