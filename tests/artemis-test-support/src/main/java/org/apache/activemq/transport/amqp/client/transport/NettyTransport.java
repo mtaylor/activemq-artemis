@@ -49,4 +49,5 @@ public interface NettyTransport {
 
    Principal getLocalPrincipal();
 
+   void kill();
 }

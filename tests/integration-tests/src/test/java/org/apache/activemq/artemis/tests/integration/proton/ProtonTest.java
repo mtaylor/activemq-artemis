@@ -599,6 +599,47 @@ public class ProtonTest extends ActiveMQTestBase {
    }
 
    @Test
+   public void testSessionResourcesAreClearedOnTCPClose() throws Exception {
+      if (protocol != 0 && protocol != 3) return; // Only run this test for AMQP protocol
+
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+      AmqpSession session = amqpConnection.createSession();
+      AmqpReceiver receiver = session.createReceiver(address);
+      receiver.setPresettle(false);
+
+      AmqpConnection amqpConnection2 = client.connect();
+      AmqpSession session2 = amqpConnection2.createSession();
+      AmqpReceiver receiver2 = session2.createReceiver(address);
+      receiver2.setPresettle(false);
+
+      AmqpSender sender = session.createSender(address);
+      sender.setPresettle(false);
+
+      receiver.flow(100);
+
+      final AmqpMessage message = new AmqpMessage();
+      message.setText("testMessage");
+
+      sender.send(message);
+
+      // Receive Message but do not accept it.  Under normal circumstances the message would wait here.
+      AmqpMessage m = receiver.receive();
+
+      // Offer credits to the broker and attempt to receive the message, (since it's already out for delivery
+      // we should not receive anything.
+      receiver2.flow(100);
+      assertNull(receiver2.receive(2000, TimeUnit.MILLISECONDS));
+
+      // Close the TCP connection, server resources should be clear and the message out for delivery should be
+      // put back on the queue.
+      amqpConnection.getNettyTransport().kill();
+
+      // Receiver 2 should now get this before the AMQP TTL expires.
+      assertNotNull(receiver2.receive(2000, TimeUnit.MILLISECONDS));
+   }
+
+   @Test
    public void testReplyTo() throws Throwable {
 
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);

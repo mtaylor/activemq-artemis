@@ -265,6 +265,11 @@ public class NettyWSTransport implements NettyTransport {
       return sslHandler.engine().getSession().getLocalPrincipal();
    }
 
+   @Override
+   public void kill() {
+      channel.close();
+   }
+
    //----- Internal implementation details, can be overridden as needed --//
 
    protected String getRemoteHost() {

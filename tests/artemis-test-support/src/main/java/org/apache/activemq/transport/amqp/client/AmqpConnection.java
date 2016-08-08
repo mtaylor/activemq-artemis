@@ -35,6 +35,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.activemq.transport.InactivityIOException;
 import org.apache.activemq.transport.amqp.client.sasl.SaslAuthenticator;
+import org.apache.activemq.transport.amqp.client.transport.NettyTransport;
 import org.apache.activemq.transport.amqp.client.transport.NettyTransportListener;
 import org.apache.activemq.transport.amqp.client.util.AsyncResult;
 import org.apache.activemq.transport.amqp.client.util.ClientFuture;
@@ -716,5 +717,9 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
    @Override
    public String toString() {
       return "AmqpConnection { " + connectionId + " }";
+   }
+
+   public NettyTransport getNettyTransport() {
+      return transport;
    }
 }

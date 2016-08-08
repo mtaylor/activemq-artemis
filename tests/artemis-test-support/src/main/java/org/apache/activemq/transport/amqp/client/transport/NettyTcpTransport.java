@@ -208,6 +208,7 @@ public class NettyTcpTransport implements NettyTransport {
       channel.writeAndFlush(output);
    }
 
+
    @Override
    public NettyTransportListener getTransportListener() {
       return listener;
@@ -248,6 +249,10 @@ public class NettyTcpTransport implements NettyTransport {
       return sslHandler.engine().getSession().getLocalPrincipal();
    }
 
+   @Override
+   public void kill() {
+      channel.close();
+   }
    //----- Internal implementation details, can be overridden as needed --//
 
    protected String getRemoteHost() {
