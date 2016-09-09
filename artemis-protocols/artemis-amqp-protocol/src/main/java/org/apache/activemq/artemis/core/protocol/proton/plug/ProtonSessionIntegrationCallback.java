@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
+import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient;
 import org.apache.activemq.artemis.core.io.IOCallback;
@@ -214,7 +215,12 @@ public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, Se
       }
       else {
          if (queueQuery.isAutoCreateJmsQueues()) {
-            serverSession.createQueue(new SimpleString(queueName), new SimpleString(queueName), null, false, true);
+            try {
+               serverSession.createQueue(new SimpleString(queueName), new SimpleString(queueName), null, false, true);
+            }
+            catch (ActiveMQQueueExistsException e) {
+               // Do nothing, it could be that another session has auto-created this queue in the mean time.
+            }
             queryResult = true;
          }
          else {
@@ -236,7 +242,12 @@ public class ProtonSessionIntegrationCallback implements AMQPSessionCallback, Se
       }
       else {
          if (queueQuery.isAutoCreateJmsQueues()) {
-            serverSession.createQueue(new SimpleString(address), new SimpleString(address), null, false, true);
+            try {
+               serverSession.createQueue(new SimpleString(address), new SimpleString(address), null, false, true);
+            }
+            catch (ActiveMQQueueExistsException e) {
+               // Do nothing, it could be that another session has auto-created this queue in the mean time.
+            }
             queryResult = true;
          }
          else {
