@@ -16,8 +16,12 @@
  */
 package org.apache.activemq.artemis.core.protocol.proton.plug;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -25,12 +29,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffers;
+import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
 import org.apache.activemq.artemis.core.protocol.proton.ActiveMQProtonRemotingConnection;
 import org.apache.activemq.artemis.core.protocol.proton.ProtonProtocolManager;
 import org.apache.activemq.artemis.core.protocol.proton.sasl.ActiveMQPlainSASL;
+import org.apache.activemq.artemis.core.remoting.CloseListener;
+import org.apache.activemq.artemis.core.remoting.FailureListener;
 import org.apache.activemq.artemis.core.server.ServerSession;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
@@ -52,7 +59,9 @@ import static org.proton.plug.AmqpSupport.CONTAINER_ID;
 import static org.proton.plug.AmqpSupport.INVALID_FIELD;
 import static org.proton.plug.context.AbstractConnectionContext.CONNECTION_OPEN_FAILED;
 
-public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback {
+public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback, FailureListener, CloseListener {
+   private static final List<String> connectedContainers = Collections.synchronizedList(new ArrayList());
+
    private static final Logger log = Logger.getLogger(ActiveMQProtonConnectionCallback.class);
 
    private final ProtonProtocolManager manager;
@@ -67,7 +76,11 @@ public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback 
 
    private final Executor closeExecutor;
 
-   private ServerSession internalSession;
+   private String remoteContainerId;
+
+   private boolean connected;
+
+   private final Object connectionLock = new Object();
 
    public ActiveMQProtonConnectionCallback(ProtonProtocolManager manager,
                                            Connection connection,
@@ -105,41 +118,17 @@ public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback 
    }
 
    @Override
-   public void init() throws Exception {
-      //This internal core session is used to represent the connection
-      //in core server. It is used to identify unique clientIDs.
-      //Note the Qpid-JMS client does create a initial session
-      //for each connection. However is comes in as a Begin
-      //After Open. This makes it unusable for this purpose
-      //as we need to decide the uniqueness in response to
-      //Open, and the checking Uniqueness and adding the unique
-      //client-id to server need to be atomic.
-      if (internalSession == null) {
-         SASLResult saslResult = amqpConnection.getSASLResult();
-         String user = null;
-         String passcode = null;
-         if (saslResult != null) {
-            user = saslResult.getUser();
-            if (saslResult instanceof PlainSASLResult) {
-               passcode = ((PlainSASLResult) saslResult).getPassword();
+   public void close() {
+      synchronized (connectionLock) {
+         try {
+            if (remoteContainerId != null && connected) {
+               connectedContainers.remove(remoteContainerId);
+               connected = false;
             }
          }
-         internalSession = manager.getServer().createSession(createInternalSessionName(), user, passcode, ActiveMQClient.DEFAULT_MIN_LARGE_MESSAGE_SIZE, protonConnectionDelegate, // RemotingConnection remotingConnection,
-                 false,
-                 false,
-                 false,
-                 false,
-                 null, (SessionCallback) createSessionCallback(this.amqpConnection), true);
-      }
-   }
-
-   @Override
-   public void close() {
-      try {
-         internalSession.close(false);
-      }
-      catch (Exception e) {
-         log.error("error closing internal session", e);
+         catch (Exception e) {
+            log.error("error closing internal session", e);
+         }
       }
       connection.close();
       amqpConnection.close();
@@ -169,6 +158,7 @@ public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback 
    }
 
    public void setProtonConnectionDelegate(ActiveMQProtonRemotingConnection protonConnectionDelegate) {
+
       this.protonConnectionDelegate = protonConnectionDelegate;
    }
 
@@ -208,25 +198,39 @@ public class ActiveMQProtonConnectionCallback implements AMQPConnectionCallback 
 
    @Override
    public boolean validateConnection(org.apache.qpid.proton.engine.Connection connection, SASLResult saslResult) {
-      String remote = connection.getRemoteContainer();
-
-      if (ExtCapability.needUniqueConnection(connection)) {
-         if (!internalSession.addUniqueMetaData(ClientSession.JMS_SESSION_CLIENT_ID_PROPERTY, remote)) {
-            //https://issues.apache.org/jira/browse/ARTEMIS-728
-            Map<Symbol, Object> connProp = new HashMap<>();
-            connProp.put(CONNECTION_OPEN_FAILED, "true");
-            connection.setProperties(connProp);
-            connection.getCondition().setCondition(AmqpError.INVALID_FIELD);
-            Map<Symbol, Symbol> info = new HashMap<>();
-            info.put(INVALID_FIELD, CONTAINER_ID);
-            connection.getCondition().setInfo(info);
-            return false;
+      synchronized (connectionLock) {
+         remoteContainerId = connection.getRemoteContainer();
+         if (ExtCapability.needUniqueConnection(connection)) {
+            if (connectedContainers.contains(remoteContainerId)) {
+               //https://issues.apache.org/jira/browse/ARTEMIS-728
+               Map<Symbol, Object> connProp = new HashMap<>();
+               connProp.put(CONNECTION_OPEN_FAILED, "true");
+               connection.setProperties(connProp);
+               connection.getCondition().setCondition(AmqpError.INVALID_FIELD);
+               Map<Symbol, Symbol> info = new HashMap<>();
+               info.put(INVALID_FIELD, CONTAINER_ID);
+               connection.getCondition().setInfo(info);
+               return false;
+            }
          }
+         connectedContainers.add(remoteContainerId);
+         connected = true;
+         return true;
       }
-      return true;
    }
 
-   private String createInternalSessionName() {
-      return "amqp:" + UUIDGenerator.getInstance().generateStringUUID();
+   @Override
+   public void connectionClosed() {
+      close();
+   }
+
+   @Override
+   public void connectionFailed(ActiveMQException exception, boolean failedOver) {
+      close();
+   }
+
+   @Override
+   public void connectionFailed(ActiveMQException exception, boolean failedOver, String scaleDownTargetNodeID) {
+      close();
    }
 }
