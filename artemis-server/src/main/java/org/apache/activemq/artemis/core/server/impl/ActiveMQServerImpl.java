@@ -27,6 +27,7 @@ import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +44,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.Pair;
@@ -309,6 +311,11 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    private Date startDate;
 
    private final List<ActiveMQComponent> externalComponents = new ArrayList<>();
+
+   private final Map<String, AtomicInteger> connectedClientIds = new ConcurrentHashMap();
+
+   private final Set<String> uniqueClients = new HashSet<>();
+
    // Constructors
    // ---------------------------------------------------------------------------------
 
@@ -2396,6 +2403,35 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       return new Date().getTime() - startDate.getTime();
    }
 
+   public boolean addClientConnection(String clientId, boolean unique) {
+      if (unique) {
+         if (connectedClientIds.putIfAbsent(clientId, new AtomicInteger(1)) == null) {
+            uniqueClients.add(clientId);
+            return true;
+         }
+         return false;
+      }
+      else {
+         // Lock required
+         if (!uniqueClients.contains(clientId)) {
+            AtomicInteger i = connectedClientIds.putIfAbsent(clientId, new AtomicInteger(1));
+            if (i != null) {
+               i.incrementAndGet();
+            }
+            return true;
+         }
+         return false;
+      }
+   }
+
+   public void removeClientConnection(String clientId, boolean unique) {
+      if (connectedClientIds.get(clientId).decrementAndGet() == 0) {
+         connectedClientIds.remove(clientId);
+      }
+      if (unique) {
+         uniqueClients.remove(clientId);
+      }
+   }
 
    private final class ActivationThread extends Thread {
       final Runnable runnable;
