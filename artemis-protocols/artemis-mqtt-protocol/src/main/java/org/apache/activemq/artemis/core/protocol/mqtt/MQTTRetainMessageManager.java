@@ -17,6 +17,7 @@
 
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.activemq.artemis.api.core.SimpleString;
@@ -24,6 +25,8 @@ import org.apache.activemq.artemis.core.server.BindingQueryResult;
 import org.apache.activemq.artemis.core.server.MessageReference;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.ServerMessage;
+import org.apache.activemq.artemis.core.transaction.Transaction;
+import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
 
 public class MQTTRetainMessageManager {
 
@@ -53,17 +56,28 @@ public class MQTTRetainMessageManager {
       // Set the address of this message to the retained queue.
       message.setAddress(retainAddress);
 
-      Iterator<MessageReference> iterator = queue.iterator();
-      synchronized (iterator) {
+      Transaction tx = new TransactionImpl(session.getServer().getStorageManager());
+      try {
+         Iterator<MessageReference> iterator = queue.iterator();
+
+         MessageReference ref = null;
          if (iterator.hasNext()) {
-            Long messageId = iterator.next().getMessage().getMessageID();
-            queue.deleteReference(messageId);
+            ref = iterator.next();
+         }
+
+         if (ref != null) {
+            ref.acknowledge(tx);
          }
 
          if (!reset) {
-            session.getServerSession().send(message.copy(), true);
+            session.getServerSession().send(tx, message.copy(), true, true);
          }
+         tx.commit();
       }
+      catch (Exception e) {
+         tx.rollback();
+      }
+      System.out.println(queue.getMessagesAcknowledged());
    }
 
    void addRetainedMessagesToQueue(SimpleString queueName, String address) throws Exception {
@@ -79,9 +93,11 @@ public class MQTTRetainMessageManager {
          Queue retainedQueue = session.getServer().locateQueue(retainedQueueName);
          synchronized (this) {
             Iterator<MessageReference> i = retainedQueue.iterator();
-            if (i.hasNext()) {
-               ServerMessage message = i.next().getMessage().copy(session.getServer().getStorageManager().generateID());
-               queue.addTail(message.createReference(queue), true);
+            while (i.hasNext()) {
+               MessageReference reference = i.next();
+               if (!reference.isAlreadyAcked()) {
+                  queue.addTail(reference);
+               }
             }
          }
       }

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.activemq.artemis.api.core.Pair;
 import org.apache.activemq.artemis.core.server.ServerMessage;
+import org.apache.activemq.artemis.utils.ConcurrentHashSet;
 
 public class MQTTSessionState {
 
@@ -35,16 +36,14 @@ public class MQTTSessionState {
 
    private ServerMessage willMessage;
 
-   private final ConcurrentMap<String, MqttTopicSubscription> subscriptions = new ConcurrentHashMap<>();
+   private final Map<String, MqttTopicSubscription> subscriptions = new ConcurrentHashMap<>();
 
    // Used to store Packet ID of Publish QoS1 and QoS2 message.  See spec: 4.3.3 QoS 2: Exactly once delivery.  Method B.
-   private Map<Integer, MQTTMessageInfo> messageRefStore;
+   private final Map<Integer, MQTTMessageInfo> messageRefStore;
 
-   private ConcurrentMap<String, Map<Long, Integer>> addressMessageMap;
+   private final Map<String, Map<Long, Integer>> addressMessageMap;
 
-   private Set<Integer> pubRec;
-
-   private Set<Integer> pub;
+   private Set<Integer> inboundQoS2MessageReferences;
 
    private boolean attached = false;
 
@@ -63,8 +62,7 @@ public class MQTTSessionState {
    public MQTTSessionState(String clientId) {
       this.clientId = clientId;
 
-      pubRec = new HashSet<>();
-      pub = new HashSet<>();
+      inboundQoS2MessageReferences = new ConcurrentHashSet<>();
 
       outboundMessageReferenceStore = new ConcurrentHashMap<>();
       reverseOutboundReferenceStore = new ConcurrentHashMap<>();
@@ -78,47 +76,8 @@ public class MQTTSessionState {
       return lastId.addAndGet(1);
    }
 
-   void addOutbandMessageRef(int mqttId, String address, long serverMessageId, int qos) {
-      synchronized (outboundLock) {
-         outboundMessageReferenceStore.put(mqttId, new Pair<>(address, serverMessageId));
-         if (qos == 2) {
-            if (reverseOutboundReferenceStore.containsKey(address)) {
-               reverseOutboundReferenceStore.get(address).put(serverMessageId, mqttId);
-            }
-            else {
-               ConcurrentHashMap<Long, Integer> serverToMqttId = new ConcurrentHashMap<>();
-               serverToMqttId.put(serverMessageId, mqttId);
-               reverseOutboundReferenceStore.put(address, serverToMqttId);
-            }
-         }
-      }
-   }
-
-   Pair<String, Long> removeOutbandMessageRef(int mqttId, int qos) {
-      synchronized (outboundLock) {
-         Pair<String, Long> messageInfo = outboundMessageReferenceStore.remove(mqttId);
-         if (qos == 1) {
-            return messageInfo;
-         }
-
-         Map<Long, Integer> map = reverseOutboundReferenceStore.get(messageInfo.getA());
-         if (map != null) {
-            map.remove(messageInfo.getB());
-            if (map.isEmpty()) {
-               reverseOutboundReferenceStore.remove(messageInfo.getA());
-            }
-            return messageInfo;
-         }
-         return null;
-      }
-   }
-
-   Set<Integer> getPubRec() {
-      return pubRec;
-   }
-
-   Set<Integer> getPub() {
-      return pub;
+   Set<Integer> getInboundQoS2MessageReferences() {
+      return inboundQoS2MessageReferences;
    }
 
    boolean getAttached() {
@@ -187,7 +146,15 @@ public class MQTTSessionState {
       this.clientId = clientId;
    }
 
-   void storeMessageRef(Integer mqttId, MQTTMessageInfo messageInfo, boolean storeAddress) {
+   boolean storeInboundQoS2MessageReference(int mqttId) {
+      return inboundQoS2MessageReferences.add(mqttId);
+   }
+
+   void removeInboundQoS2MessageReference(int mqttId) {
+      inboundQoS2MessageReferences.remove(mqttId);
+   }
+
+   void storeOutboundMessageReference(Integer mqttId, MQTTMessageInfo messageInfo, boolean storeAddress) {
       messageRefStore.put(mqttId, messageInfo);
       if (storeAddress) {
          Map<Long, Integer> addressMap = addressMessageMap.get(messageInfo.getAddress());
@@ -197,7 +164,7 @@ public class MQTTSessionState {
       }
    }
 
-   void removeMessageRef(Integer mqttId) {
+   MQTTMessageInfo removeOutboundMessageReference(Integer mqttId) {
       MQTTMessageInfo info = messageRefStore.remove(mqttId);
       if (info != null) {
          Map<Long, Integer> addressMap = addressMessageMap.get(info.getAddress());
@@ -205,9 +172,10 @@ public class MQTTSessionState {
             addressMap.remove(info.getServerMessageId());
          }
       }
+      return info;
    }
 
-   MQTTMessageInfo getMessageInfo(Integer mqttId) {
+   MQTTMessageInfo getOutboundMessageReference(Integer mqttId) {
       return messageRefStore.get(mqttId);
    }
 }

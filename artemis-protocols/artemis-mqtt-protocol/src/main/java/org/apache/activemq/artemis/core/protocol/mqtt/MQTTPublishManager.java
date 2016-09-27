@@ -24,7 +24,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import org.apache.activemq.artemis.api.core.Message;
-import org.apache.activemq.artemis.api.core.Pair;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.io.IOCallback;
 import org.apache.activemq.artemis.core.server.ServerConsumer;
@@ -89,7 +88,7 @@ public class MQTTPublishManager {
       return consumer == managementConsumer;
    }
 
-   private int generateMqttId(int qos) {
+   private int generateMqttId() {
       return session.getSessionState().generateId();
    }
 
@@ -107,15 +106,16 @@ public class MQTTPublishManager {
       }
       else {
          int qos = decideQoS(message, consumer);
+         int mqttid = generateMqttId();
+
          if (qos == 0) {
-            sendServerMessage((int) message.getMessageID(), (ServerMessageImpl) message, deliveryCount, qos);
+            sendServerMessage(mqttid, (ServerMessageImpl) message, deliveryCount, qos);
             session.getServerSession().acknowledge(consumer.getID(), message.getMessageID());
          }
          else {
-            String consumerAddress = consumer.getQueue().getAddress().toString();
-            Integer mqttid = generateMqttId(qos);
-
-            session.getSessionState().addOutbandMessageRef(mqttid, consumerAddress, message.getMessageID(), qos);
+            String address = message.getAddress().toString();
+            MQTTMessageInfo info = new MQTTMessageInfo(message.getMessageID(), consumer.getID(), address);
+            session.getSessionState().storeOutboundMessageReference(mqttid, info, true);
             sendServerMessage(mqttid, (ServerMessageImpl) message, deliveryCount, qos);
          }
       }
@@ -126,14 +126,19 @@ public class MQTTPublishManager {
       synchronized (lock) {
          ServerMessage serverMessage = MQTTUtil.createServerMessageFromByteBuf(session, topic, retain, qos, payload);
 
-         if (qos > 0) {
-            serverMessage.setDurable(MQTTUtil.DURABLE_MESSAGES);
-         }
-
-         if (qos < 2 || !session.getSessionState().getPubRec().contains(messageId)) {
-            if (qos == 2)
-               session.getSessionState().getPubRec().add(messageId);
+         if (qos == 0) {
             session.getServerSession().send(serverMessage, true);
+         }
+         if (qos == 1) {
+            serverMessage.setDurable(MQTTUtil.DURABLE_MESSAGES);
+            session.getServerSession().send(serverMessage, true);
+         }
+         else if (qos == 2) {
+            serverMessage.setDurable(MQTTUtil.DURABLE_MESSAGES);
+            // If we already have a reference to this message, then the client retried.  Drop message and send ack.
+            if (session.getSessionState().storeInboundQoS2MessageReference(messageId)) {
+               session.getServerSession().send(serverMessage, true);
+            }
          }
 
          if (retain) {
@@ -149,7 +154,7 @@ public class MQTTPublishManager {
       if (message.getIntProperty(MQTTUtil.MQTT_MESSAGE_TYPE_KEY) == MqttMessageType.PUBREL.value()) {
          int messageId = message.getIntProperty(MQTTUtil.MQTT_MESSAGE_ID_KEY);
          MQTTMessageInfo messageInfo = new MQTTMessageInfo(message.getMessageID(), managementConsumer.getID(), message.getAddress().toString());
-         session.getSessionState().storeMessageRef(messageId, messageInfo, false);
+         session.getSessionState().storeOutboundMessageReference(messageId, messageInfo, false);
          session.getProtocolHandler().sendPubRel(messageId);
       }
    }
@@ -173,18 +178,26 @@ public class MQTTPublishManager {
       });
    }
 
+   // OUTBOUND
    void handlePubRec(int messageId) throws Exception {
-      MQTTMessageInfo messageRef = session.getSessionState().getMessageInfo(messageId);
+      MQTTMessageInfo messageRef = session.getSessionState().getOutboundMessageReference(messageId);
+      // This is the first time we've received a pubrec for this message.  Schedule PubRel.
       if (messageRef != null) {
          ServerMessage pubRel = MQTTUtil.createPubRelMessage(session, managementAddress, messageId);
          session.getServerSession().send(pubRel, true);
          session.getServerSession().acknowledge(messageRef.getConsumerId(), messageRef.getServerMessageId());
-         session.getProtocolHandler().sendPubRel(messageId);
       }
+      session.getProtocolHandler().sendPubRel(messageId);
+   }
+
+   void handlePubRel(int messageId) {
+      // If this is a retry from client, we may have already removed the PubRec.
+      session.getProtocolHandler().sendPubComp(messageId);
+      session.getSessionState().removeInboundQoS2MessageReference(messageId);
    }
 
    void handlePubComp(int messageId) throws Exception {
-      MQTTMessageInfo messageInfo = session.getSessionState().getMessageInfo(messageId);
+      MQTTMessageInfo messageInfo = session.getSessionState().removeOutboundMessageReference(messageId);
 
       // Check to see if this message is stored if not just drop the packet.
       if (messageInfo != null) {
@@ -192,22 +205,14 @@ public class MQTTPublishManager {
       }
    }
 
-   void handlePubRel(int messageId) {
-      // We don't check to see if a PubRel existed for this message.  We assume it did and so send PubComp.
-      session.getSessionState().getPubRec().remove(messageId);
-      session.getProtocolHandler().sendPubComp(messageId);
-      session.getSessionState().removeMessageRef(messageId);
-   }
-
    void handlePubAck(int messageId) throws Exception {
-      Pair<String, Long> pub1MessageInfo = session.getSessionState().removeOutbandMessageRef(messageId, 1);
-      if (pub1MessageInfo != null) {
-         String mqttAddress = MQTTUtil.convertCoreAddressFilterToMQTT(pub1MessageInfo.getA());
-         ServerConsumer consumer = session.getSubscriptionManager().getConsumerForAddress(mqttAddress);
-         session.getServerSession().acknowledge(consumer.getID(), pub1MessageInfo.getB());
+      MQTTMessageInfo info = session.getSessionState().removeOutboundMessageReference(messageId);
+      if (info != null) {
+         session.getServerSession().acknowledge(info.getConsumerId(), info.getServerMessageId());
       }
    }
 
+   // OUTBOUND
    private void sendServerMessage(int messageId, ServerMessageImpl message, int deliveryCount, int qos) {
       String address = MQTTUtil.convertCoreAddressFilterToMQTT(message.getAddress().toString());
 
@@ -235,6 +240,7 @@ public class MQTTPublishManager {
    private int decideQoS(ServerMessage message, ServerConsumer consumer) {
       int subscriptionQoS = session.getSubscriptionManager().getConsumerQoSLevels().get(consumer.getID());
 
+      // The property may not be set for cross protocol.  So we default to highest QoS.
       int qos = 2;
       if (message.containsProperty(MQTTUtil.MQTT_QOS_LEVEL_KEY)) {
          qos = message.getIntProperty(MQTTUtil.MQTT_QOS_LEVEL_KEY);

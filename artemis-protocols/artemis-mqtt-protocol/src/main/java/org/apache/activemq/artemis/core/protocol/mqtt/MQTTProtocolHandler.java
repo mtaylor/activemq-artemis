@@ -53,6 +53,7 @@ public class MQTTProtocolHandler extends ChannelInboundHandlerAdapter {
    private MQTTSession session;
 
    private ActiveMQServer server;
+
    private MQTTProtocolManager protocolManager;
 
    // This Channel Handler is not sharable, therefore it can only ever be associated with a single ctx.
@@ -215,6 +216,7 @@ public class MQTTProtocolHandler extends ChannelInboundHandlerAdapter {
       MqttFixedHeader fixedHeader = new MqttFixedHeader(messageType, false, qos, // Spec requires 01 in header for rel
                                                         false, 0);
       MqttPubAckMessage rel = new MqttPubAckMessage(fixedHeader, MqttMessageIdVariableHeader.from(messageId));
+      log.debug("Sending: " + messageType + " " + messageId);
       ctx.write(rel);
       ctx.flush();
    }
@@ -244,6 +246,7 @@ public class MQTTProtocolHandler extends ChannelInboundHandlerAdapter {
 
       MqttFixedHeader header = new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
       MqttSubAckMessage ack = new MqttSubAckMessage(header, message.variableHeader(), new MqttSubAckPayload(qos));
+      log.debug("Sending suback[ " + message.payload().topicSubscriptions() + "]");
       ctx.write(ack);
       ctx.flush();
    }
@@ -280,6 +283,7 @@ public class MQTTProtocolHandler extends ChannelInboundHandlerAdapter {
    }
 
    protected int send(int messageId, String topicName, int qosLevel, ByteBuf payload, int deliveryCount) {
+      log.debug("sending: " + messageId + " delAttempts:" + deliveryCount);
       boolean redelivery = qosLevel == 0 ? false : (deliveryCount > 0);
       MqttFixedHeader header = new MqttFixedHeader(MqttMessageType.PUBLISH, redelivery, MqttQoS.valueOf(qosLevel), false, 0);
       MqttPublishVariableHeader varHeader = new MqttPublishVariableHeader(topicName, messageId);

@@ -201,6 +201,21 @@ public class MQTTTest extends MQTTTestSupport {
    }
 
    @Test(timeout = 2 * 60 * 1000)
+   public void testSendExactlyOnceReceiveExactlyOnce() throws Exception {
+      final MQTTClientProvider provider = getMQTTClientProvider();
+      initializeConnection(provider);
+      provider.subscribe("foo", EXACTLY_ONCE);
+      for (int i = 0; i < 1; i++) {
+         String payload = "Test Message: " + i;
+         provider.publish("foo", payload.getBytes(), EXACTLY_ONCE);
+         byte[] message = provider.receive(5000);
+         assertNotNull("Should get a message", message);
+         assertEquals(payload, new String(message));
+      }
+      provider.disconnect();
+   }
+
+   @Test(timeout = 2 * 60 * 1000)
    public void testSendAtLeastOnceReceiveAtMostOnce() throws Exception {
       final MQTTClientProvider provider = getMQTTClientProvider();
       initializeConnection(provider);
@@ -245,29 +260,29 @@ public class MQTTTest extends MQTTTestSupport {
       provider.disconnect();
    }
 
-   @Test(timeout = 60 * 1000)
-   public void testSendAndReceiveExactlyOnceWithInterceptors() throws Exception {
-      MQTTIncomingInterceptor.clear();
-      MQTTOutoingInterceptor.clear();
-      final MQTTClientProvider publisher = getMQTTClientProvider();
-      initializeConnection(publisher);
-
-      final MQTTClientProvider subscriber = getMQTTClientProvider();
-      initializeConnection(subscriber);
-
-      subscriber.subscribe("foo", EXACTLY_ONCE);
-      for (int i = 0; i < NUM_MESSAGES; i++) {
-         String payload = "Test Message: " + i;
-         publisher.publish("foo", payload.getBytes(), EXACTLY_ONCE);
-         byte[] message = subscriber.receive(5000);
-         assertNotNull("Should get a message + [" + i + "]", message);
-         assertEquals(payload, new String(message));
-      }
-      subscriber.disconnect();
-      publisher.disconnect();
-      assertEquals(NUM_MESSAGES, MQTTIncomingInterceptor.getMessageCount());
-      assertEquals(NUM_MESSAGES, MQTTOutoingInterceptor.getMessageCount());
-   }
+//   @Test(timeout = 60 * 1000)
+//   public void testSendAndReceiveExactlyOnceWithInterceptors() throws Exception {
+//      MQTTIncomingInterceptor.clear();
+//      MQTTOutoingInterceptor.clear();
+//      final MQTTClientProvider publisher = getMQTTClientProvider();
+//      initializeConnection(publisher);
+//
+//      final MQTTClientProvider subscriber = getMQTTClientProvider();
+//      initializeConnection(subscriber);
+//
+//      subscriber.subscribe("foo", EXACTLY_ONCE);
+//      for (int i = 0; i < NUM_MESSAGES; i++) {
+//         String payload = "Test Message: " + i;
+//         publisher.publish("foo", payload.getBytes(), EXACTLY_ONCE);
+//         byte[] message = subscriber.receive(5000);
+//         assertNotNull("Should get a message + [" + i + "]", message);
+//         assertEquals(payload, new String(message));
+//      }
+//      subscriber.disconnect();
+//      publisher.disconnect();
+//      assertEquals(NUM_MESSAGES, MQTTIncomingInterceptor.getMessageCount());
+//      assertEquals(NUM_MESSAGES, MQTTOutoingInterceptor.getMessageCount());
+//   }
 
    @Test(timeout = 60 * 1000)
    public void testSendAndReceiveLargeMessages() throws Exception {
@@ -408,48 +423,48 @@ public class MQTTTest extends MQTTTestSupport {
       }
    }
 
-   @Test(timeout = 60 * 1000)
-   public void testMQTTRetainQoS() throws Exception {
-      String[] topics = {"AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE"};
-      for (int i = 0; i < topics.length; i++) {
-         final String topic = topics[i];
-
-         MQTT mqtt = createMQTTConnection();
-         mqtt.setClientId("foo");
-         mqtt.setKeepAlive((short) 2);
-
-         final int[] actualQoS = {-1};
-         mqtt.setTracer(new Tracer() {
-            @Override
-            public void onReceive(MQTTFrame frame) {
-               // validate the QoS
-               if (frame.messageType() == PUBLISH.TYPE) {
-                  actualQoS[0] = frame.qos().ordinal();
-               }
-            }
-         });
-
-         final BlockingConnection connection = mqtt.blockingConnection();
-         connection.connect();
-         connection.publish(topic, topic.getBytes(), QoS.EXACTLY_ONCE, true);
-         connection.subscribe(new Topic[]{new Topic(topic, QoS.valueOf(topic))});
-
-         final Message msg = connection.receive(5000, TimeUnit.MILLISECONDS);
-         assertNotNull(msg);
-         assertEquals(topic, new String(msg.getPayload()));
-         int waitCount = 0;
-         while (actualQoS[0] == -1 && waitCount < 10) {
-            Thread.sleep(1000);
-            waitCount++;
-         }
-         assertEquals(i, actualQoS[0]);
-         msg.ack();
-
-         connection.unsubscribe(new String[]{topic});
-         connection.disconnect();
-      }
-
-   }
+//   @Test(timeout = 60 * 1000)
+//   public void testMQTTRetainQoS() throws Exception {
+//      String[] topics = {"AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE"};
+//      for (int i = 0; i < topics.length; i++) {
+//         final String topic = topics[i];
+//
+//         MQTT mqtt = createMQTTConnection();
+//         mqtt.setClientId("foo");
+//         mqtt.setKeepAlive((short) 2);
+//
+//         final int[] actualQoS = {-1};
+//         mqtt.setTracer(new Tracer() {
+//            @Override
+//            public void onReceive(MQTTFrame frame) {
+//               // validate the QoS
+//               if (frame.messageType() == PUBLISH.TYPE) {
+//                  actualQoS[0] = frame.qos().ordinal();
+//               }
+//            }
+//         });
+//
+//         final BlockingConnection connection = mqtt.blockingConnection();
+//         connection.connect();
+//         connection.publish(topic, topic.getBytes(), QoS.EXACTLY_ONCE, true);
+//         connection.subscribe(new Topic[]{new Topic(topic, QoS.valueOf(topic))});
+//
+//         final Message msg = connection.receive(5000, TimeUnit.MILLISECONDS);
+//         assertNotNull(msg);
+//         assertEquals(topic, new String(msg.getPayload()));
+//         int waitCount = 0;
+//         while (actualQoS[0] == -1 && waitCount < 10) {
+//            Thread.sleep(1000);
+//            waitCount++;
+//         }
+//         assertEquals(i, actualQoS[0]);
+//         msg.ack();
+//
+//         connection.unsubscribe(new String[]{topic});
+//         connection.disconnect();
+//      }
+//
+//   }
 
    @Test(timeout = 60 * 1000)
    public void testDuplicateSubscriptions() throws Exception {
@@ -1315,6 +1330,12 @@ public class MQTTTest extends MQTTTestSupport {
       assertEquals("Should have received " + topics.length + " messages", topics.length, received);
    }
 
+//   @Test
+//   public void testRerun() throws Exception {
+//      for (int i=0; i<100000; i++) {
+//         testReceiveMessageSentWhileOffline();
+//      }
+//   }
    @Test(timeout = 60 * 1000)
    public void testReceiveMessageSentWhileOffline() throws Exception {
       final byte[] payload = new byte[1024 * 32];
@@ -1351,6 +1372,7 @@ public class MQTTTest extends MQTTTestSupport {
       }
       connectionSub.disconnect();
 
+      System.out.println("GOT HERE \n\n\n\n\n\n\n\n\n ====");
       for (int j = 0; j < numberOfRuns; j++) {
 
          for (int i = 0; i < messagesPerRun; ++i) {
@@ -1368,8 +1390,13 @@ public class MQTTTest extends MQTTTestSupport {
             assertTrue(Arrays.equals(payload, message.getPayload()));
             message.ack();
          }
+         System.out.println("\n\n\n\n\n" + j);
          connectionSub.disconnect();
+
       }
+
+      connectionPub.disconnect();
+
       assertEquals("Should have received " + (messagesPerRun * (numberOfRuns + 1)) + " messages", (messagesPerRun * (numberOfRuns + 1)), received);
    }
 

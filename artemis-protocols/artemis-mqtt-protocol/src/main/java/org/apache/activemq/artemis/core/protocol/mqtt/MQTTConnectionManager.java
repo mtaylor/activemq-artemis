@@ -110,6 +110,10 @@ public class MQTTConnectionManager {
          return;
       }
       try {
+         session.stop();
+         session.getConnection().disconnect(false);
+         session.getConnection().destroy();
+
          if (session.getSessionState() != null) {
             String clientId = session.getSessionState().getClientId();
             if (clientId != null)
@@ -119,9 +123,7 @@ public class MQTTConnectionManager {
                session.getConnectionManager().sendWill();
             }
          }
-         session.stop();
-         session.getConnection().disconnect(false);
-         session.getConnection().destroy();
+         System.out.println("DIsconnected");
       }
       catch (Exception e) {
          /* FIXME Failure during disconnect would leave the session state in an unrecoverable state.  We should handle
