@@ -36,14 +36,7 @@ under the License.
       <large-messages-directory>./data/largemessages</large-messages-directory>
 
       <paging-directory>./data/paging</paging-directory>
-
-      <queues>
-         <queue name="jms">
-            <address></address>
-         </queue>
-      </queues>
-
-
+      
       <remoting-incoming-interceptors>
          <class-name>org.apache.activemq.artemis.jms.example.MyStompInterceptor</class-name>
          <class-name>org.apache.activemq.artemis.jms.example.RegularInterceptor</class-name>
