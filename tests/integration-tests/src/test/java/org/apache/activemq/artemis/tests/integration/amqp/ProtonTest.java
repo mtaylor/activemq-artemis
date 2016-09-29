@@ -63,6 +63,7 @@ import org.apache.activemq.artemis.core.remoting.CloseListener;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.utils.ByteUtil;
 import org.apache.activemq.artemis.utils.VersionLoader;
 import org.apache.activemq.transport.amqp.client.AmqpClient;
@@ -79,6 +80,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -741,7 +743,7 @@ public class ProtonTest extends ProtonTestBase {
    }
 
    @Test
-   public void testLinkDetatchSentWhenQueueDeleted() throws Exception {
+   public void testLinkDetachSentWhenQueueDeleted() throws Exception {
       AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
       AmqpConnection amqpConnection = client.connect();
       try {
@@ -752,6 +754,32 @@ public class ProtonTest extends ProtonTestBase {
 
          Thread.sleep(5000);
          assertTrue(receiver.isClosed());
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+      }
+      finally {
+         amqpConnection.close();
+      }
+   }
+
+   @Test
+   @Ignore
+   public void testCloseIsSentOnConnectionClose() throws Exception {
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+      try {
+         AmqpSession session = amqpConnection.createSession();
+
+         AmqpReceiver receiver = session.createReceiver(coreAddress);
+
+         for (RemotingConnection connection : server.getRemotingService().getConnections()) {
+            server.getRemotingService().removeConnection(connection);
+            connection.disconnect(true);
+         }
+
+         Thread.sleep(5000);
+         assertTrue(amqpConnection.isClosed());
       }
       catch (Exception e) {
          e.printStackTrace();
