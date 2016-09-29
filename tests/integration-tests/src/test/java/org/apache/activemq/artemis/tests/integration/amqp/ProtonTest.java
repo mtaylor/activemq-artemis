@@ -67,6 +67,7 @@ import org.apache.activemq.artemis.utils.ByteUtil;
 import org.apache.activemq.artemis.utils.VersionLoader;
 import org.apache.activemq.transport.amqp.client.AmqpClient;
 import org.apache.activemq.transport.amqp.client.AmqpConnection;
+import org.apache.activemq.transport.amqp.client.AmqpConnectionListener;
 import org.apache.activemq.transport.amqp.client.AmqpMessage;
 import org.apache.activemq.transport.amqp.client.AmqpReceiver;
 import org.apache.activemq.transport.amqp.client.AmqpSender;
@@ -158,6 +159,7 @@ public class ProtonTest extends ProtonTestBase {
       server.createQueue(new SimpleString("amqp_testtopic" + "8"), new SimpleString("amqp_testtopic" + "8"), null, true, false);
       server.createQueue(new SimpleString("amqp_testtopic" + "9"), new SimpleString("amqp_testtopic" + "9"), null, true, false);
       server.createQueue(new SimpleString("amqp_testtopic" + "10"), new SimpleString("amqp_testtopic" + "10"), null, true, false);
+
       connection = createConnection();
 
    }
@@ -736,6 +738,27 @@ public class ProtonTest extends ProtonTestBase {
       assertNotNull(expectedException);
       assertTrue(expectedException.getMessage().contains("amqp:not-found"));
       assertTrue(expectedException.getMessage().contains("target address does not exist"));
+   }
+
+   @Test
+   public void testLinkDetatchSentWhenQueueDeleted() throws Exception {
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+      try {
+         AmqpSession session = amqpConnection.createSession();
+
+         AmqpReceiver receiver = session.createReceiver(coreAddress);
+         server.destroyQueue(new SimpleString(coreAddress), null, false, true);
+
+         Thread.sleep(5000);
+         assertTrue(receiver.isClosed());
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+      }
+      finally {
+         amqpConnection.close();
+      }
    }
 
    @Test

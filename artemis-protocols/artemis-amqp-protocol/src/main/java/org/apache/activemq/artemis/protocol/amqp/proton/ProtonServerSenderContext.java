@@ -22,6 +22,7 @@ import java.util.Objects;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.core.server.ServerConsumer;
 import org.apache.activemq.artemis.protocol.amqp.broker.AMQPSessionCallback;
 import org.apache.activemq.artemis.protocol.amqp.exceptions.ActiveMQAMQPInternalErrorException;
 import org.apache.activemq.artemis.protocol.amqp.util.CreditsSemaphore;
@@ -118,7 +119,6 @@ public class ProtonServerSenderContext extends ProtonInitializable implements Pr
          throw ActiveMQAMQPProtocolMessageBundle.BUNDLE.errorStartingConsumer(e.getMessage());
       }
    }
-
    /**
     * create the actual underlying ActiveMQ Artemis Server Consumer
     */
@@ -337,6 +337,9 @@ public class ProtonServerSenderContext extends ProtonInitializable implements Pr
                   }
                }
             }
+         }
+         else {
+            sender.close();
          }
       }
       catch (Exception e) {

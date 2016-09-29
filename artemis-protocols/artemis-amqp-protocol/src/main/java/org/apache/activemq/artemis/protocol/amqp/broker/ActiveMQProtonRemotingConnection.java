@@ -111,6 +111,8 @@ public class ActiveMQProtonRemotingConnection extends AbstractRemotingConnection
     */
    @Override
    public void disconnect(String scaleDownNodeID, boolean criticalError) {
+      amqpConnection.close();
+      amqpConnection.flush();
       getTransportConnection().close();
    }
 

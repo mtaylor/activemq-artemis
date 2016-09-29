@@ -472,9 +472,14 @@ public class AMQPSessionCallback implements SessionCallback {
 
    @Override
    public void disconnect(ServerConsumer consumer, String queueName) {
-      synchronized (connection.getLock()) {
-         ((Link) consumer.getProtocolContext()).close();
-         connection.flush();
+      try {
+         synchronized (connection.getLock()) {
+            ((ProtonServerSenderContext) consumer.getProtocolContext()).close(false);
+            connection.flush();
+         }
+      }
+      catch (ActiveMQAMQPException e) {
+         e.printStackTrace();
       }
    }
 
@@ -511,5 +516,4 @@ public class AMQPSessionCallback implements SessionCallback {
       protonSPI.removeTransaction(txid);
 
    }
-
 }
