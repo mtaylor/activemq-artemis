@@ -77,6 +77,8 @@ import org.apache.activemq.transport.amqp.client.AmqpValidator;
 import org.apache.qpid.jms.JmsConnectionFactory;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Source;
+import org.apache.qpid.proton.amqp.messaging.TerminusDurability;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -780,6 +782,34 @@ public class ProtonTest extends ProtonTestBase {
 
          Thread.sleep(5000);
          assertTrue(amqpConnection.isClosed());
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+      }
+      finally {
+         amqpConnection.close();
+      }
+   }
+
+   @Test
+   public void testClientIdIsSetInSubscriptionList() throws Exception {
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.createConnection();
+      amqpConnection.setContainerId("testClient");
+      amqpConnection.setOfferedCapabilities(Arrays.asList(Symbol.getSymbol("topic")));
+      amqpConnection.connect();
+      try {
+         AmqpSession session = amqpConnection.createSession();
+
+         Source source = new Source();
+         source.setDurable(TerminusDurability.UNSETTLED_STATE);
+         source.setCapabilities(Symbol.getSymbol("topic"));
+         source.setAddress("jms.topic.mytopic");
+         AmqpReceiver receiver = session.createReceiver(source, "testSub");
+
+         SimpleString fo = new SimpleString("testClient.testSub:jms.topic.mytopic");
+         assertNotNull(server.locateQueue(fo));
+
       }
       catch (Exception e) {
          e.printStackTrace();
