@@ -274,7 +274,7 @@ public class ProtonHandler extends ProtonInitializable {
             }
          });
          try {
-            latch.wait();
+            latch.wait(10_000);
          } catch (InterruptedException e) {
             // Ignore for now, but print event
              e.printStackTrace();
