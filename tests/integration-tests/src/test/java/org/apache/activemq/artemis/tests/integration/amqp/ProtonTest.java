@@ -766,7 +766,6 @@ public class ProtonTest extends ProtonTestBase {
    }
 
    @Test
-   @Ignore
    public void testCloseIsSentOnConnectionClose() throws Exception {
       AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
       AmqpConnection amqpConnection = client.connect();
