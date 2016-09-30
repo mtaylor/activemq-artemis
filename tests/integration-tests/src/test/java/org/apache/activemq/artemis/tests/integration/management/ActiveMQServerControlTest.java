@@ -249,6 +249,32 @@ public class ActiveMQServerControlTest extends ManagementTestBase {
       checkNoResource(ObjectNameBuilder.DEFAULT.getQueueObjectName(address, name));
    }
 
+    @Test
+    public void testCreateAndDestroyQueueClosingConsumers() throws Exception {
+       SimpleString address = RandomUtil.randomSimpleString();
+       SimpleString name = RandomUtil.randomSimpleString();
+       boolean durable = true;
+
+       ActiveMQServerControl serverControl = createManagementControl();
+
+       checkNoResource(ObjectNameBuilder.DEFAULT.getQueueObjectName(address, name));
+
+       serverControl.createQueue(address.toString(), name.toString(), durable);
+
+       ServerLocator receiveLocator = createInVMNonHALocator();
+       ClientSessionFactory receiveCsf = createSessionFactory(receiveLocator);
+       ClientSession receiveClientSession = receiveCsf.createSession(true, false, false);
+       ClientConsumer consumer = receiveClientSession.createConsumer(name);
+
+       Assert.assertFalse(consumer.isClosed());
+
+       checkResource(ObjectNameBuilder.DEFAULT.getQueueObjectName(address, name));
+       serverControl.destroyQueue(name.toString(), true);
+       Assert.assertTrue(consumer.isClosed());
+
+       checkNoResource(ObjectNameBuilder.DEFAULT.getQueueObjectName(address, name));
+    }
+
    @Test
    public void testCreateAndDestroyQueueWithNullFilter() throws Exception {
       SimpleString address = RandomUtil.randomSimpleString();
