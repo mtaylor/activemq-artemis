@@ -613,8 +613,8 @@ public class ActiveMQServerImpl implements ActiveMQServer {
          throw ActiveMQMessageBundle.BUNDLE.addressIsNull();
       }
 
-      boolean autoCreateJmsQueues = address.toString().startsWith(ResourceNames.JMS_QUEUE) && getAddressSettingsRepository().getMatch(address.toString()).isAutoCreateJmsQueues();
-      boolean autoCreateJmsTopics = address.toString().startsWith(ResourceNames.JMS_TOPIC) && getAddressSettingsRepository().getMatch(address.toString()).isAutoCreateJmsTopics();
+      boolean autoCreateJmsQueues = getAddressSettingsRepository().getMatch(address.toString()).isAutoCreateJmsQueues();
+      boolean autoCreateJmsTopics = getAddressSettingsRepository().getMatch(address.toString()).isAutoCreateJmsTopics();
 
       List<SimpleString> names = new ArrayList<>();
 
@@ -643,7 +643,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
          throw ActiveMQMessageBundle.BUNDLE.queueNameIsNull();
       }
 
-      boolean autoCreateJmsQueues = name.toString().startsWith(ResourceNames.JMS_QUEUE) && getAddressSettingsRepository().getMatch(name.toString()).isAutoCreateJmsQueues();
+      boolean autoCreateJmsQueues = getAddressSettingsRepository().getMatch(name.toString()).isAutoCreateJmsQueues();
 
       QueueQueryResult response;
 

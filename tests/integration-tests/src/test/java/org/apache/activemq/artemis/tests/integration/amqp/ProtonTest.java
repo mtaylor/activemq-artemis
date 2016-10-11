@@ -16,25 +16,6 @@
  */
 package org.apache.activemq.artemis.tests.integration.amqp;
 
-import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.DELAYED_DELIVERY;
-import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.PRODUCT;
-import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.VERSION;
-import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.contains;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -58,6 +39,19 @@ import javax.jms.Topic;
 import javax.jms.TopicPublisher;
 import javax.jms.TopicSession;
 import javax.jms.TopicSubscriber;
+import java.io.IOException;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.postoffice.Bindings;
@@ -89,6 +83,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.DELAYED_DELIVERY;
+import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.PRODUCT;
+import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.VERSION;
+import static org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport.contains;
 
 @RunWith(Parameterized.class)
 public class ProtonTest extends ProtonTestBase {
@@ -864,7 +863,6 @@ public class ProtonTest extends ProtonTestBase {
       receiver.flow(1);
 
       AmqpMessage message = new AmqpMessage();
-      message.setText("TestPayload");
       sender.send(message);
 
       AmqpMessage receivedMessage = receiver.receive();
@@ -1478,6 +1476,56 @@ public class ProtonTest extends ProtonTestBase {
       Assert.assertEquals("msg:1", m.getText());
       Assert.assertEquals(m.getStringProperty("color"), "RED");
       connection.close();
+   }
+
+   @Test
+   public void receiveFromNonExistingQueue() throws Exception {
+      AddressSettings settings = server.getAddressSettingsRepository().getMatch("#");
+      settings.setAutoCreateJmsQueues(true);
+
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+      try {
+         AmqpSession s = amqpConnection.createSession();
+         AmqpReceiver receiver = s.createReceiver("foo");
+         AmqpSender sender = s.createSender("foo");
+
+         AmqpMessage m1 = new AmqpMessage();
+         sender.send(m1);
+
+         AmqpMessage m = receiver.receiveNoWait();
+         m.accept();
+         assertNotNull(m);
+
+      } finally {
+         amqpConnection.close();
+      }
+   }
+
+   @Test
+   public void sendToNonExistingQueue() throws Exception {
+      AddressSettings settings = server.getAddressSettingsRepository().getMatch("#");
+      settings.setAutoCreateJmsQueues(true);
+
+      AmqpClient client = new AmqpClient(new URI(tcpAmqpConnectionUri), userName, password);
+      AmqpConnection amqpConnection = client.connect();
+      try {
+         AmqpSession s = amqpConnection.createSession();
+         AmqpSender sender = s.createSender("foo");
+         AmqpReceiver receiver = s.createReceiver("foo");
+
+         AmqpMessage m1 = new AmqpMessage();
+         m1.setText("foobar");
+
+         sender.send(new AmqpMessage());
+
+         AmqpMessage m = receiver.receiveNoWait();
+         m.accept();
+         assertNotNull(m);
+
+      } finally {
+         amqpConnection.close();
+      }
    }
 
    @Test
