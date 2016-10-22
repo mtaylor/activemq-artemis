@@ -97,7 +97,7 @@ public abstract class DestinationAction extends InputAbstract {
            ClientSessionFactory sessionFactory = locator.createSessionFactory();
            ClientSession session = sessionFactory.createSession(user, password, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)) {
          session.start();
-         ClientRequestor requestor = new ClientRequestor(session, "jms.queue.activemq.management");
+         ClientRequestor requestor = new ClientRequestor(session, "activemq.management");
          ClientMessage message = session.createMessage(false);
 
          cb.setUpInvocation(message);
