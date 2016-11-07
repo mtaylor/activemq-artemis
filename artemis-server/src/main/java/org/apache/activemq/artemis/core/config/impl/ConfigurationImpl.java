@@ -257,6 +257,8 @@ public class ConfigurationImpl implements Configuration, Serializable {
 
    private int diskScanPeriod = ActiveMQDefaultConfiguration.getDefaultDiskScanPeriod();
 
+   private String internalNamingPrefix = ActiveMQDefaultConfiguration.getInternalNamingPrefix();
+
    /**
     * Parent folder for all data folders.
     */
@@ -1823,6 +1825,17 @@ public class ConfigurationImpl implements Configuration, Serializable {
    @Override
    public int getDiskScanPeriod() {
       return diskScanPeriod;
+   }
+
+   @Override
+   public String getInternalNamingPrefix() {
+      return internalNamingPrefix;
+   }
+
+   @Override
+   public ConfigurationImpl setInternalNamingPrefix(String internalNamingPrefix) {
+      this.internalNamingPrefix = internalNamingPrefix;
+      return this;
    }
 
    @Override
