@@ -64,16 +64,17 @@ public class WildcardAddressManager extends SimpleAddressManager {
          Address add = addAndUpdateAddressMap(address);
          if (!add.containsWildCard()) {
             for (Address destAdd : add.getLinkedAddresses()) {
-               Bindings b = super.getBindingsForRoutingAddress(destAdd.getAddress());
-               if (b != null) {
-                  Collection<Binding> theBindings = b.getBindings();
+               bindings = super.getBindingsForRoutingAddress(destAdd.getAddress());
+               if (bindings != null) {
+                  Collection<Binding> theBindings = bindings.getBindings();
                   for (Binding theBinding : theBindings) {
                      super.addMappingInternal(address, theBinding);
                   }
                }
             }
+         } else {
+            bindings = super.getBindingsForRoutingAddress(address);
          }
-         bindings = super.getBindingsForRoutingAddress(address);
       }
       return bindings;
    }
