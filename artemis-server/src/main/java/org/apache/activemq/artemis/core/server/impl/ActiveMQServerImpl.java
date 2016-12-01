@@ -2477,7 +2477,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
 
       if (info == null) {
          if (autoCreateAddress) {
-            postOffice.addAddressInfo(defaultAddressInfo.setAutoCreated(true));
+            createAddressInfo(defaultAddressInfo.setAutoCreated(true));
             addressAlreadyExists = false;
          } else {
             throw ActiveMQMessageBundle.BUNDLE.addressDoesNotExist(addressName);
@@ -2490,7 +2490,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
 
       AddressInfo addressInfo = postOffice.getAddressInfo(queue.getAddress());
       if (addressInfo == null) {
-         postOffice.addAddressInfo(new AddressInfo(queue.getAddress()));
+         createAddressInfo(new AddressInfo(queue.getAddress()));
       } else {
          if (!addressInfo.getRoutingTypes().contains(routingType)) {
             throw ActiveMQMessageBundle.BUNDLE.invalidRoutingTypeForAddress(routingType, addressInfo.getName().toString(), addressInfo.getRoutingTypes());
