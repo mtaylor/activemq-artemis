@@ -377,13 +377,39 @@ public final class ClientSessionImpl implements ClientSessionInternal, FailureLi
 
    @Override
    public void createQueue(final String address, final RoutingType routingType, final String queueName, final String filterString,
-                           final boolean durable,
-                           final boolean autoCreated) throws ActiveMQException {
+                           final boolean durable, final boolean autoCreated) throws ActiveMQException {
       createQueue(SimpleString.toSimpleString(address),
                   SimpleString.toSimpleString(queueName),
                   SimpleString.toSimpleString(filterString),
                   durable,
                   autoCreated);
+   }
+
+
+   @Override
+   public void createQueue(final SimpleString address, final RoutingType routingType, final SimpleString queueName, final SimpleString filterString,
+                           final boolean durable, final boolean autoCreated, final int maxConsumers, final boolean deleteOnNoConsumers) throws ActiveMQException {
+      internalCreateQueue(address,
+                          queueName, routingType,
+                          filterString,
+                          durable,
+                          false,
+                          maxConsumers,
+                          deleteOnNoConsumers,
+                          autoCreated);
+   }
+
+   @Override
+   public void createQueue(final String address, final RoutingType routingType, final String queueName, final String filterString,
+                           final boolean durable, final boolean autoCreated, final int maxConsumers, final boolean deleteOnNoConsumers) throws ActiveMQException {
+      createQueue(SimpleString.toSimpleString(address),
+                  routingType,
+                  SimpleString.toSimpleString(queueName),
+                  SimpleString.toSimpleString(filterString),
+                  durable,
+                  autoCreated,
+                  maxConsumers,
+                  deleteOnNoConsumers);
    }
 
    @Override

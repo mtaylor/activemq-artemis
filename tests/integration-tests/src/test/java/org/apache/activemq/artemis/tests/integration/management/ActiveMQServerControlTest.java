@@ -584,7 +584,7 @@ public class ActiveMQServerControlTest extends ManagementTestBase {
       assertEquals(slowConsumerPolicy, info.getSlowConsumerPolicy());
       assertEquals(autoCreateJmsQueues, info.isAutoCreateJmsQueues());
       assertEquals(autoDeleteJmsQueues, info.isAutoDeleteJmsQueues());
-//      assertEquals(autoCreateJmsTopics, info.isAutoCreateJmsTopics());
+//      assertEquals(autoCreateJmsTopics, info.isAutoCreateAddresses());
       assertEquals(autoDeleteJmsTopics, info.isAutoDeleteJmsTopics());
 
       serverControl.addAddressSettings(addressMatch, DLA, expiryAddress, expiryDelay, lastValueQueue, deliveryAttempts, -1, 1000, pageMaxCacheSize, redeliveryDelay, redeliveryMultiplier, maxRedeliveryDelay, redistributionDelay, sendToDLAOnNoRoute, addressFullMessagePolicy, slowConsumerThreshold, slowConsumerCheckPeriod, slowConsumerPolicy, autoCreateJmsQueues, autoDeleteJmsQueues, autoCreateJmsTopics, autoDeleteJmsTopics);
@@ -610,7 +610,7 @@ public class ActiveMQServerControlTest extends ManagementTestBase {
       assertEquals(slowConsumerPolicy, info.getSlowConsumerPolicy());
       assertEquals(autoCreateJmsQueues, info.isAutoCreateJmsQueues());
       assertEquals(autoDeleteJmsQueues, info.isAutoDeleteJmsQueues());
-//      assertEquals(autoCreateJmsTopics, info.isAutoCreateJmsTopics());
+//      assertEquals(autoCreateJmsTopics, info.isAutoCreateAddresses());
       assertEquals(autoDeleteJmsTopics, info.isAutoDeleteJmsTopics());
 
       ex = false;
