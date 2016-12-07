@@ -1500,7 +1500,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
                             final SimpleString filterString,
                             final boolean durable,
                             final boolean temporary) throws Exception {
-      return createQueue(address, routingType, queueName, filterString, null, durable, temporary, getAddressSettingsRepository().getMatch(address.toString()).getDefaultMaxConsumers(), getAddressSettingsRepository().getMatch(address.toString()).isDefaultDeleteOnNoConsumers(), false);
+      return createQueue(address, routingType, queueName, filterString, null, durable, temporary, getAddressSettingsRepository().getMatch(address.toString()).getDefaultMaxConsumers(), getAddressSettingsRepository().getMatch(address.toString()).isDefaultDeleteOnNoConsumers(), true);
    }
 
    @Override
