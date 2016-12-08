@@ -2412,6 +2412,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       postOffice.removeRoutingType(addressName,routingType);
    }
 
+   @Override
    public boolean createAddressInfo(AddressInfo addressInfo) throws Exception {
       boolean result = postOffice.addAddressInfo(addressInfo);
 
