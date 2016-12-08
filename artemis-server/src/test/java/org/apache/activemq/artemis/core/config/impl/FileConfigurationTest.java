@@ -38,6 +38,7 @@ import org.apache.activemq.artemis.core.config.BridgeConfiguration;
 import org.apache.activemq.artemis.core.config.ClusterConnectionConfiguration;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.CoreAddressConfiguration;
+import org.apache.activemq.artemis.core.config.CoreAliasConfiguration;
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.config.FileDeploymentManager;
@@ -54,6 +55,7 @@ import org.apache.activemq.artemis.core.server.impl.LegacyLDAPSecuritySettingPlu
 import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy;
 import org.junit.Assert;
 import org.junit.Test;
+import sun.java2d.pipe.SpanShapeRenderer;
 
 public class FileConfigurationTest extends ConfigurationImplTest {
 
@@ -347,6 +349,8 @@ public class FileConfigurationTest extends ConfigurationImplTest {
 
       verifyAddresses();
 
+      verifyAliases();
+
       Map<String, Set<Role>> roles = conf.getSecurityRoles();
 
       assertEquals(2, roles.size());
@@ -379,6 +383,17 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertEquals(123, conf.getDiskScanPeriod());
 
       assertEquals(false, conf.isJournalDatasync());
+   }
+
+   private void verifyAliases() {
+      assertEquals(2, conf.getAliasConfigurations().size());
+      CoreAliasConfiguration aliasConfiguration = conf.getAliasConfigurations().get(0);
+      assertEquals("alias", aliasConfiguration.getFromAddress());
+      assertEquals("addr2", aliasConfiguration.getToAddress());
+
+      aliasConfiguration = conf.getAliasConfigurations().get(1);
+      assertEquals("alias2", aliasConfiguration.getFromAddress());
+      assertEquals("addr1", aliasConfiguration.getToAddress());
    }
 
    private void verifyAddresses() {

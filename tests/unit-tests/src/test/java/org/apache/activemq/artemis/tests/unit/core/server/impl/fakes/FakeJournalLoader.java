@@ -24,6 +24,7 @@ import org.apache.activemq.artemis.api.core.Pair;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.journal.Journal;
 import org.apache.activemq.artemis.core.persistence.AddressBindingInfo;
+import org.apache.activemq.artemis.core.persistence.AliasBindingInfo;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 import org.apache.activemq.artemis.core.persistence.QueueBindingInfo;
 import org.apache.activemq.artemis.core.persistence.impl.PageCountPending;
@@ -52,6 +53,12 @@ public class FakeJournalLoader implements JournalLoader {
    @Override
    public void initAddresses(Map<Long, AddressBindingInfo> addressBindingInfosMap,
                              List<AddressBindingInfo> addressBindingInfo) throws Exception {
+   }
+
+   @Override
+   public void initAliases(Map<Long, AliasBindingInfo> aliasBindingInfosMap,
+                           List<AliasBindingInfo> aliasBindingInfo) throws Exception {
+
    }
 
    @Override

@@ -29,6 +29,8 @@ public final class ResourceNames {
 
    public static final String ADDRESS = "address.";
 
+   public static final String ALIAS = "alias.";
+
    public static final String BRIDGE = "bridge.";
 
    public static final String ACCEPTOR = "acceptor.";

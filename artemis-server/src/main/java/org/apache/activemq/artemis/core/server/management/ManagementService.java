@@ -47,6 +47,7 @@ import org.apache.activemq.artemis.core.server.cluster.Bridge;
 import org.apache.activemq.artemis.core.server.cluster.BroadcastGroup;
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.settings.HierarchicalRepository;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.core.transaction.ResourceManager;
@@ -93,7 +94,11 @@ public interface ManagementService extends NotificationService, ActiveMQComponen
 
    void registerAddress(AddressInfo addressInfo) throws Exception;
 
+   void registerAlias(Alias alias) throws Exception;
+
    void unregisterAddress(SimpleString address) throws Exception;
+
+   void unregisterAlias(final SimpleString address) throws Exception;
 
    void registerQueue(Queue queue, SimpleString address, StorageManager storageManager) throws Exception;
 

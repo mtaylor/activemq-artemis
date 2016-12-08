@@ -349,5 +349,10 @@
          </address>
       </addresses>
 
+      <aliases>
+         <alias from="alias" to="addr2"/>
+         <alias from="alias2" to="addr1"/>
+      </aliases>
+
    </core>
 </configuration>

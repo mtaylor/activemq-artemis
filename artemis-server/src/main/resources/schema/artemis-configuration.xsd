@@ -883,6 +883,8 @@
 
          <xsd:element name="addresses" type="addressesType" maxOccurs="1" minOccurs="0"/>
 
+         <xsd:element name="aliases" type="aliasesType" maxOccurs="1" minOccurs="0" />
+
          <xsd:element name="network-check-list" type="xsd:string" default="" maxOccurs="1" minOccurs="0">
             <xsd:annotation>
                <xsd:documentation>
@@ -2738,6 +2740,31 @@
    <xsd:complexType name="addressesType">
       <xsd:sequence>
          <xsd:element name="address" type="addressType" maxOccurs="unbounded" minOccurs="0"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+
+   <xsd:complexType name="aliasType">
+      <xsd:attribute name="from" type="xsd:string" use="required">
+         <xsd:annotation>
+            <xsd:documentation>
+               The address that the alias matches.  This address must be unique across aliases and addresses.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="to" type="xsd:string" use="required">
+         <xsd:annotation>
+            <xsd:documentation>
+               The address this alias maps to.  This can map to any address by specifying the address name or can map
+               directly to a queue using the syntax address-name::queue-name.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:complexType>
+
+   <xsd:complexType name="aliasesType">
+      <xsd:sequence>
+         <xsd:element name="alias" type="aliasType" maxOccurs="unbounded" minOccurs="0"/>
       </xsd:sequence>
    </xsd:complexType>
 

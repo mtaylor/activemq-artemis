@@ -49,6 +49,7 @@ import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.files.FileStoreMonitor;
 import org.apache.activemq.artemis.core.server.group.impl.GroupBinding;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.impl.JournalLoader;
 import org.apache.activemq.artemis.core.transaction.ResourceManager;
 import org.apache.activemq.artemis.core.transaction.Transaction;
@@ -306,9 +307,14 @@ public interface StorageManager extends IDGenerator, ActiveMQComponent {
 
    void deleteAddressBinding(long tx, long addressBindingID) throws Exception;
 
+   void addAlias(long tx, Alias alias) throws Exception;
+
+   void deleteAlias(long tx, long aliasID) throws Exception;
+
    JournalLoadInformation loadBindingJournal(List<QueueBindingInfo> queueBindingInfos,
                                              List<GroupingInfo> groupingInfos,
-                                             List<AddressBindingInfo> addressBindingInfos) throws Exception;
+                                             List<AddressBindingInfo> addressBindingInfos,
+                                             List<AliasBindingInfo> aliasBindingInfos) throws Exception;
 
    // grouping related operations
    void addGrouping(GroupBinding groupBinding) throws Exception;

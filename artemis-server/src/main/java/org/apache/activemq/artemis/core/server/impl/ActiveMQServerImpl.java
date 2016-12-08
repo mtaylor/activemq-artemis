@@ -57,6 +57,7 @@ import org.apache.activemq.artemis.core.config.BridgeConfiguration;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.ConfigurationUtils;
 import org.apache.activemq.artemis.core.config.CoreAddressConfiguration;
+import org.apache.activemq.artemis.core.config.CoreAliasConfiguration;
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.config.StoreConfiguration;
@@ -74,6 +75,7 @@ import org.apache.activemq.artemis.core.paging.cursor.PageSubscription;
 import org.apache.activemq.artemis.core.paging.impl.PagingManagerImpl;
 import org.apache.activemq.artemis.core.paging.impl.PagingStoreFactoryNIO;
 import org.apache.activemq.artemis.core.persistence.AddressBindingInfo;
+import org.apache.activemq.artemis.core.persistence.AliasBindingInfo;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
 import org.apache.activemq.artemis.core.persistence.QueueBindingInfo;
@@ -1539,7 +1541,10 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    }
 
    @Override
-   public Queue createQueue(SimpleString address, RoutingType routingType, SimpleString queueName, SimpleString filter,
+   public Queue createQueue(SimpleString address,
+                            RoutingType routingType,
+                            SimpleString queueName,
+                            SimpleString filter,
                             SimpleString user,
                             boolean durable,
                             boolean temporary,
@@ -1565,7 +1570,10 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    }
 
    @Override
-   public Queue createQueue(SimpleString address, RoutingType routingType, SimpleString queueName, SimpleString filter,
+   public Queue createQueue(SimpleString address,
+                            RoutingType routingType,
+                            SimpleString queueName,
+                            SimpleString filter,
                             SimpleString user,
                             boolean durable,
                             boolean temporary,
@@ -1596,19 +1604,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
          }
       }
 
-      final Queue queue = createQueue(address,
-                                      name,
-                                      routingType,
-                                      filterString,
-                                      user,
-                                      durable,
-                                      !durable,
-                                      true,
-                                      !durable,
-                                      false,
-                                      Queue.MAX_CONSUMERS_UNLIMITED,
-                                      false,
-                                      true);
+      final Queue queue = createQueue(address, name, routingType, filterString, user, durable, !durable, true, !durable, false, Queue.MAX_CONSUMERS_UNLIMITED, false, true);
 
       if (!queue.getAddress().equals(address)) {
          throw ActiveMQMessageBundle.BUNDLE.queueSubscriptionBelongsToDifferentAddress(name);
@@ -2209,6 +2205,9 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       // Deploy predefined addresses
       deployAddressesFromConfiguration();
 
+      // Deploy predefined aliases
+      deployAliasesFromConfiguration();
+
       // Deploy any predefined queues
       deployQueuesFromConfiguration();
 
@@ -2295,6 +2294,12 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       }
    }
 
+   private void deployAliasesFromConfiguration() throws Exception {
+      for (CoreAliasConfiguration config : configuration.getAliasConfigurations()) {
+         postOffice.addAlias(new Alias(SimpleString.toSimpleString(config.getFromAddress()), SimpleString.toSimpleString(config.getToAddress())));
+      }
+   }
+
    private void deployQueuesFromListCoreQueueConfiguration(List<CoreQueueConfiguration> queues) throws Exception {
       for (CoreQueueConfiguration config : queues) {
          deployQueue(SimpleString.toSimpleString(config.getAddress()), config.getRoutingType(), SimpleString.toSimpleString(config.getName()), SimpleString.toSimpleString(config.getFilterString()), config.isDurable(), false, false, config.getMaxConsumers(), config.getDeleteOnNoConsumers(), true);
@@ -2336,13 +2341,19 @@ public class ActiveMQServerImpl implements ActiveMQServer {
 
       List<AddressBindingInfo> addressBindingInfos = new ArrayList<>();
 
-      journalInfo[0] = storageManager.loadBindingJournal(queueBindingInfos, groupingInfos, addressBindingInfos);
+      List<AliasBindingInfo> aliasesBindingInfos = new ArrayList<>();
+
+      journalInfo[0] = storageManager.loadBindingJournal(queueBindingInfos, groupingInfos, addressBindingInfos, aliasesBindingInfos);
 
       recoverStoredConfigs();
 
       Map<Long, AddressBindingInfo> addressBindingInfosMap = new HashMap<>();
 
       journalLoader.initAddresses(addressBindingInfosMap, addressBindingInfos);
+
+      Map<Long, AliasBindingInfo> aliasesBindingInfosMap = new HashMap<>();
+
+      journalLoader.initAliases(aliasesBindingInfosMap, aliasesBindingInfos);
 
       Map<Long, QueueBindingInfo> queueBindingInfosMap = new HashMap<>();
 
@@ -2403,13 +2414,13 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    @Override
    public void addRoutingType(String address, RoutingType routingType) throws ActiveMQAddressDoesNotExistException {
       final SimpleString addressName = new SimpleString(address);
-      postOffice.addRoutingType(addressName,routingType);
+      postOffice.addRoutingType(addressName, routingType);
    }
 
    @Override
    public void removeRoutingType(String address, RoutingType routingType) throws Exception {
       final SimpleString addressName = new SimpleString(address);
-      postOffice.removeRoutingType(addressName,routingType);
+      postOffice.removeRoutingType(addressName, routingType);
    }
 
    @Override
@@ -2425,6 +2436,36 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       }
 
       return result;
+   }
+
+   /**
+    * Adds an Alias.  Throws AddressExistsException if an address with the same fromAddress exist already exists.
+    *
+    * @param alias
+    * @throws Exception
+    */
+   @Override
+   public void addAlias(Alias alias) throws Exception {
+      postOffice.addAlias(alias);
+      long txID = storageManager.generateID();
+      storageManager.addAlias(txID, alias);
+      storageManager.commitBindings(txID);
+   }
+
+   @Override
+   public Alias getAlias(SimpleString fromAddress) {
+      return postOffice.getAlias(fromAddress);
+   }
+
+   @Override
+   public Alias removeAlias(SimpleString fromAddress) throws Exception {
+      Alias alias = postOffice.removeAlias(fromAddress);
+      if (alias != null) {
+         long txID = storageManager.generateID();
+         storageManager.deleteAlias(txID, alias.getId());
+         storageManager.commitBindings(txID);
+      }
+      return alias;
    }
 
    @Override
@@ -2446,8 +2487,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
    }
 
    @Override
-   public void removeAddressInfo(final SimpleString address,
-                                 final SecurityAuth session) throws Exception {
+   public void removeAddressInfo(final SimpleString address, final SecurityAuth session) throws Exception {
       if (session != null) {
          securityStore.check(address, CheckType.DELETE_ADDRESS, session);
       }

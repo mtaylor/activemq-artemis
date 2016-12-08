@@ -49,6 +49,7 @@ import org.apache.activemq.artemis.core.config.ClusterConnectionConfiguration;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.ConnectorServiceConfiguration;
 import org.apache.activemq.artemis.core.config.CoreAddressConfiguration;
+import org.apache.activemq.artemis.core.config.CoreAliasConfiguration;
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.config.HAPolicyConfiguration;
@@ -137,6 +138,8 @@ public class ConfigurationImpl implements Configuration, Serializable {
    private List<CoreQueueConfiguration> queueConfigurations = new ArrayList<>();
 
    private List<CoreAddressConfiguration> addressConfigurations = new ArrayList<>();
+
+   private List<CoreAliasConfiguration> aliasConfigurations = new ArrayList<>();
 
    protected transient List<BroadcastGroupConfiguration> broadcastGroupConfigurations = new ArrayList<>();
 
@@ -663,6 +666,14 @@ public class ConfigurationImpl implements Configuration, Serializable {
       return addressConfigurations;
    }
 
+   /**
+    * Returns the aliases configured for this server.
+    */
+   @Override
+   public List<CoreAliasConfiguration> getAliasConfigurations() {
+      return aliasConfigurations;
+   }
+
    @Override
    public Configuration setAddressConfigurations(List<CoreAddressConfiguration> configs) {
       this.addressConfigurations = configs;
@@ -672,6 +683,28 @@ public class ConfigurationImpl implements Configuration, Serializable {
    @Override
    public Configuration addAddressConfiguration(CoreAddressConfiguration config) {
       this.addressConfigurations.add(config);
+      return this;
+   }
+
+   /**
+    * Sets the alias configurations for this server.
+    *
+    * @param configs
+    */
+   @Override
+   public Configuration setAliasConfigurations(List<CoreAliasConfiguration> configs) {
+      this.aliasConfigurations = configs;
+      return this;
+   }
+
+   /**
+    * Adds an alias configuration
+    *
+    * @param config
+    */
+   @Override
+   public Configuration addAliasConfiguration(CoreAliasConfiguration config) {
+      aliasConfigurations.add(config);
       return this;
    }
 

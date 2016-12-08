@@ -44,6 +44,7 @@ import org.apache.activemq.artemis.core.server.cluster.ha.HAPolicy;
 import org.apache.activemq.artemis.core.server.group.GroupingHandler;
 import org.apache.activemq.artemis.core.server.impl.Activation;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.impl.ConnectorsService;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.core.server.reload.ReloadManager;
@@ -479,6 +480,12 @@ public interface ActiveMQServer extends ActiveMQComponent {
    boolean createOrUpdateAddressInfo(AddressInfo addressInfo) throws Exception;
 
    void removeAddressInfo(SimpleString address, SecurityAuth session) throws Exception;
+
+   void addAlias(Alias alias) throws Exception;
+
+   Alias getAlias(SimpleString fromAddress);
+
+   Alias removeAlias(SimpleString fromAddress) throws Exception;
 
    String getInternalNamingPrefix();
 }

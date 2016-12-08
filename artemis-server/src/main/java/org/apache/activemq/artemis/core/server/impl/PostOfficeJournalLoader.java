@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.activemq.artemis.api.core.ActiveMQAddressExistsException;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.api.core.Pair;
 import org.apache.activemq.artemis.api.core.SimpleString;
@@ -38,6 +39,7 @@ import org.apache.activemq.artemis.core.paging.PagingStore;
 import org.apache.activemq.artemis.core.paging.cursor.PageSubscriptionCounter;
 import org.apache.activemq.artemis.core.paging.impl.Page;
 import org.apache.activemq.artemis.core.persistence.AddressBindingInfo;
+import org.apache.activemq.artemis.core.persistence.AliasBindingInfo;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 import org.apache.activemq.artemis.core.persistence.QueueBindingInfo;
 import org.apache.activemq.artemis.core.persistence.QueueStatus;
@@ -144,21 +146,14 @@ public class PostOfficeJournalLoader implements JournalLoader {
          } else {
             queueConfigBuilder = QueueConfig.builderWith(queueBindingInfo.getId(), queueBindingInfo.getQueueName(), queueBindingInfo.getAddress());
          }
-         queueConfigBuilder.filter(filter).pagingManager(pagingManager)
-            .user(queueBindingInfo.getUser())
-            .durable(true)
-            .temporary(false)
-            .autoCreated(queueBindingInfo.isAutoCreated())
-            .deleteOnNoConsumers(queueBindingInfo.isDeleteOnNoConsumers())
-            .maxConsumers(queueBindingInfo.getMaxConsumers())
-            .routingType(RoutingType.getType(queueBindingInfo.getRoutingType()));
+         queueConfigBuilder.filter(filter).pagingManager(pagingManager).user(queueBindingInfo.getUser()).durable(true).temporary(false).autoCreated(queueBindingInfo.isAutoCreated()).deleteOnNoConsumers(queueBindingInfo.isDeleteOnNoConsumers()).maxConsumers(queueBindingInfo.getMaxConsumers()).routingType(RoutingType.getType(queueBindingInfo.getRoutingType()));
          final Queue queue = queueFactory.createQueueWith(queueConfigBuilder.build());
-         queue.setConsumersRefCount(new AutoCreatedQueueManagerImpl(((PostOfficeImpl)postOffice).getServer(), queueBindingInfo.getQueueName()));
+         queue.setConsumersRefCount(new AutoCreatedQueueManagerImpl(((PostOfficeImpl) postOffice).getServer(), queueBindingInfo.getQueueName()));
 
          if (queueBindingInfo.getQueueStatusEncodings() != null) {
             for (QueueStatusEncoding encoding : queueBindingInfo.getQueueStatusEncodings()) {
                if (encoding.getStatus() == QueueStatus.PAUSED)
-               queue.reloadPause(encoding.getId());
+                  queue.reloadPause(encoding.getId());
             }
          }
 
@@ -173,12 +168,26 @@ public class PostOfficeJournalLoader implements JournalLoader {
 
    @Override
    public void initAddresses(Map<Long, AddressBindingInfo> addressBindingInfosMap,
-                          List<AddressBindingInfo> addressBindingInfos) throws Exception {
+                             List<AddressBindingInfo> addressBindingInfos) throws Exception {
       for (AddressBindingInfo addressBindingInfo : addressBindingInfos) {
          addressBindingInfosMap.put(addressBindingInfo.getId(), addressBindingInfo);
-
          AddressInfo addressInfo = new AddressInfo(addressBindingInfo.getName()).setRoutingTypes(addressBindingInfo.getRoutingTypes());
          postOffice.addAddressInfo(addressInfo);
+      }
+   }
+
+   @Override
+   public void initAliases(Map<Long, AliasBindingInfo> aliasBindings,
+                           List<AliasBindingInfo> aliasBindingInfos) throws Exception {
+      for (AliasBindingInfo aliasBindingInfo : aliasBindingInfos) {
+         aliasBindings.put(aliasBindingInfo.getId(), aliasBindingInfo);
+         Alias alias = new Alias(aliasBindingInfo.getFromAddress(), aliasBindingInfo.getToAddress());
+         try {
+            postOffice.addAlias(alias);
+            managementService.registerAlias(alias);
+         } catch (ActiveMQAddressExistsException e) {
+            //continue
+         }
       }
    }
 

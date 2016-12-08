@@ -434,6 +434,11 @@ public interface Configuration {
    List<CoreAddressConfiguration> getAddressConfigurations();
 
    /**
+    * Returns the aliases configured for this server.
+    */
+   List<CoreAliasConfiguration> getAliasConfigurations();
+
+   /**
     * Sets the addresses configured for this server.
     */
    Configuration setAddressConfigurations(final List<CoreAddressConfiguration> configs);
@@ -442,6 +447,16 @@ public interface Configuration {
     * Adds an addresses configuration
     */
    Configuration addAddressConfiguration(final CoreAddressConfiguration config);
+
+   /**
+    * Sets the alias configured for this server.
+    */
+   Configuration setAliasConfigurations(final List<CoreAliasConfiguration> configs);
+
+   /**
+    * Adds an alias configuration
+    */
+   Configuration addAliasConfiguration(final CoreAliasConfiguration config);
 
    /**
     * Returns the management address of this server. <br>

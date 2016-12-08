@@ -39,6 +39,7 @@ import org.apache.activemq.artemis.core.paging.PagingManager;
 import org.apache.activemq.artemis.core.paging.PagingStore;
 import org.apache.activemq.artemis.core.paging.cursor.PagePosition;
 import org.apache.activemq.artemis.core.persistence.AddressBindingInfo;
+import org.apache.activemq.artemis.core.persistence.AliasBindingInfo;
 import org.apache.activemq.artemis.core.persistence.GroupingInfo;
 import org.apache.activemq.artemis.core.persistence.OperationContext;
 import org.apache.activemq.artemis.core.persistence.QueueBindingInfo;
@@ -57,6 +58,7 @@ import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.files.FileStoreMonitor;
 import org.apache.activemq.artemis.core.server.group.impl.GroupBinding;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.impl.JournalLoader;
 import org.apache.activemq.artemis.core.transaction.ResourceManager;
 import org.apache.activemq.artemis.core.transaction.Transaction;
@@ -165,13 +167,24 @@ public class NullStorageManager implements StorageManager {
    }
 
    @Override
+   public void addAlias(long tx, Alias alias) throws Exception {
+
+   }
+
+   @Override
+   public void deleteAlias(long tx, long aliasID) throws Exception {
+
+   }
+
+   @Override
    public void commit(final long txID) throws Exception {
    }
 
    @Override
    public JournalLoadInformation loadBindingJournal(final List<QueueBindingInfo> queueBindingInfos,
                                                     final List<GroupingInfo> groupingInfos,
-                                                    final List<AddressBindingInfo> addressBindingInfos) throws Exception {
+                                                    final List<AddressBindingInfo> addressBindingInfos,
+                                                    final List<AliasBindingInfo> aliasBindingInfos) throws Exception {
       return new JournalLoadInformation();
    }
 
