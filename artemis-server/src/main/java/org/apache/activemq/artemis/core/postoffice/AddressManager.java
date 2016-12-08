@@ -20,9 +20,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
+import org.apache.activemq.artemis.api.core.ActiveMQAddressExistsException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.server.RoutingType;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 
 /**
@@ -77,4 +79,9 @@ public interface AddressManager {
 
    AddressInfo getAddressInfo(SimpleString address);
 
+   Alias getAlias(SimpleString address);
+
+   void addAlias(Alias alias) throws ActiveMQAddressExistsException;
+
+   Alias removeAlias(SimpleString address);
 }

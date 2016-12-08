@@ -44,6 +44,7 @@ import org.apache.activemq.artemis.core.config.ClusterConnectionConfiguration;
 import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.ConnectorServiceConfiguration;
 import org.apache.activemq.artemis.core.config.CoreAddressConfiguration;
+import org.apache.activemq.artemis.core.config.CoreAliasConfiguration;
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.config.ScaleDownConfiguration;
@@ -588,6 +589,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
 
       parseAddresses(e, config);
 
+      parseAliases(e, config);
+
       parseSecurity(e, config);
 
       NodeList connectorServiceConfigs = e.getElementsByTagName("connector-service");
@@ -661,6 +664,23 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
          for (int i = 0; i < list.getLength(); i++) {
             CoreAddressConfiguration addrConfig = parseAddressConfiguration(list.item(i));
             config.getAddressConfigurations().add(addrConfig);
+         }
+      }
+   }
+
+   /**
+    * @param e
+    * @param config
+    */
+   private void parseAliases(final Element e, final Configuration config) {
+      NodeList elements = e.getElementsByTagName("aliases");
+
+      if (elements.getLength() != 0) {
+         Element node = (Element) elements.item(0);
+         NodeList list = node.getElementsByTagName("alias");
+         for (int i = 0; i < list.getLength(); i++) {
+            CoreAliasConfiguration aliasConfiguration = parseAliasConfiguration(list.item(i));
+            config.getAliasConfigurations().add(aliasConfiguration);
          }
       }
    }
@@ -981,6 +1001,13 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
 
       addressConfiguration.setQueueConfigurations(queueConfigurations);
       return addressConfiguration;
+   }
+
+   protected CoreAliasConfiguration parseAliasConfiguration(final Node node) {
+      CoreAliasConfiguration aliasConfiguration = new CoreAliasConfiguration();
+      aliasConfiguration.setFromAddress(getAttributeValue(node, "from"));
+      aliasConfiguration.setToAddress(getAttributeValue(node, "to"));
+      return aliasConfiguration;
    }
 
    private TransportConfiguration parseAcceptorTransportConfiguration(final Element e,

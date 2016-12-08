@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
+import org.apache.activemq.artemis.api.core.ActiveMQAddressExistsException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.postoffice.Address;
 import org.apache.activemq.artemis.core.postoffice.AddressManager;
@@ -32,6 +34,7 @@ import org.apache.activemq.artemis.core.postoffice.BindingsFactory;
 import org.apache.activemq.artemis.core.server.ActiveMQMessageBundle;
 import org.apache.activemq.artemis.core.server.RoutingType;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.jboss.logging.Logger;
 
@@ -44,6 +47,7 @@ public class SimpleAddressManager implements AddressManager {
 
    private final ConcurrentMap<SimpleString, AddressInfo> addressInfoMap = new ConcurrentHashMap<>();
 
+   private final ConcurrentMap<SimpleString, Alias> aliases = new ConcurrentHashMap<>();
    /**
     * HashMap<Address, Binding>
     */
@@ -123,8 +127,7 @@ public class SimpleAddressManager implements AddressManager {
 
       Binding binding = nameMap.get(address);
 
-      if (binding == null || !(binding instanceof  LocalQueueBinding)
-            || !binding.getAddress().equals(address)) {
+      if (binding == null || !(binding instanceof LocalQueueBinding) || !binding.getAddress().equals(address)) {
          Bindings bindings = mappings.get(address);
          if (bindings != null) {
             for (Binding theBinding : bindings.getBindings()) {
@@ -140,7 +143,9 @@ public class SimpleAddressManager implements AddressManager {
    }
 
    @Override
-   public SimpleString getMatchingQueue(final SimpleString address, final SimpleString queueName, RoutingType routingType) throws Exception {
+   public SimpleString getMatchingQueue(final SimpleString address,
+                                        final SimpleString queueName,
+                                        RoutingType routingType) throws Exception {
       Binding binding = nameMap.get(queueName);
 
       if (binding != null && !binding.getAddress().equals(address)) {
@@ -221,7 +226,7 @@ public class SimpleAddressManager implements AddressManager {
 
    @Override
    public AddressInfo updateAddressInfoIfPresent(SimpleString addressName,
-                                        BiFunction<? super SimpleString, ? super AddressInfo, ? extends AddressInfo> remappingFunction) {
+                                                 BiFunction<? super SimpleString, ? super AddressInfo, ? extends AddressInfo> remappingFunction) {
       return addressInfoMap.computeIfPresent(addressName, remappingFunction);
    }
 
@@ -250,5 +255,30 @@ public class SimpleAddressManager implements AddressManager {
    @Override
    public AddressInfo getAddressInfo(SimpleString addressName) {
       return addressInfoMap.get(addressName);
+   }
+
+   @Override
+   public Alias getAlias(SimpleString address) {
+      return aliases.get(address);
+   }
+
+   @Override
+   public void addAlias(final Alias alias) throws ActiveMQAddressExistsException {
+      final AtomicBoolean addressExists = new AtomicBoolean(false);
+      AddressInfo a = addressInfoMap.computeIfAbsent(alias.getFromAddress(), f -> {
+         if (aliases.putIfAbsent(alias.getFromAddress(), alias) != null) {
+            addressExists.set(true);
+         }
+         return null;
+      });
+
+      if (addressExists.get() || a != null) {
+         throw ActiveMQMessageBundle.BUNDLE.addressAlreadyExists(alias.getFromAddress());
+      }
+   }
+
+   @Override
+   public Alias removeAlias(SimpleString address) {
+      return aliases.remove(address);
    }
 }

@@ -85,4 +85,6 @@ public final class JournalRecordIds {
    public static final byte PAGE_CURSOR_PENDING_COUNTER = 43;
 
    public static final byte ADDRESS_BINDING_RECORD = 44;
+
+   public static final byte ALIAS_RECORD = 45;
 }

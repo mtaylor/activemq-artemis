@@ -95,6 +95,15 @@ public final class ObjectNameBuilder {
    }
 
    /**
+    * Returns the ObjectName used by AddressControl.
+    *
+    * @see AddressControl
+    */
+   public ObjectName getAliasObjectName(final SimpleString address) throws Exception {
+      return createObjectName("Alias", address.toString());
+   }
+
+   /**
     * Returns the ObjectName used by QueueControl.
     *
     * @see QueueControl

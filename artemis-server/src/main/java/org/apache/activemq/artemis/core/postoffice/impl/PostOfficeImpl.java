@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.artemis.api.core.ActiveMQAddressDoesNotExistException;
+import org.apache.activemq.artemis.api.core.ActiveMQAddressExistsException;
 import org.apache.activemq.artemis.api.core.ActiveMQAddressFullException;
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException;
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException;
@@ -72,6 +73,7 @@ import org.apache.activemq.artemis.core.server.RoutingType;
 import org.apache.activemq.artemis.core.server.ServerMessage;
 import org.apache.activemq.artemis.core.server.group.GroupingHandler;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.impl.RoutingContextImpl;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
@@ -135,6 +137,8 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
    private final ActiveMQServer server;
 
    private final Object addressLock = new Object();
+
+   private final ConcurrentMap<SimpleString, SimpleString> aliases = new ConcurrentHashMap<>();
 
    public PostOfficeImpl(final ActiveMQServer server,
                          final StorageManager storageManager,
@@ -491,6 +495,21 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
    }
 
    @Override
+   public void addAlias(Alias alias) throws ActiveMQAddressExistsException {
+      addressManager.addAlias(alias);
+   }
+
+   @Override
+   public Alias getAlias(SimpleString address) {
+      return addressManager.getAlias(address);
+   }
+
+   @Override
+   public Alias removeAlias(SimpleString address) {
+      return addressManager.removeAlias(address);
+   }
+
+   @Override
    public AddressInfo removeAddressInfo(SimpleString address) throws Exception {
       synchronized (addressLock) {
          Bindings bindingsForAddress = getBindingsForAddress(address);
@@ -508,6 +527,7 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
          return addressManager.getAddressInfo(addressName);
       }
    }
+
 
    @Override
    public List<Queue> listQueuesForAddress(SimpleString address) throws Exception {

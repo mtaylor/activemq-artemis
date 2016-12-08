@@ -37,6 +37,7 @@ import org.apache.activemq.artemis.api.core.JsonUtil;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.api.core.TransportConfiguration;
 import org.apache.activemq.artemis.api.core.management.AcceptorControl;
+import org.apache.activemq.artemis.api.core.management.AliasControl;
 import org.apache.activemq.artemis.api.core.management.BridgeControl;
 import org.apache.activemq.artemis.api.core.management.BroadcastGroupControl;
 import org.apache.activemq.artemis.api.core.management.ClusterConnectionControl;
@@ -51,6 +52,7 @@ import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.management.impl.AcceptorControlImpl;
 import org.apache.activemq.artemis.core.management.impl.ActiveMQServerControlImpl;
 import org.apache.activemq.artemis.core.management.impl.AddressControlImpl;
+import org.apache.activemq.artemis.core.management.impl.AliasControlImpl;
 import org.apache.activemq.artemis.core.management.impl.BridgeControlImpl;
 import org.apache.activemq.artemis.core.management.impl.BroadcastGroupControlImpl;
 import org.apache.activemq.artemis.core.management.impl.ClusterConnectionControlImpl;
@@ -77,6 +79,7 @@ import org.apache.activemq.artemis.core.server.cluster.Bridge;
 import org.apache.activemq.artemis.core.server.cluster.BroadcastGroup;
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.core.server.management.Notification;
@@ -226,12 +229,33 @@ public class ManagementServiceImpl implements ManagementService {
    }
 
    @Override
-   public synchronized void unregisterAddress(final SimpleString address) throws Exception {
+   public void unregisterAlias(final SimpleString address) throws Exception {
       ObjectName objectName = objectNameBuilder.getAddressObjectName(address);
+      unregisterFromJMX(objectName);
+      unregisterFromRegistry(ResourceNames.ALIAS + address);
+   }
+
+   @Override
+   public void registerAlias(Alias alias) throws Exception {
+      ObjectName objectName = objectNameBuilder.getAliasObjectName(alias.getFromAddress());
+      AliasControl addressControl = new AliasControlImpl(alias.getFromAddress(), alias.getToAddress(), storageManager, securityRepository);
+
+      registerInJMX(objectName, addressControl);
+      registerInRegistry(ResourceNames.ALIAS + alias.getFromAddress(), addressControl);
+
+      if (logger.isDebugEnabled()) {
+         logger.debug("registered alias " + objectName);
+      }
+   }
+
+   @Override
+   public synchronized void unregisterAddress(final SimpleString aliasAddress) throws Exception {
+      ObjectName objectName = objectNameBuilder.getAliasObjectName(aliasAddress);
 
       unregisterFromJMX(objectName);
-      unregisterFromRegistry(ResourceNames.ADDRESS + address);
+      unregisterFromRegistry(ResourceNames.ADDRESS + aliasAddress);
    }
+
    @Override
    public synchronized void registerQueue(final Queue queue,
                                           final SimpleString address,

@@ -49,6 +49,7 @@ import org.apache.activemq.artemis.core.server.cluster.Bridge;
 import org.apache.activemq.artemis.core.server.cluster.BroadcastGroup;
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
+import org.apache.activemq.artemis.core.server.impl.Alias;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.core.server.management.Notification;
 import org.apache.activemq.artemis.core.server.management.NotificationListener;
@@ -252,7 +253,17 @@ public class ClusteredResetMockTest extends ActiveMQTestBase {
       }
 
       @Override
+      public void registerAlias(Alias alias) throws Exception {
+
+      }
+
+      @Override
       public void unregisterAddress(SimpleString address) throws Exception {
+
+      }
+
+      @Override
+      public void unregisterAlias(SimpleString address) throws Exception {
 
       }
 
