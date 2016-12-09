@@ -139,7 +139,7 @@ public class BasicOpenWireTest extends OpenWireTestBase {
       SimpleString coreQ = testQueues.get(qname);
       if (coreQ == null) {
          coreQ = new SimpleString(qname);
-         this.server.createQueue(coreQ, RoutingType.ANYCAST, coreQ, null, false, false);
+         this.server.createQueue(coreQ, RoutingType.ANYCAST, coreQ, null, false, false, -1, false, true);
          testQueues.put(qname, coreQ);
       }
    }
