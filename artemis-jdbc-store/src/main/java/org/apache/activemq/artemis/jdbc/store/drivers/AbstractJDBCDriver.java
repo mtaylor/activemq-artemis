@@ -37,13 +37,13 @@ import org.jboss.logging.Logger;
  * Class to hold common database functionality such as drivers and connections
  */
 @SuppressWarnings("SynchronizeOnNonFinalField")
-public abstract class AbstractJDBCDriver {
+public abstract class AbstractJDBCDriver<T extends SQLProvider> {
 
    private static final Logger logger = Logger.getLogger(AbstractJDBCDriver.class);
 
    protected Connection connection;
 
-   protected SQLProvider sqlProvider;
+   protected T sqlProvider;
 
    private String jdbcConnectionUrl;
 
@@ -54,13 +54,13 @@ public abstract class AbstractJDBCDriver {
    public AbstractJDBCDriver() {
    }
 
-   public AbstractJDBCDriver(SQLProvider sqlProvider, String jdbcConnectionUrl, String jdbcDriverClass) {
+   public AbstractJDBCDriver(T sqlProvider, String jdbcConnectionUrl, String jdbcDriverClass) {
       this.jdbcConnectionUrl = jdbcConnectionUrl;
       this.jdbcDriverClass = jdbcDriverClass;
       this.sqlProvider = sqlProvider;
    }
 
-   public AbstractJDBCDriver(DataSource dataSource, SQLProvider provider) {
+   public AbstractJDBCDriver(DataSource dataSource, T provider) {
       this.dataSource = dataSource;
       this.sqlProvider = provider;
    }
@@ -73,7 +73,7 @@ public abstract class AbstractJDBCDriver {
       }
    }
 
-   public AbstractJDBCDriver(Connection connection, SQLProvider sqlProvider) {
+   public AbstractJDBCDriver(Connection connection, T sqlProvider) {
       this.connection = connection;
       this.sqlProvider = sqlProvider;
    }
@@ -224,7 +224,7 @@ public abstract class AbstractJDBCDriver {
       }
    }
 
-   public void setSqlProvider(SQLProvider sqlProvider) {
+   public void setSqlProvider(T sqlProvider) {
       this.sqlProvider = sqlProvider;
    }
 

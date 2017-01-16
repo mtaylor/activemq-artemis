@@ -58,6 +58,7 @@ public class JDBCSequentialFileFactory implements SequentialFileFactory, ActiveM
                                     final SQLProvider sqlProvider,
                                     Executor executor) throws Exception {
       this.executor = executor;
+
       dbDriver = JDBCFileUtils.getDBFileDriver(className, connectionUrl, sqlProvider);
    }
 

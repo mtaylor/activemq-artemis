@@ -22,6 +22,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.apache.activemq.artemis.jdbc.store.drivers.postgres.PostgresSQLProvider;
+import org.apache.activemq.artemis.jdbc.store.sql.GenericSQLProvider;
+import org.apache.activemq.artemis.jdbc.store.sql.Oracle12CSQLProvider;
 import org.apache.activemq.artemis.jdbc.store.sql.SQLProvider;
 
 class JDBCFileUtils {
@@ -29,17 +31,25 @@ class JDBCFileUtils {
    static JDBCSequentialFileFactoryDriver getDBFileDriver(String driverClass,
                                                           String jdbcConnectionUrl,
                                                           SQLProvider provider) throws SQLException {
-      JDBCSequentialFileFactoryDriver dbDriver = new JDBCSequentialFileFactoryDriver();
-      dbDriver.setSqlProvider(provider);
-      dbDriver.setJdbcConnectionUrl(jdbcConnectionUrl);
-      dbDriver.setJdbcDriverClass(driverClass);
-      return dbDriver;
-   }
-
-   static JDBCSequentialFileFactoryDriver getDBFileDriver(DataSource dataSource, SQLProvider provider) throws SQLException {
       JDBCSequentialFileFactoryDriver dbDriver;
       if (provider instanceof PostgresSQLProvider) {
          dbDriver = new PostgresSequentialSequentialFileDriver();
+      } else if (provider instanceof Oracle12CSQLProvider) {
+         dbDriver = new Oracle12CSequentialSequentialFileDriver((Oracle12CSQLProvider) provider, jdbcConnectionUrl, driverClass);
+      } else {
+         dbDriver = new JDBCSequentialFileFactoryDriver(provider, jdbcConnectionUrl, driverClass);
+      }
+      return dbDriver;
+   }
+
+   static JDBCSequentialFileFactoryDriver getDBFileDriver(DataSource dataSource,
+                                                          SQLProvider provider) throws SQLException {
+      JDBCSequentialFileFactoryDriver dbDriver;
+      if (provider instanceof PostgresSQLProvider) {
+         dbDriver = new PostgresSequentialSequentialFileDriver();
+         dbDriver.setDataSource(dataSource);
+      } else if (provider instanceof Oracle12CSQLProvider) {
+         dbDriver = new Oracle12CSequentialSequentialFileDriver();
          dbDriver.setDataSource(dataSource);
       } else {
          dbDriver = new JDBCSequentialFileFactoryDriver(dataSource, provider);
@@ -47,7 +57,8 @@ class JDBCFileUtils {
       return dbDriver;
    }
 
-   static JDBCSequentialFileFactoryDriver getDBFileDriver(Connection connection, SQLProvider provider) throws SQLException {
+   static JDBCSequentialFileFactoryDriver getDBFileDriver(Connection connection,
+                                                          SQLProvider provider) throws SQLException {
       JDBCSequentialFileFactoryDriver dbDriver;
       if (provider instanceof PostgresSQLProvider) {
          dbDriver = new PostgresSequentialSequentialFileDriver();

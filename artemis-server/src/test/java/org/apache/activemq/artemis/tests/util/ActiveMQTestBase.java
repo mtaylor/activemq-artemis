@@ -346,6 +346,7 @@ public abstract class ActiveMQTestBase extends Assert {
 
    @Before
    public void setUp() throws Exception {
+      ThreadLeakCheckRule.addKownThread("oracle.jdbc.driver.BlockSource.ThreadedCachingBlockSource.BlockReleaser");
       sendMsgCount = 0;
       testDir = temporaryFolder.getRoot().getAbsolutePath();
       clearDataRecreateServerDirs();
