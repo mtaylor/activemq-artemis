@@ -197,8 +197,8 @@ Let's take a look at all the parameters in turn:
 
 -   `producer-window-size`. This optional parameter determines the
     producer flow control through the bridge. You usually leave this off
-    unless you are dealing with huge large messages. 
-    
+    unless you are dealing with huge large messages.
+
     Default=-1 (disabled)
 
 -   `user`. This optional parameter determines the user name to use when
@@ -225,5 +225,3 @@ Let's take a look at all the parameters in turn:
     `discovery-group-name`. This attribute points to a `discovery-group`
     defined elsewhere. For more information about what discovery-groups
     are and how to configure them, please see [Discovery Groups](clusters.md).
-
-
