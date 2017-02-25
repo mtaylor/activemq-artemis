@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffers;
@@ -80,6 +81,7 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
 
    private JDBCSequentialFile directoryList;
 
+   private boolean started = false;
    public PagingStoreFactoryDatabase(final DatabaseStorageConfiguration dbConf,
                                      final StorageManager storageManager,
                                      final long syncTimeout,
@@ -93,27 +95,35 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
       this.scheduledExecutor = scheduledExecutor;
       this.syncTimeout = syncTimeout;
       this.dbConf = dbConf;
-
-      if (dbConf.getDataSource() != null) {
-         SQLProvider.Factory sqlProviderFactory = dbConf.getSqlProviderFactory();
-         if (sqlProviderFactory == null) {
-            sqlProviderFactory = new GenericSQLProvider.Factory();
-         }
-         pagingFactoryFileFactory = new JDBCSequentialFileFactory(dbConf.getDataSource(), sqlProviderFactory.create(dbConf.getPageStoreTableName()), executorFactory.getExecutor());
-      } else {
-         String driverClassName = dbConf.getJdbcDriverClassName();
-         pagingFactoryFileFactory = new JDBCSequentialFileFactory(dbConf.getJdbcConnectionUrl(), driverClassName, JDBCUtils.getSQLProvider(driverClassName, dbConf.getPageStoreTableName()), executorFactory.getExecutor());
-      }
-      pagingFactoryFileFactory.start();
-      directoryList = (JDBCSequentialFile) pagingFactoryFileFactory.createSequentialFile(DIRECTORY_NAME);
-      directoryList.open();
+      start();
    }
 
+   public synchronized void start() throws Exception {
+      if (!started) {
+         if (dbConf.getDataSource() != null) {
+            SQLProvider.Factory sqlProviderFactory = dbConf.getSqlProviderFactory();
+            if (sqlProviderFactory == null) {
+               sqlProviderFactory = new GenericSQLProvider.Factory();
+            }
+            pagingFactoryFileFactory = new JDBCSequentialFileFactory(dbConf.getDataSource(), sqlProviderFactory.create(dbConf.getPageStoreTableName()), executorFactory.getExecutor());
+         } else {
+            String driverClassName = dbConf.getJdbcDriverClassName();
+            pagingFactoryFileFactory = new JDBCSequentialFileFactory(dbConf.getJdbcConnectionUrl(), driverClassName, JDBCUtils.getSQLProvider(driverClassName, dbConf.getPageStoreTableName()), executorFactory.getExecutor());
+         }
+         pagingFactoryFileFactory.start();
+         directoryList = (JDBCSequentialFile) pagingFactoryFileFactory.createSequentialFile(DIRECTORY_NAME);
+         directoryList.open();
+         started = true;
+      }
+   }
    // Public --------------------------------------------------------
 
    @Override
-   public void stop() {
-      pagingFactoryFileFactory.stop();
+   public synchronized void stop() {
+      if (started) {
+         pagingFactoryFileFactory.stop();
+         started = false;
+      }
    }
 
    @Override
@@ -156,6 +166,7 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
 
    @Override
    public synchronized List<PagingStore> reloadStores(final HierarchicalRepository<AddressSettings> addressSettingsRepository) throws Exception {
+      start();
       // We assume the directory list < Integer.MAX_VALUE (this is only a list of addresses).
       int size = ((Long) directoryList.size()).intValue();
       ActiveMQBuffer buffer = readActiveMQBuffer(directoryList, size);
