@@ -193,7 +193,15 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
       ActiveMQBuffer buffer = ActiveMQBuffers.fixedBuffer(simpleString.sizeof());
       buffer.writeSimpleString(simpleString);
       if (writeToDirectory) directoryList.write(buffer, true);
-      return new JDBCSequentialFileFactory(pagingFactoryFileFactory.getDbDriver().getConnection(), JDBCUtils.getSQLProvider(dbConf.getJdbcDriverClassName(), getTableNameForGUID(directoryName)), executorFactory.getExecutor());
+
+      SQLProvider sqlProvider = null;
+      if (dbConf.getDataSource() != null) {
+         SQLProvider.Factory sqlProviderFactory = dbConf.getSqlProviderFactory() == null ? new GenericSQLProvider.Factory() : dbConf.getSqlProviderFactory();
+         sqlProvider = sqlProviderFactory.create(getTableNameForGUID(directoryName));
+      } else {
+         sqlProvider = JDBCUtils.getSQLProvider(dbConf.getJdbcDriverClassName(), getTableNameForGUID(directoryName));
+      }
+      return  new JDBCSequentialFileFactory(pagingFactoryFileFactory.getDbDriver().getConnection(), sqlProvider, executorFactory.getExecutor());
    }
 
    private String getTableNameForGUID(String guid) {
