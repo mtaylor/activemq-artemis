@@ -150,6 +150,10 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
    public void loadFile(JDBCSequentialFile file) throws SQLException {
       synchronized (connection) {
          connection.setAutoCommit(false);
+         System.out.println("LargeObjectStatement");
+         System.out.println(readLargeObject.toString());
+         System.out.println("File");
+         System.out.println(file);
          readLargeObject.setLong(1, file.getId());
 
          try (ResultSet rs = readLargeObject.executeQuery()) {
