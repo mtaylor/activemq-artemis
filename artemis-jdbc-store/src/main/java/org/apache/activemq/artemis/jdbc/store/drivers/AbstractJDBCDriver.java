@@ -104,6 +104,11 @@ public abstract class AbstractJDBCDriver {
          if (dataSource != null) {
             try {
                connection = dataSource.getConnection();
+               if (connection == null) {
+                  logger.error("DataSource returned null When trying to establish a connection");
+                  logger.error("DataSource: " + dataSource.toString());
+                  throw new RuntimeException("Could not start JDBC Driver, DataSource returned null for connection");
+               }
             } catch (SQLException e) {
                logger.error(JDBCUtils.appendSQLExceptionDetails(new StringBuilder(), e));
                throw e;

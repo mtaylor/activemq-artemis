@@ -48,6 +48,7 @@ class JDBCFileUtils {
       } else {
          dbDriver = new JDBCSequentialFileFactoryDriver(dataSource, provider);
       }
+      dbDriver.setConnection(dataSource.getConnection());
       return dbDriver;
    }
 
@@ -55,10 +56,10 @@ class JDBCFileUtils {
       JDBCSequentialFileFactoryDriver dbDriver;
       if (provider instanceof PostgresSQLProvider) {
          dbDriver = new PostgresSequentialSequentialFileDriver(connection, provider);
-         dbDriver.setConnection(connection);
       } else {
          dbDriver = new JDBCSequentialFileFactoryDriver(connection, provider);
       }
+      dbDriver.setConnection(connection);
       return dbDriver;
    }
 }
