@@ -17,12 +17,15 @@
 package org.apache.activemq.artemis.jdbc.store.drivers;
 
 import java.sql.SQLException;
+import java.util.Base64;
+import java.util.UUID;
 
 import org.apache.activemq.artemis.jdbc.store.drivers.derby.DerbySQLProvider;
 import org.apache.activemq.artemis.jdbc.store.drivers.mysql.MySQLSQLProvider;
 import org.apache.activemq.artemis.jdbc.store.drivers.postgres.PostgresSQLProvider;
 import org.apache.activemq.artemis.jdbc.store.sql.GenericSQLProvider;
 import org.apache.activemq.artemis.jdbc.store.sql.SQLProvider;
+import org.apache.activemq.artemis.utils.UUIDGenerator;
 import org.jboss.logging.Logger;
 
 public class JDBCUtils {
@@ -119,5 +122,28 @@ public class JDBCUtils {
       final int errorCode = exception.getErrorCode();
       final String message = exception.getMessage();
       return errorMessage.append("SQLState: ").append(sqlState).append(" ErrorCode: ").append(errorCode).append(" Message: ").append(message);
+   }
+
+   /**
+    * Generates a globally unique random table name.  UUID is encoded as base 64 Mime with "-" and "_" encoded as
+    * "AA" and "BB" respectively.  This keeps the charset to [A-Z][a-z][0-9] and max length 30 for compatibility with
+    * various DB vendors.
+    *
+    * @return GUID for DB table name
+    */
+   public static String getRandomDatabaseTableName() {
+      byte[] uuid = UUIDGenerator.getInstance().generateUUID().asBytes();
+      String base64uuid = Base64.getMimeEncoder().encodeToString(uuid);
+      base64uuid = base64uuid.replace("/", "AA");
+      base64uuid = base64uuid.replace("=", "BB");
+      base64uuid = base64uuid.replace("+", "CC");
+      /* Since we're using AA,BB,CC as the replacement for unsupported chars, there's a small chance that the uuid could
+      exceed 30 chars, if this happens we rebuild.  It's an expensive operation but only happens once on a single
+      address when initial page happens */
+      // FIXME This could be avoided by understanding the supported char set and table length of each database.
+      if (base64uuid.length() > 30) {
+         base64uuid = getRandomDatabaseTableName();
+      }
+      return base64uuid;
    }
 }

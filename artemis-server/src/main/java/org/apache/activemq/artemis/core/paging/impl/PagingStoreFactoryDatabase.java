@@ -45,8 +45,10 @@ import org.apache.activemq.artemis.jdbc.store.file.JDBCSequentialFileFactory;
 import org.apache.activemq.artemis.jdbc.store.file.JDBCSequentialFileFactoryDriver;
 import org.apache.activemq.artemis.jdbc.store.sql.GenericSQLProvider;
 import org.apache.activemq.artemis.jdbc.store.sql.SQLProvider;
+import org.apache.activemq.artemis.utils.Base64;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
 import org.apache.activemq.artemis.utils.UUIDGenerator;
+import org.jgroups.util.UUID;
 
 /**
  * Integration point between Paging and JDBC
@@ -82,6 +84,7 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
    private JDBCSequentialFile directoryList;
 
    private boolean started = false;
+
    public PagingStoreFactoryDatabase(final DatabaseStorageConfiguration dbConf,
                                      final StorageManager storageManager,
                                      final long syncTimeout,
@@ -146,8 +149,7 @@ public class PagingStoreFactoryDatabase implements PagingStoreFactory {
 
    @Override
    public synchronized SequentialFileFactory newFileFactory(final SimpleString address) throws Exception {
-      String guid = UUIDGenerator.getInstance().generateStringUUID();
-      SequentialFileFactory factory = newFileFactory(guid, true);
+      SequentialFileFactory factory = newFileFactory(JDBCUtils.getRandomDatabaseTableName(), true);
       factory.start();
 
       SequentialFile file = factory.createSequentialFile(PagingStoreFactoryDatabase.ADDRESS_FILE);
