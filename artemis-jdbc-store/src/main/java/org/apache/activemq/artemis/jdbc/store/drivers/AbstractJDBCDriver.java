@@ -188,6 +188,9 @@ public abstract class AbstractJDBCDriver {
          }
          throw e;
       }
+      catch (Throwable t) {
+         System.out.println(t);
+      }
    }
 
    private Driver getDriver(String className) {
