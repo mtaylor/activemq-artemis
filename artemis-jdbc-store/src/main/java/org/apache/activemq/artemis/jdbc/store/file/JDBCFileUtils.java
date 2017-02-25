@@ -48,7 +48,6 @@ class JDBCFileUtils {
       } else {
          dbDriver = new JDBCSequentialFileFactoryDriver(dataSource, provider);
       }
-      dbDriver.setConnection(dataSource.getConnection());
       return dbDriver;
    }
 
