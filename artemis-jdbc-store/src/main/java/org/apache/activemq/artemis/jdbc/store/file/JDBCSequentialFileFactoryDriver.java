@@ -157,8 +157,6 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
                Blob blob = rs.getBlob(1);
                if (blob != null) {
                   file.setWritePosition((int) blob.length());
-               } else {
-                  file.setWritePosition(0);
                }
             }
             connection.commit();
@@ -286,9 +284,11 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
          try (ResultSet rs = readLargeObject.executeQuery()) {
             if (rs.next()) {
                final Blob blob = rs.getBlob(1);
-               readLength = (int) calculateReadLength(blob.length(), bytes.remaining(), file.position());
-               byte[] data = blob.getBytes(file.position() + 1, readLength);
-               bytes.put(data);
+               if (blob != null) {
+                  readLength = (int) calculateReadLength(blob.length(), bytes.remaining(), file.position());
+                  byte[] data = blob.getBytes(file.position() + 1, readLength);
+                  bytes.put(data);
+               }
             }
             connection.commit();
             return readLength;
