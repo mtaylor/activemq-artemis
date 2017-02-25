@@ -155,7 +155,11 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
          try (ResultSet rs = readLargeObject.executeQuery()) {
             if (rs.next()) {
                Blob blob = rs.getBlob(1);
-               file.setWritePosition((int) blob.length());
+               if (blob != null) {
+                  file.setWritePosition((int) blob.length());
+               } else {
+                  file.setWritePosition(0);
+               }
             }
             connection.commit();
          } catch (SQLException e) {
@@ -250,6 +254,9 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
          try (ResultSet rs = appendToLargeObject.executeQuery()) {
             if (rs.next()) {
                Blob blob = rs.getBlob(1);
+               if (blob == null) {
+                  blob = connection.createBlob();
+               }
                bytesWritten = blob.setBytes(blob.length() + 1, data);
                rs.updateBlob(1, blob);
                rs.updateRow();
