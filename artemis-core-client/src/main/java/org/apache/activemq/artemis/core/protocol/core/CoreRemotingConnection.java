@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.artemis.core.protocol.core;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.activemq.artemis.core.security.ActiveMQPrincipal;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 
@@ -103,7 +105,7 @@ public interface CoreRemotingConnection extends RemotingConnection {
     *
     * @return the lock
     */
-   Object getTransferLock();
+   ReentrantLock getTransferLock();
 
    /**
     * Returns the default security principal
