@@ -389,6 +389,8 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
             //don't wait for ever as this may hang tests etc, we've probably been closed anyway
             long now = System.currentTimeMillis();
             long deadline = now + timeout;
+
+            tryFlush();
             while (!writable.get() && now < deadline) {
                replicationLock.wait(deadline - now);
                now = System.currentTimeMillis();
@@ -410,6 +412,24 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
          }
       }
       return true;
+   }
+
+   /**
+    * It's possible that the NettyChannel buffer is full (i.e. not writable).  We also could be holding the
+    * transfer lock, preventing the NettyChannel from being flushed and becoming writable.  This would cause
+    * Replication to hang and eventually time out.
+    *
+    * Check to see if we have the transfer lock, if so then flush the connection.
+    */
+   private void tryFlush() {
+
+      remotingConnection.getTransferLock().tryLock();
+      try {
+         remotingConnection.flush();
+      }
+      finally {
+         remotingConnection.getTransferLock().unlock();;
+      }
    }
 
    @Override

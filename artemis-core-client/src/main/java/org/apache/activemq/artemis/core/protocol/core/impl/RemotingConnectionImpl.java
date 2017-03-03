@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -68,7 +69,7 @@ public class RemotingConnectionImpl extends AbstractRemotingConnection implement
 
    private boolean idGeneratorSynced = false;
 
-   private final Object transferLock = new Object();
+   private final ReentrantLock transferLock = new ReentrantLock();
 
    private final Object failLock = new Object();
 
@@ -290,7 +291,7 @@ public class RemotingConnectionImpl extends AbstractRemotingConnection implement
    }
 
    @Override
-   public Object getTransferLock() {
+   public ReentrantLock getTransferLock() {
       return transferLock;
    }
 
@@ -318,10 +319,14 @@ public class RemotingConnectionImpl extends AbstractRemotingConnection implement
    //sitting there with many unacked messages
    @Override
    public void flush() {
-      synchronized (transferLock) {
+      transferLock.lock();
+      try {
          for (Channel channel : channels.values()) {
             channel.flushConfirmations();
          }
+      }
+      finally {
+         transferLock.unlock();
       }
    }
 
@@ -366,20 +371,28 @@ public class RemotingConnectionImpl extends AbstractRemotingConnection implement
          return;
       }
 
-      synchronized (transferLock) {
+      transferLock.lock();
+      try {
          final Channel channel = channels.get(packet.getChannelID());
 
          if (channel != null) {
             channel.handlePacket(packet);
          }
       }
+      finally {
+         transferLock.unlock();
+      }
    }
 
    protected void removeAllChannels() {
       // We get the transfer lock first - this ensures no packets are being processed AND
       // it's guaranteed no more packets will be processed once this method is complete
-      synchronized (transferLock) {
+      transferLock.lock();
+      try {
          channels.clear();
+      }
+      finally {
+         transferLock.unlock();
       }
    }
 
