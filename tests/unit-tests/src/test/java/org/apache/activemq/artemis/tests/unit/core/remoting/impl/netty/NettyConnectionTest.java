@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -99,5 +100,49 @@ public class NettyConnectionTest extends ActiveMQTestBase {
       public void connectionReadyForWrites(Object connectionID, boolean ready) {
       }
 
+   }
+
+   @Test
+   public void testOrderedWritesWhileBatching() throws Exception {
+      final int msgSize = Long.BYTES;
+      final ActiveMQBuffer firstMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
+      firstMessage.writeLong(1L);
+      final ActiveMQBuffer secondMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
+      secondMessage.writeLong(2L);
+      final EmbeddedChannel channel = createChannel();
+      Assert.assertTrue(channel.config().getWriteBufferHighWaterMark() >= (msgSize * 2));
+
+      final NettyConnection connection = new NettyConnection(emptyMap, channel, new MyListener(), true, false);
+
+      connection.write(firstMessage, false, true);
+      connection.getChannel().eventLoop().submit(() -> {
+         connection.write(secondMessage, false, true);
+      });
+      channel.flushOutbound();
+      final ByteBuf expectedFirst = channel.readOutbound();
+      Assert.assertEquals(1L, expectedFirst.readLong());
+      final ByteBuf expectedSecond = channel.readOutbound();
+      Assert.assertEquals(2L, expectedSecond.readLong());
+   }
+
+   @Test
+   public void testShouldFlushOverWriteBatchSize() throws Exception {
+      final EmbeddedChannel channel = createChannel();
+      final NettyConnection connection = new NettyConnection(emptyMap, channel, new MyListener(), true, false);
+
+      final ActiveMQBuffer firstMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(connection.writeBatchSize() - 1));
+      firstMessage.setByte(0, (byte) 1);
+      firstMessage.writerIndex(firstMessage.capacity());
+      final ActiveMQBuffer secondMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(1));
+      secondMessage.setByte(0, (byte) 2);
+      secondMessage.writerIndex(secondMessage.capacity());
+
+      Assert.assertTrue(channel.isWritable());
+      connection.write(firstMessage, false, true);
+      Assert.assertTrue(channel.isWritable());
+      Assert.assertEquals(0, channel.outboundMessages().size());
+      connection.write(secondMessage, false, true);
+      Assert.assertTrue(channel.isWritable());
+      Assert.assertEquals(2, channel.outboundMessages().size());
    }
 }
