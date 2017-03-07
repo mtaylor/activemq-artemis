@@ -209,7 +209,7 @@ public class ClientSessionFactoryImpl implements ClientSessionFactoryInternal, C
 
       orderedExecutorFactory = new OrderedExecutorFactory(threadPool);
 
-      closeExecutor = orderedExecutorFactory.getExecutor();
+      closeExecutor = threadPool;
 
       this.incomingInterceptors = incomingInterceptors;
 
