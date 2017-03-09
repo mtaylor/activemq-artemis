@@ -1,61 +1,16 @@
-# Queue Attributes
+# Address and Queue Attributes and Settings
 
-Queue attributes can be set in one of two ways. Either by configuring
+Address and queue attributes can be set in one of two ways. Either by configuring
 them using the configuration file or by using the core API. This chapter
 will explain how to configure each attribute and what effect the
 attribute has.
 
-## Predefined Queues
+## Address and Queue Attributes
 
-Queues can be predefined via configuration at a core level or at a JMS
-level. Firstly let's look at a JMS level.
-
-The following shows a queue predefined in the jms element of the `broker.xml`
-configuration file.
-
-    <queue name="selectorQueue">
-       <selector string="color='red'"/>
-       <durable>true</durable>
-    </queue>
-
-This name attribute of queue defines the name of the queue. When we do
-this at a jms level we follow a naming convention so the actual name of
-the core queue will be `jms.queue.selectorQueue`.
-
-The selector element defines what JMS message selector the predefined
-queue will have. Only messages that match the selector will be added to
-the queue. This is an optional element with a default of null when
-omitted.
-
-The durable element specifies whether the queue will be persisted. This
-again is optional and defaults to true if omitted.
-
-Secondly a queue can be predefined at a core level in the
-`broker.xml` file. The following is an example.
-
-    <queues>
-       <queue name="jms.queue.selectorQueue">
-          <address>jms.queue.selectorQueue</address>
-          <filter string="color='red'"/>
-          <durable>true</durable>
-        </queue>
-    </queues>
-
-This is very similar to the JMS configuration, with 3 real differences
-which are.
-
-1.  The name attribute of queue is the actual name used for the queue
-    with no naming convention as in JMS.
-
-2.  The address element defines what address is used for routing
-    messages.
-
-3.  The filter uses the *Core filter syntax* (described in [filter Expressions](filter-expressions.md)), *not* the
-    JMS selector syntax.
 
 ## Using the API
 
-Queues can also be created using the core API or the management API.
+Addresses and Queues can also be created using the core API or the management API.
 
 For the core API, queues can be created via the
 `org.apache.activemq.artemis.api.core.client.ClientSession` interface. There are
@@ -67,10 +22,10 @@ that the queue will be deleted once the session is disconnected.
 Take a look at [Management](management.md) for a description of the management API for creating
 queues.
 
-## Configuring Queues Via Address Settings
+## Configuring Addresses and Queues via Address Settings
 
 There are some attributes that are defined against an address wildcard
-rather than a specific queue. Here an example of an `address-setting`
+rather than a specific address/queue. Here an example of an `address-setting`
 entry that would be found in the `broker.xml` file.
 
     <address-settings>
@@ -88,14 +43,6 @@ entry that would be found in the `broker.xml` file.
           <slow-consumer-threshold>-1</slow-consumer-threshold>
           <slow-consumer-policy>NOTIFY</slow-consumer-policy>
           <slow-consumer-check-period>5</slow-consumer-check-period>
-          <auto-create-jms-queues>true</auto-create-jms-queues> <!-- DEPRECATED see auto-create-queues>
-          <auto-delete-jms-queues>true</auto-delete-jms-queues> <!-- DEPRECATED see auto-delete-queues>
-          <auto-create-jms-topics>true</auto-create-jms-topics> <!-- DEPRECATED see auto-create-addresses>
-          <auto-delete-jms-topics>true</auto-delete-jms-topics> <!-- DEPRECATED see auto-delete-addresses>
-          <auto-create-jms-queues>true</auto-create-jms-queues>
-          <auto-delete-jms-queues>true</auto-delete-jms-queues>
-          <auto-create-jms-topics>true</auto-create-jms-topics>
-          <auto-delete-jms-topics>true</auto-delete-jms-topics>
        </address-setting>
     </address-settings>
 

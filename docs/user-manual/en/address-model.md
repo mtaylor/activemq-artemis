@@ -1,4 +1,4 @@
-# Addresses, Queues, and Topics
+# Apache ActiveMQ Artemis Addressing and Queues
 
 Apache ActiveMQ Artemis has a unique addressing model that is both powerful and flexible and that offers great performance. The addressing model comprises three main concepts: addresses, queues and routing types.
 
@@ -170,6 +170,75 @@ The XML snippet below is an example of what the configuration for an address usi
 </configuration>
 ```
 
+## How to filter messages
+
+Apache ActiveMQ Artemis supports the ability to filter messages using Apache Artemis [Filter Expressions](#filter-expressions).
+
+Filters can be applied in two places, on a queue and on a consumer.
+
+### Queue Filter
+
+When a filter is applied to a queue, messages are filter before they sent to the queue.  To add a queue filter use the
+filter element when configuring a queue.  Open up the broker.xml and add an address with a queue, using the filter element
+to configure a filter on this queue.
+
+```xml
+    <address name="filter">
+       <queue name=filter">
+          <filter string="color='red'"/>
+        </queue>
+    </address>
+```
+
+The filter defined above ensures that only messages with an attribute "color='red'" is sent to this queue.
+
+### Consumer Filters
+
+Consumer filters are applied after messages have reached a queue and are defined using the appropriate client APIs.  The
+follow JMS example shows how to consumer filters work.
+
+1. Define an address with a single queue, with no filter applied.
+
+```xml
+    <address name="filter">
+       <queue name=filter">
+          <filter string="color='red'"/>
+        </queue>
+    </address>
+```
+
+```java
+  ...
+  // Send some messages
+  for (int i = 0; i < 3; i ++) {
+    TextMessage redMessage = senderSession.createTextMessage("Red");
+    redMessage.setStringProperty("color", "red");
+    producer.send(redMessage)
+        
+   TextMessage greenMessage = senderSession.createTextMessage("Green");
+   greenMessage.setStringProperty("color", "green");
+   producer.send(greenMessage)
+  }
+```
+
+At this point the queue would have 6 messages: red,green,red,green,red,green
+         
+```java
+  MessageConsumer redConsumer = redSession.createConsumer(queue, "color='red'");
+```
+
+The redConsumer has a filter that only matches "red" messages.  The redConsumer will receive 3 messages.
+
+```
+red, red, red
+```
+
+The resulting queue would now be
+
+```
+green, green, green
+```
+
 ## Creating and Deleting Addresses and Queues Automatically
 
 You can configure Apache ActiveMQ Artemis  to automatically create addresses and then delete them when they are no longer in use. This saves you from having to preconfigure each address before a client can connect to it. Automatic creation and deletion is configured on a per address basis and is controlled by following
@@ -306,11 +375,11 @@ In <broker-instance>/etc/broker.xml, add the anycastPrefix to the URL of the des
 
 In most cases it’s not necessary to pre-create subscription queues. The relevant protocol managers take care of creating subscription queues when clients request to subscribe to an address.  The type of subscription queue created, depends on what properties the client request.  E.g. durable, non-shared, shared etc...  Protocol managers uses special queue names to identify which queues below to which consumers and users need not worry about the details.
 
-However, there are scenarios where a user may want to use broker side configuration to pre-configure a subscription.  And later connect to that queue directly using an FQQN.  The examples below show how to use broker side configuration to pre-configure a queue with publish subscribe behaviour for shared, non-shared, durable and non-durable subscription behaviour.
+However, there are scenarios where a user may want to use broker side configuration to pre-configure a subscription.  And later connect to that queue directly using an FQQN.  The examples below show how to use broker side configuration to pre-configure a queue with publish subscribe behavior for shared, non-shared, durable and non-durable subscription behavior.
 
 #### Configuring a shared durable subscription queue with up to 10 concurrent consumers
 
-The default behaviour for queues is to not limit the number connected queue consumers.  The **max-consumers** paramter of the queue element can be used to limit the number of connected consumers allowed at any one time.
+The default behavior for queues is to not limit the number connected queue consumers.  The **max-consumers** paramter of the queue element can be used to limit the number of connected consumers allowed at any one time.
 
 Open the file <broker-instance>/etc/broker.xml for editing.
 
