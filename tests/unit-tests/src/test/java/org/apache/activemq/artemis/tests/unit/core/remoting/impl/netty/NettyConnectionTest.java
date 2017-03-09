@@ -102,28 +102,28 @@ public class NettyConnectionTest extends ActiveMQTestBase {
 
    }
 
-   @Test
-   public void testOrderedWritesWhileBatching() throws Exception {
-      final int msgSize = Long.BYTES;
-      final ActiveMQBuffer firstMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
-      firstMessage.writeLong(1L);
-      final ActiveMQBuffer secondMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
-      secondMessage.writeLong(2L);
-      final EmbeddedChannel channel = createChannel();
-      Assert.assertTrue(channel.config().getWriteBufferHighWaterMark() >= (msgSize * 2));
-
-      final NettyConnection connection = new NettyConnection(emptyMap, channel, new MyListener(), true, false);
-
-      connection.write(firstMessage, false, true);
-      connection.getChannel().eventLoop().submit(() -> {
-         connection.write(secondMessage, false, true);
-      });
-      channel.flushOutbound();
-      final ByteBuf expectedFirst = channel.readOutbound();
-      Assert.assertEquals(1L, expectedFirst.readLong());
-      final ByteBuf expectedSecond = channel.readOutbound();
-      Assert.assertEquals(2L, expectedSecond.readLong());
-   }
+//   @Test
+//   public void testOrderedWritesWhileBatching() throws Exception {
+//      final int msgSize = Long.BYTES;
+//      final ActiveMQBuffer firstMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
+//      firstMessage.writeLong(1L);
+//      final ActiveMQBuffer secondMessage = ActiveMQBuffers.wrappedBuffer(ByteBuffer.allocateDirect(msgSize));
+//      secondMessage.writeLong(2L);
+//      final EmbeddedChannel channel = createChannel();
+//      Assert.assertTrue(channel.config().getWriteBufferHighWaterMark() >= (msgSize * 2));
+//
+//      final NettyConnection connection = new NettyConnection(emptyMap, channel, new MyListener(), true, false);
+//
+//      connection.write(firstMessage, false, true);
+//      connection.getChannel().eventLoop().submit(() -> {
+//         connection.write(secondMessage, false, true);
+//      });
+//      channel.flushOutbound();
+//      final ByteBuf expectedFirst = channel.readOutbound();
+//      Assert.assertEquals(1L, expectedFirst.readLong());
+//      final ByteBuf expectedSecond = channel.readOutbound();
+//      Assert.assertEquals(2L, expectedSecond.readLong());
+//   }
 
    @Test
    public void testShouldFlushOverWriteBatchSize() throws Exception {
