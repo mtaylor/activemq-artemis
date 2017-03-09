@@ -19,6 +19,11 @@ Table 1. Routing Types
 **Note:** It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended.  If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type.
 The one exception is when the client uses the MQTT protocol. In that case, the default routing type is multicast. |
 
+In simple words:
+
+- Anycast: A message is routed to only one single queue. Hence the name *any* cast.
+- Multicast: A message is routed to multiple queues. Hence the name *multi* cast.
+ 
 ## Background (Protocol Managers and Addresses)
 
 A protocol manager maps protocol specific concepts down to the Apache ActiveMQ Artemis core model of addresses, queues and routing types. For example, when a client sends a MQTT subscription packet with the addresses 
@@ -36,7 +41,7 @@ If a client requests a point to point semantic (e.g. JMS Queue).  Apache ActiveM
 
 If it is it will aim to locate a queue with the same name as the address. If it does not exist, it will look for the first queue available. If this does not exist then it will auto create the queue (providing auto create is enabled) and then bind the consumer to this queue.
 
-N.B. If the queue is auto created, it will be auto deleted once there are no consumers and no messages in it.  For more information on auto create see 
+**Note** If the queue is auto created, it will be auto deleted once there are no consumers and no messages in it.  For more information on auto create see 
 
 ## Basic Address Configuration
 
