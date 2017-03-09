@@ -10,18 +10,14 @@ A routing type determines how messages are sent to the queues associated with an
 
 Table 1. Routing Types
 
-----------------------------------------------------------------------------------------------------
-| If you want your messages routed to…​	                                  | Use this routing type …​ |
-| ----------------------------------------------------------------------- | :---------------------: |
-| A single queue within the matching address, in a point-to-point manner. | Anycast                 |
-| Every queue within the matching address, in a publish-subscribe manner. | Multicast               |
+| If you want your messages routed to…​	                                    | Use this routing type …​ |
+| ------------------------------------------------------------------------- | :---------------------: |
+| :A single queue within the matching address, in a point-to-point manner.: | Anycast                 |
+| :Every queue within the matching address, in a publish-subscribe manner.: | Multicast               |
 
-multicast
-
-Note
-It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended.
-
-If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type. The one exception is when the client uses the MQTT protocol. In that case, the default routing type is multicast.
+|Note | It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended. 
+If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type.
+The one exception is when the client uses the MQTT protocol. In that case, the default routing type is multicast. |
 
 Configuring an Address for Point-to-Point Messaging
 
