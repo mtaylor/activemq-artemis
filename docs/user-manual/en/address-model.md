@@ -31,7 +31,11 @@ If it is it will aim to locate a queue with the same name as the address. If it 
 
 N.B. If the queue is auto created, it will be auto deleted once there are no consumers and no messages in it.  For more information on auto create see 
 
-## Configuring an Address for Point-to-Point Messaging
+## Basic Address Configuration
+
+The following examples show how to configure basic point to point and publish subscribe addresses.
+
+### Point-to-Point Messaging
 
 Point-to-point messaging is a common scenario in which a message sent by a producer has only one consumer. AMQP and JMS message producers and consumers can make use of point-to-point messaging queues, for example. Define an anycast routing type for an address so that its queues receive messages in a point-to-point manner.
 
@@ -40,7 +44,7 @@ When a message is received on an address using anycast, Apache ActiveMQ Artemis 
 ![Point to Point](images/addressing-model-p2p.png)
 Figure 1. Point to Point Messaging
 
-### Configuring an Address to Use the Anycast Routing Type
+#### Configuring an Address to Use the Anycast Routing Type
 
 Open the file <broker-instance>/etc/broker.xml for editing.
 
@@ -59,7 +63,7 @@ Add an address configuration element and its associated queue if they do not exi
 </configuration>
 ```
 
-## Configuring an Address for Publish-Subscribe Messaging
+### Publish-Subscribe Messaging
 
 In a publish-subscribe scenario, messages are sent to every consumer subscribed to an address. JMS topics and MQTT subscriptions are two examples of publish-subscribe messaging. An example of a publish-subscribe Assign a multicast routing type for an address so that its queues receive messages in a pubish-subscribe manner.
 
@@ -68,7 +72,7 @@ When a message is received on an address with a multicast routing type, Apache A
 ![Publish Subscribe](images/addressing-model-pubsub.png)
 Figure 2. Publish-Subscribe
 
-### Configuring an Address to Use the Multicast Routing Type
+#### Configuring an Address to Use the Multicast Routing Type
 
 Open the file <broker-instance>/etc/broker.xml for editing.
 
@@ -103,7 +107,7 @@ Add an address configuration element with multicast routing type.
 
 Figure 3. Point-to-Point with Two Queues
 
-### Configuring a Point-to-Point Address with Two Queues
+### Point-to-Point Address multiple Queues
 
 It is actually possible to define more than one queue on an address with an anycast routing type. When messages are received on such an address, they are firstly distributed evenly across all the defined queues. Using Fully Qualified Queue Names described later, clients are able to select the queue that they’d like to subscribe to. Should more than one consumer connect direct to a single queue, Apache ActiveMQ Artemis will take care of distributing messages between them, as in the example above.
 
@@ -131,7 +135,7 @@ Add an address configuration with Anycast routing type element and its associate
 </configuration>
 ```
 
-## Configuring an Address to Use Point-to-Point and Publish-Subscribe
+### Point-to-Point and Publish-Subscribe Addresses
 
 It is possible to define an address with both point-to-point and publish-subscribe semantics enabled. While not typically recommend, this can be useful when you want, for example, a JMS Queue say orders and a JMS Topic named orders. The different routing types make the addresses appear to be distinct.
 
@@ -154,107 +158,6 @@ The XML snippet below is an example of what the configuration for an address usi
         <queue name="orders"/>
       </anycast>
       <multicast/>
-    </address>
-  </core>
-</configuration>
-```
-
-## Using a Fully Qualified Queue Names
-
-Internally the broker maps a client’s request for an address to specific queues. The broker decides on behalf of the client which queues to send messages to or from which queue to receive messages. However, more advanced use cases might require that the client specify a queue directly. In these situations the client and use a fully qualified queue name, by specifying both the address name and the queue name, separated by a ::.
-
-### Specifying a Fully Qualified Queue Name
-In this example, the address foo is configured with two queues q1, q2 as shown in the configuration below.
-
-```xml
-<configuration ...>
-  <core ...>
-    ...
-    <addresses>
-       <address name="foo">
-          <anycast>
-             <queue name="q1" />
-             <queue name="q2" />
-          </anycast>
-       </address>
-    </addresses>
-  </core>
-</configuration>
-```
-
-In the client code, use both the address name and the queue name when requesting a connection from the broker. Remember to use two colons, ::, to separate the names, as in the example Java code below.
-
-```java
-String FQQN = "foo::q1";
-Queue q1 session.createQueue(FQQN);
-MessageConsumer consumer = session.createConsumer(q1);
-```
-
-
-## Pre-configuring subscription queue semantics
-
-In most cases it’s not necessary to pre-create subscription queues. The relevant protocol managers take care of creating subscription queues when clients request to subscribe to an address.  The type of subscription queue created, depends on what properties the client request.  E.g. durable, non-shared, shared etc...  Protocol managers uses special queue names to identify which queues below to which consumers and users need not worry about the details.
-
-However, there are scenarios where a user may want to use broker side configuration to pre-configure a subscription.  And later connect to that queue directly using an FQQN.  The examples below show how to use broker side configuration to pre-configure a queue with publish subscribe behaviour for shared, non-shared, durable and non-durable subscription behaviour.
-
-### Configuring a shared durable subscription queue with up to 10 concurrent consumers
-
-The default behaviour for queues is to not limit the number connected queue consumers.  The **max-consumers** paramter of the queue element can be used to limit the number of connected consumers allowed at any one time.
-
-Open the file <broker-instance>/etc/broker.xml for editing.
-
-```xml
-<configuration ...>
-  <core ...>
-    ...
-    <address name="durable.foo">
-      <multicast>
-        <!-- pre-configured shared durable subscription queue -->
-        <queue name="q1" max-consumers="10">
-          <durable>true</durable>
-        </queue>
-      </multicast>
-    </address>
-  </core>
-</configuration>
-```
-
-### Configuring a non-shared durable subscription
-
-The broker can be configured to prevent more than one consumer from connecting to a queue at any one time. The subscriptions to queues configured this way are therefore "non-shared".  To do this simply set the **max-consumers** parameter to "1"
-
-```xml
-<configuration ...>
-  <core ...>
-    ...
-    <address name="durable.foo">
-      <multicast>
-        <!-- pre-configured non shared durable subscription queue -->
-        <queue name="q1" max-consumers="1">
-          <durable>true</durable>
-        </queue>
-      </multicast>
-    </address>
-  </core>
-</configuration>
-```
-
-### Pre-configuring a queue as a non-durable subscription queue
-
-Non-durable subscriptions are again usually managed by the relevant protocol manager, by creating and deleting temporary queues.
-
-If a user requires to pre-create a queue that behaves like a non-durable subscription queue the **purge-on-no-consumers** flag can be enabled on the queue.  When **purge-on-no-consumers** is set to **true**.  The queue will not start receiving messages until a consumer is attached.  When the last consumer is detached from the queue.  The queue is purged (it's messages are removed) and will not receive any more messages until a new consumer is attached.
-
-Open the file <broker-instance>/etc/broker.xml for editing.
-
-```xml
-<configuration ...>
-  <core ...>
-    ...
-    <address name="non.shared.durable.foo">
-      <multicast>
-        <queue name="orders1" purge-on-no-consumers="true"/>
-      </multicast>
     </address>
   </core>
 </configuration>
@@ -321,7 +224,36 @@ The example below configures an address-setting to be automatically deleted by t
 </configuration>
 ```
 
+## Fully Qualified Queue Names
 
+Internally the broker maps a client’s request for an address to specific queues. The broker decides on behalf of the client which queues to send messages to or from which queue to receive messages. However, more advanced use cases might require that the client specify a queue directly. In these situations the client and use a fully qualified queue name, by specifying both the address name and the queue name, separated by a ::.
+
+### Specifying a Fully Qualified Queue Name
+In this example, the address foo is configured with two queues q1, q2 as shown in the configuration below.
+
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <addresses>
+       <address name="foo">
+          <anycast>
+             <queue name="q1" />
+             <queue name="q2" />
+          </anycast>
+       </address>
+    </addresses>
+  </core>
+</configuration>
+```
+
+In the client code, use both the address name and the queue name when requesting a connection from the broker. Remember to use two colons, ::, to separate the names, as in the example Java code below.
+
+```java
+String FQQN = "foo::q1";
+Queue q1 session.createQueue(FQQN);
+MessageConsumer consumer = session.createConsumer(q1);
+```
 
 ## Configuring a Prefix to Connect to a Specific Routing Type
 
@@ -357,6 +289,77 @@ In <broker-instance>/etc/broker.xml, add the anycastPrefix to the URL of the des
          <acceptor name="artemis">tcp://0.0.0.0:61616?protocols=AMQP&multicastPrefix=multicast://</acceptor>
       </acceptors>
     ...
+  </core>
+</configuration>
+```
+
+## Advanced Address Configuration
+
+### Pre-configuring subscription queue semantics
+
+In most cases it’s not necessary to pre-create subscription queues. The relevant protocol managers take care of creating subscription queues when clients request to subscribe to an address.  The type of subscription queue created, depends on what properties the client request.  E.g. durable, non-shared, shared etc...  Protocol managers uses special queue names to identify which queues below to which consumers and users need not worry about the details.
+
+However, there are scenarios where a user may want to use broker side configuration to pre-configure a subscription.  And later connect to that queue directly using an FQQN.  The examples below show how to use broker side configuration to pre-configure a queue with publish subscribe behaviour for shared, non-shared, durable and non-durable subscription behaviour.
+
+#### Configuring a shared durable subscription queue with up to 10 concurrent consumers
+
+The default behaviour for queues is to not limit the number connected queue consumers.  The **max-consumers** paramter of the queue element can be used to limit the number of connected consumers allowed at any one time.
+
+Open the file <broker-instance>/etc/broker.xml for editing.
+
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <address name="durable.foo">
+      <multicast>
+        <!-- pre-configured shared durable subscription queue -->
+        <queue name="q1" max-consumers="10">
+          <durable>true</durable>
+        </queue>
+      </multicast>
+    </address>
+  </core>
+</configuration>
+```
+
+#### Configuring a non-shared durable subscription
+
+The broker can be configured to prevent more than one consumer from connecting to a queue at any one time. The subscriptions to queues configured this way are therefore "non-shared".  To do this simply set the **max-consumers** parameter to "1"
+
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <address name="durable.foo">
+      <multicast>
+        <!-- pre-configured non shared durable subscription queue -->
+        <queue name="q1" max-consumers="1">
+          <durable>true</durable>
+        </queue>
+      </multicast>
+    </address>
+  </core>
+</configuration>
+```
+
+#### Pre-configuring a queue as a non-durable subscription queue
+
+Non-durable subscriptions are again usually managed by the relevant protocol manager, by creating and deleting temporary queues.
+
+If a user requires to pre-create a queue that behaves like a non-durable subscription queue the **purge-on-no-consumers** flag can be enabled on the queue.  When **purge-on-no-consumers** is set to **true**.  The queue will not start receiving messages until a consumer is attached.  When the last consumer is detached from the queue.  The queue is purged (it's messages are removed) and will not receive any more messages until a new consumer is attached.
+
+Open the file <broker-instance>/etc/broker.xml for editing.
+
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <address name="non.shared.durable.foo">
+      <multicast>
+        <queue name="orders1" purge-on-no-consumers="true"/>
+      </multicast>
+    </address>
   </core>
 </configuration>
 ```
