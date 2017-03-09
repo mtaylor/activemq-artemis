@@ -55,7 +55,7 @@ In a publish-subscribe scenario, messages are sent to every consumer subscribed 
 
 When a message is received on an address with a multicast routing type, Apache ActiveMQ Artemis will route a copy of the message (in reality only a message reference to reduce the overhead of copying) to each queue.
 
-![Point to Point](images/addressing-model-p2p.png)
+![Point to Point](images/addressing-model-pubsub.png)
 Figure 2. Publish-Subscribe
 
 ### Configuring an Address to Use the Multicast Routing Type
@@ -91,7 +91,6 @@ Add an address configuration element with multicast routing type.
 </configration>
 ```
 
-![Point to Point](images/addressing-model-pubsub.png)
 Figure 3. Point-to-Point with Two Queues
 
 ### Configuring a Point-to-Point Address with Two Queues
