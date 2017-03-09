@@ -10,8 +10,8 @@ A routing type determines how messages are sent to the queues associated with an
 
 Table 1. Routing Types
 
-| If you want your messages routed to…​	                                   | Use this routing type …​ |
-| :----------------------------------------------------------------------: | :---------------------: |
+| If you want your messages routed to…​	                                   | Use this routing type…​ |
+| :----------------------------------------------------------------------  | :--------------------- |
 | A single queue within the matching address, in a point-to-point manner.  | Anycast                 |
 | Every queue within the matching address, in a publish-subscribe manner.  | Multicast               |
 
@@ -246,11 +246,12 @@ green, green, green
 You can configure Apache ActiveMQ Artemis  to automatically create addresses and then delete them when they are no longer in use. This saves you from having to preconfigure each address before a client can connect to it. Automatic creation and deletion is configured on a per address basis and is controlled by following
 
 | Parameter | Description |
----------------------------
-| auto-create-addresses | When set to true, the broker will create the address requested by the client if it does not exist already. The default is true.|
+| :-------   | :----------- |
+| auto-create-addresses | When set to true, the broker will create the address requested by the client if it does not exist already. The default is true. |
 | auto-delete-addresses | When set to true, the broker will be delete the address once all of it’s queues have been deleted. The default is true |
-|default-address-routing-type | The routing type to use if the client does not specify one. Possible values are MULTICAST and ANYCAST. See earlier in this chapter for more information about routing types. The default value is MULTICAST. |
-
+|default-address-routing-type | The routing type to use if the client does not specify one. Possible values are MULTICAST and ANYCAST. See earlier in this chapter for more information about routing types. The default value is MULTICAST.|
+--------------------------------------------------------------------------------------------
+    
 Configuring an Address to be Automatically Created
 
 Edit the file <broker-instance>/etc/broker.xml and add the auto-create-addresses element to the address-setting you want the broker to automatically create.

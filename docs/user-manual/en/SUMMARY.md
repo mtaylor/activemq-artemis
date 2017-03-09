@@ -5,6 +5,7 @@
 * [Preface](preface.md)
 * [Project Info](project-info.md)
 * [Messaging Concepts](messaging-concepts.md)
+* [Address Model](address-model.md)
 * [Architecture](architecture.md)
 * [Using the Server](using-server.md)
 * [Using JMS](using-jms.md)
