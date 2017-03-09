@@ -57,13 +57,15 @@ Open the file <broker-instance>/etc/broker.xml for editing.
 
 Add an address configuration element and its associated queue if they do not exist already.
 
+**Note** For normal Point to Point semantics, the queue name **MUST** match the address name.
+
 ```xml
 <configuration ...>
   <core ...>
     ...
-    <address name="address.foo">
+    <address name="orders">
       <anycast>
-        <queue name="q1"/>
+        <queue name="orders"/>
       </anycast>
     </address>
   </core>
