@@ -15,11 +15,21 @@ Table 1. Routing Types
 | A single queue within the matching address, in a point-to-point manner.  | Anycast                 |
 | Every queue within the matching address, in a publish-subscribe manner.  | Multicast               |
 
-#### Note
-
-It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended. 
-If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type.
+--------------------------------------------------------------------------------------------
+**Note:** It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended.  If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type.
 The one exception is when the client uses the MQTT protocol. In that case, the default routing type is multicast. |
+
+## Backgroup (Protocol Managers and Addresses)
+
+A protocol manager maps protocol specific concepts down to the Apache ActiveMQ Artemis core model of addresses, queues and routing types. For example, when a client sends a MQTT subscription packet with the addresses /house/room1/lights and /house/room2/lights, the MQTT protocol manager understands that the two addresses require multicast semantics. The protocol manager will therefore first look to ensure that multicast is enabled for both addresses. If not, it will attempt to dynamically create them. If successful, the protocol manager will then create special subscription queues with special names, for each subscription requested by the client.
+
+The special name allows the protocol manager to quickly identify the required client subscription queues should the client disconnect and reconnect at a later date.  If the subscription is temporary the protocol manager will delete the queue once the client disconnects.
+
+If a client requests a point to point semantic (e.g. JMS Queue).  Apache ActiveMQ Artemis will first look at the address sent by the client and use that to look up an Apache ActiveMQ Artemis address.  It will then ensure the point to point (Anycast) routing type is enabled. 
+
+If it is it will aim to locate a queue with the same name as the address. If it does not exist, it will look for the first queue available. If this does not exist then it will auto create the queue (providing auto create is enabled) and then bind the consumer to this queue.
+
+N.B. If the queue is auto created, it will be auto deleted once there are no consumers and no messages in it.  For more information on auto create see 
 
 ## Configuring an Address for Point-to-Point Messaging
 
@@ -55,7 +65,7 @@ In a publish-subscribe scenario, messages are sent to every consumer subscribed 
 
 When a message is received on an address with a multicast routing type, Apache ActiveMQ Artemis will route a copy of the message (in reality only a message reference to reduce the overhead of copying) to each queue.
 
-![Point to Point](images/addressing-model-pubsub.png)
+![Publish Subscribe](images/addressing-model-pubsub.png)
 Figure 2. Publish-Subscribe
 
 ### Configuring an Address to Use the Multicast Routing Type
@@ -100,8 +110,8 @@ It is actually possible to define more than one queue on an address with an anyc
 ![Point to Point](images/addressing-model-p2p2.png)
 Figure 3. Point-to-Point with Two Queues
 
-#### Note
-This is how Apache ActiveMQ Artemis handles load balancing of queues across multiple nodes in a cluster.
+--------------------------------------------------------------------------------------------
+**Note:** This is how Apache ActiveMQ Artemis handles load balancing of queues across multiple nodes in a cluster.
 Configuring a Point-to-Point Address with Two Queues
 Open the file <broker-instance>/etc/broker.xml for editing.
 
@@ -129,10 +139,13 @@ Using an example of JMS Clients, the messages sent by a JMS queue producer will 
 
 ![Point to Point](images/addressing-model-p2p-pubsub.png)
 Figure 4. [Point-to-Point and Publish-Subscribe
-Note
-The behavior in this scenario is dependent on the protocol being used. For JMS there is a clear distinction between topic and queue producers and consumers, which make the logic straight forward. Other protocols like AMQP do not make this distinction. A message being sent via AMQP will be routed by both anycast and multicast and consumers will default to anycast. For more information, please check the behavior of each protocol in the sections on protocols.
+
+--------------------------------------------------------------------------------------------
+**Note:** The behavior in this scenario is dependent on the protocol being used. For JMS there is a clear distinction between topic and queue producers and consumers, which make the logic straight forward. Other protocols like AMQP do not make this distinction. A message being sent via AMQP will be routed by both anycast and multicast and consumers will default to anycast. For more information, please check the behavior of each protocol in the sections on protocols.
+
 The XML snippet below is an example of what the configuration for an address using both anycast and multicast would look like in <broker-instance>/etc/broker.xml. routing types. Note that subscription queues are typically created on demand, so there is no need to list specific queue elements inside the multicast routing type.
 
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -144,132 +157,121 @@ The XML snippet below is an example of what the configuration for an address usi
     </address>
   </core>
 </configuration>
-Configuring Subscription Queues
+```
 
-In most cases it’s not necessary to pre-create subscription queues. The relevant protocol manager will take care of creating the subscription queues when the client initially requests to subscribe to an address. See Protocol Mangers and Adresses for more information. For durable subscriptions, the generated queue name is usually a concatenation of the client id and the address.
+## Using a Fully Qualified Queue Names
 
-Configuring a Durable Subscription Queue
+Internally the broker maps a client’s request for an address to specific queues. The broker decides on behalf of the client which queues to send messages to or from which queue to receive messages. However, more advanced use cases might require that the client specify a queue directly. In these situations the client and use a fully qualified queue name, by specifying both the address name and the queue name, separated by a ::.
 
-When an queue is configured as a durable subscription, the broker saves messages for any inactive subscribers and delivers them to the subscribers when they reconnect. Clients are therefore guaranteed to receive each message delivered to the queue after subscribing to it.
+### Specifying a Fully Qualified Queue Name
+In this example, the address foo is configured with two queues q1, q2 as shown in the configuration below.
 
-Configuring a Queue as a Durable Subscription
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <addresses>
+       <address name="foo">
+          <anycast>
+             <queue name="q1" />
+             <queue name="q2" />
+          </anycast>
+       </address>
+    </addresses>
+  </core>
+</configuration>
+```
+
+In the client code, use both the address name and the queue name when requesting a connection from the broker. Remember to use two colons, ::, to separate the names, as in the example Java code below.
+
+```java
+String FQQN = "foo::q1";
+Queue q1 session.createQueue(FQQN);
+MessageConsumer consumer = session.createConsumer(q1);
+```
+
+
+## Pre-configuring subscription queue semantics
+
+In most cases it’s not necessary to pre-create subscription queues. The relevant protocol managers take care of creating subscription queues when clients request to subscribe to an address.  The type of subscription queue created, depends on what properties the client request.  E.g. durable, non-shared, shared etc...  Protocol managers uses special queue names to identify which queues below to which consumers and users need not worry about the details.
+
+However, there are scenarios where a user may want to use broker side configuration to pre-configure a subscription.  And later connect to that queue directly using an FQQN.  The examples below show how to use broker side configuration to pre-configure a queue with publish subscribe behaviour for shared, non-shared, durable and non-durable subscription behaviour.
+
+### Configuring a shared durable subscription queue with up to 10 concurrent consumers
+
+The default behaviour for queues is to not limit the number connected queue consumers.  The **max-consumers** paramter of the queue element can be used to limit the number of connected consumers allowed at any one time.
+
 Open the file <broker-instance>/etc/broker.xml for editing.
 
-(Optional) Add address and queue configuration elements if they do not exist already.
-
+```xml
 <configuration ...>
   <core ...>
     ...
     <address name="durable.foo">
-        <queue name="q1"/>
-    </address>
-  </core>
-</configuration>
-(Optional) Wrap an anycast configuration element around the queue if it does not exist already.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="durable.foo">
-      <anycast>
-        <queue name="q1" />
-      </anycast>
-    </address>
-  </core>
-</configuration>
-Add the durable configuration element to the queue and assign it a value of true.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="durable.foo">
-      <anycast>
-        <queue name="q1">
+      <multicast>
+        <!-- pre-configured shared durable subscription queue -->
+        <queue name="q1" max-consumers="10">
           <durable>true</durable>
         </queue>
-      </anycast>
-    </address>
-  </core>
-</configuration>
-Configuring a Non-Shared Durable Subscription
-
-The broker can be configured to prevent more than one consumer from connecting to a queue at any one time. The subscriptions to queues configured this way are therefore "non-shared".
-
-Configuring a Queue as a Durable Subscription
-Open the file <broker-instance>/etc/broker.xml for editing.
-
-(Optional) Add address and queue configuration elements if they do not exist already.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="non.shared.durable.foo">
-        <queue name="orders1"/>
-        <queue name="orders2"/>
-    </address>
-  </core>
-</configuration>
-(Optional) Add the multicast routing type if does not exist.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="non.shared.durable.foo">
-      <multicast>
-        <queue name="orders1"/>
-        <queue name="orders2"/>
       </multicast>
     </address>
   </core>
 </configuration>
-Add the durable configuration element to each queue.
+```
 
+### Configuring a non-shared durable subscription
+
+The broker can be configured to prevent more than one consumer from connecting to a queue at any one time. The subscriptions to queues configured this way are therefore "non-shared".  To do this simply set the **max-consumers** parameter to "1"
+
+```xml
+<configuration ...>
+  <core ...>
+    ...
+    <address name="durable.foo">
+      <multicast>
+        <!-- pre-configured non shared durable subscription queue -->
+        <queue name="q1" max-consumers="1">
+          <durable>true</durable>
+        </queue>
+      </multicast>
+    </address>
+  </core>
+</configuration>
+```
+
+### Pre-configuring a queue as a non-durable subscription queue
+
+Non-durable subscriptions are again usually managed by the relevant protocol manager, by creating and deleting temporary queues.
+
+If a user requires to pre-create a queue that behaves like a non-durable subscription queue the **purge-on-no-consumers** flag can be enabled on the queue.  When **purge-on-no-consumers** is set to **true**.  The queue will not start receiving messages until a consumer is attached.  When the last consumer is detached from the queue.  The queue is purged (it's messages are removed) and will not receive any more messages until a new consumer is attached.
+
+Open the file <broker-instance>/etc/broker.xml for editing.
+
+```xml
 <configuration ...>
   <core ...>
     ...
     <address name="non.shared.durable.foo">
       <multicast>
-        <queue name="orders1">
-          <durable>true</durable>
-        </queue>
-        <queue name="orders2">
-          <durable>true</durable>
-        </queue>
-      </mutlicast>
+        <queue name="orders1" purge-on-no-consumers="true"/>
+      </multicast>
     </address>
   </core>
 </configuration>
-Add the maxConsumers attribute to each queue element and assign it a value of 1.
+```
 
-<configuration ...>
-  <core ...>
-    ...
-    <address name="non.shared.durable.foo">
-      <multicast>
-        <queue name="orders1" maxConsumers="1">
-          <durable>true</durable>
-        </queue>
-        <queue name="orders2" maxConsumers="1">
-          <durable>true</durable>
-        </queue>
-      </mutlicast>
-    </address>
-  </core>
-</configuration>
-Creating and Deleting Queues Automatically
+## Creating and Deleting Addresses and Queues Automatically
 
-You can configure {ProductName} to automatically create addresses and then delete them when they are no longer in use. This saves you from having to preconfigure each address before a client can connect to it. Automatic creation and deletion is configured on a per address basis and is controlled by three configuration elements:
+You can configure Apache ActiveMQ Artemis  to automatically create addresses and then delete them when they are no longer in use. This saves you from having to preconfigure each address before a client can connect to it. Automatic creation and deletion is configured on a per address basis and is controlled by following
 
-auto-create-addresses
-When set to true, the broker will create the address requested by the client if it does not exist already. The default is true.
-
-auto-delete-addresses
-When set to true, the broker will be delete the address once all of it’s queues have been deleted. The default is true
-
-default-address-routing-type
-The routing type to use if the client does not specify one. Possible values are MULTICAST and ANYCAST. See earlier in this chapter for more information about routing types. The default value is MULTICAST.
+| Parameter | Description |
+---------------------------
+| auto-create-addresses | When set to true, the broker will create the address requested by the client if it does not exist already. The default is true.|
+| auto-delete-addresses | When set to true, the broker will be delete the address once all of it’s queues have been deleted. The default is true |
+|default-address-routing-type | The routing type to use if the client does not specify one. Possible values are MULTICAST and ANYCAST. See earlier in this chapter for more information about routing types. The default value is MULTICAST. |
 
 Configuring an Address to be Automatically Created
+
 Edit the file <broker-instance>/etc/broker.xml and add the auto-create-addresses element to the address-setting you want the broker to automatically create.
 
 (Optional) Add the address-setting if it does not exits. Use the match parameter and the The Apache ActiveMQ Artemis Wildcard Syntax to match more than one specific address.
@@ -280,6 +282,7 @@ Set auto-create-addresses to true
 
 The example below configures an address-setting to be automatically created by the broker. The default routing type to be used if not specified by the client is MULTICAST. Note that wildcard syntax is used. Any address starting with /news/politics/ will be automatically created by the broker.
 
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -292,6 +295,8 @@ The example below configures an address-setting to be automatically created by t
     ...
   </core>
 </configuration>
+```
+
 Configuring and Address to be Automatically Deleted
 Edit the file <broker-instance>/etc/broker.xml and add the auto-delete-addresses element to the address-setting you want the broker to automatically create.
 
@@ -301,6 +306,7 @@ Set auto-delete-addresses to true
 
 The example below configures an address-setting to be automatically deleted by the broker. Note that wildcard syntax is used. Any address request by the client that starts with /news/politics/ is configured to be automatically deleted by the broker.
 
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -313,163 +319,44 @@ The example below configures an address-setting to be automatically deleted by t
     ...
   </core>
 </configuration>
-Using a Fully Qualified Queue Name
+```
 
-Internally the broker maps a client’s request for an address to specific queues. The broker decides on behalf of the client which queues to send messages to or from which queue to receive messages. However, more advanced use cases might require that the client specify a queue directly. In these situations the client and use a fully qualified queue name, by specifying both the address name and the queue name, separated by a ::.
 
-Specifying a Fully Qualified Queue Name
-In this example, the address foo is configured with two queues q1, q2 as shown in the configuration below.
 
-<configuration ...>
-  <core ...>
-    ...
-    <addresses>
-       <address name="foo">
-          <anycast>
-             <queue name="q1" />
-             <queue name="q2" />
-          </anycast>
-       </address>
-    </addresses>
-  </core>
-</configuration>
-In the client code, use both the address name and the queue name when requesting a connection from the broker. Remember to use two colons, ::, to separate the names, as in the example Java code below.
+## Configuring a Prefix to Connect to a Specific Routing Type
 
-String FQQN = "foo::q1";
-Queue q1 session.createQueue(FQQN);
-MessageConsumer consumer = session.createConsumer(q1);
-Configuring Sharded Queues
+Normally, if a Apache ActiveMQ Artemis receivs a message sent to a particular address, that has both anycast and multicast routing types enable, Apache ActiveMQ Artemis will route a copy of the message to **one** of the anycast queues and to **all** of the multicast queues.
 
-A common pattern for processing of messages across a queue where only partial ordering is required is to use queue sharding. In Artemis this can be achieved by creating an anycast address that acts as a single logical queue, but which is backed by many underlying physical queues.
+However, clients can specify a special prefix when connecting to an address to specify whether to connect using anycast or multicast. The prefixes are custom values that are designated using the anycastPrefix and multicastPrefix parameters within the URL of an acceptor.
 
-Configuring a Sharded Queue
-Open <broker-instance>/etc/broker.xml and add an address with the desired name. In the example below the address named sharded is added to the configuration.
+### Configuring an Anycast Prefix
 
-<configuration ...>
-  <core ...>
-    ...
-    <addresses>
-       <address name="sharded"></address>
-    </addresses>
-  </core>
-</configuration>
-Add a the anycast routing type and include the desired number of sharded queues. In the example below, the queues q1, q2, and q3 are added as anycast destinations.
-
-<configuration ...>
-  <core ...>
-    ...
-    <addresses>
-       <address name="sharded">
-          <anycast>
-             <queue name="q1" />
-             <queue name="q2" />
-             <queue name="q3" />
-          </anycast>
-       </address>
-    </addresses>
-</core>
-</configuration>
-Using the configuration above, messages sent to foo are distributed equally across q1, q2 and q3. Clients are able to connect directly to a specific physical queue when using a fully qualified queue name and will receive messages sent to that specific queue only.
-
-In order to tie particular messages to a particular queue, clients can specify a message group for each message. A message group will be associated with a specific queue and therefore all messages sent to any one group will always get sent to the same queue.
-
-Limiting the Number of Consumers Connected to a Queue
-
-It’s possible to limit the number of consumers connected to for a particular queue by using the max-consumers attribute. Create an exclusive consumer by setting max-consumers flag can be set to 1. The default value is -1, which is sets an unlimited number of consumers.
-
-Limiting the Number of Consumers for a Queue
-Open <broker-instance>/etc/broker.xml and add the max-consumers attribute to the desired queue. In the example below, only 20 consumers can connect to the queue q3 at the same time.
-
-<configuration ...>
-  <core ...>
-    ...
-    <addresses>
-       <address name="foo">
-          <anycast>
-             <queue name="q3" max-consumers="20"/>
-          </anycast>
-       </address>
-    </addresses>
-  </core>
-</configuration>
-(Optional) Create an exclusive consumer by setting max-consumers to 1, as in the example below.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="foo">
-      <anycast>
-        <queue name="q3" max-consumers="1"/>
-      </anycast>
-    </address>
-  </core>
-</configuration>
-(Optional) Have an unlimited number of consumers by setting max-consumers to -1, as in the example below.
-
-<configuration ...>
-  <core ...>
-    ...
-    <address name="foo">
-      <anycast>
-         <queue name="q3" max-consumers="-1"/>
-      </anycast>
-    </address>
-  </core>
-</configuration>
-Configuring a Prefix to Connect to a Specific Routing Type
-
-Normally, if a message is received by an address that uses both anycast and multicast, one of the anycast queues will receiving the message and all of the multicast queues. However, clients can specify a special prefix when connecting to an address to specify whether to connect using anycast or multicast. The prefixes are custom values that are designated using the anycastPrefix and multicastPrefix parameters within the URL of an acceptor.
-
-Configuring an Anycast Prefix
 In <broker-instance>/etc/broker.xml, add the anycastPrefix to the URL of the desired acceptor. In the example below, the acceptor is configured to use anycast:// for the anycastPrefix. Client code can specify anycast://foo/ if the client needs to send a message to only one of the anycast queues.
 
+```xml
 <configuration ...>
   <core ...>
     ...
       <acceptors>
-         <!-- Acceptor for every supported protocol -->
          <acceptor name="artemis">tcp://0.0.0.0:61616?protocols=AMQP&anycastPrefix=anycast://</acceptor>
       </acceptors>
     ...
   </core>
 </configuration>
-Configuring a Multicast Prefix
+```
+
+### Configuring a Multicast Prefix
+
 In <broker-instance>/etc/broker.xml, add the anycastPrefix to the URL of the desired acceptor. In the example below, the acceptor is configured to use multicast:// for the multicastPrefix. Client code can specify multicast://foo/ if the client needs the message sent to only the multicast queues of the address.
 
+```xml
 <configuration ...>
   <core ...>
     ...
       <acceptors>
-         <!-- Acceptor for every supported protocol -->
          <acceptor name="artemis">tcp://0.0.0.0:61616?protocols=AMQP&multicastPrefix=multicast://</acceptor>
       </acceptors>
     ...
   </core>
 </configuration>
-Protocol Managers and Addresses
-
-A protocol manager maps protocol specific concepts down to the Apache ActiveMQ Artemis core model of addresses, queues and routing types. For example, when a client sends a MQTT subscription packet with the addresses /house/room1/lights and /house/room2/lights, the MQTT protocol manager understands that the two addresses require multicast semantics. The protocol manager will therefore first look to ensure that multicast is enabled for both addresses. If not, it will attempt to dynamically create them. If successful, the protocol manger then creates special subscription queues for each subscription requested by the client.
-
-Each protocol behaves slightly differently. The table below describes what typically happens when subscribe frames to various types of queue are requested.
-
-Table 2. Protocol Manager Actions
-If the queue is of this type…​	The typical action for a protocol manager is to…​
-Durable Subscription Queue
-
-Look for the appropriate address and ensures that multicast semantics is enabled. It then creates a special subscription queue with the client ID and the address as it’s name and multicast as it’s routing type.
-
-The special name allows the protocol manager to quickly identify the required client subscription queues should the client disconnect and reconnect at a later date.
-
-When the client unsubscribes the queue is deleted.
-
-Temporary Subscription Queue
-
-Look for the appropriate address and ensures that multicast semantics is enabled. It then creates a queue with a random (read UUID) name under this address with multicast routing type.
-
-When the client disconnects the queue is deleted.
-
-Point-to-Point Queue
-
-Look for the appropriate address and ensures that anycast routing type is enabled. If it is it will aim to locate a queue with the same name as the address. If it does not exist, it will look for the first queue available. It this does not exist then it will auto create the queue (providing auto create is enabled). The queue consumer is bound to this queue.
-
-If the queue is auto created, it will be auto deleted once there are no consumers and no messages in it.
+```
