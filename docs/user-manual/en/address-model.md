@@ -10,38 +10,33 @@ A routing type determines how messages are sent to the queues associated with an
 
 Table 1. Routing Types
 
-| If you want your messages routed to…​	                                    | Use this routing type …​ |
-| ------------------------------------------------------------------------- | :---------------------: |
-| :A single queue within the matching address, in a point-to-point manner.: | Anycast                 |
-| :Every queue within the matching address, in a publish-subscribe manner.: | Multicast               |
+| If you want your messages routed to…​	                                   | Use this routing type …​ |
+| :----------------------------------------------------------------------: | :---------------------: |
+| A single queue within the matching address, in a point-to-point manner.  | Anycast                 |
+| Every queue within the matching address, in a publish-subscribe manner.  | Multicast               |
 
-|Note | It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended. 
+#### Note
+
+It is possible to define more than one routing type per address, but this typically results in an anti-pattern and is therefore not recommended. 
 If an address does use both routing types, however, and the client does not show a preference for either one, the broker typically defaults to the anycast routing type.
 The one exception is when the client uses the MQTT protocol. In that case, the default routing type is multicast. |
 
-Configuring an Address for Point-to-Point Messaging
+## Configuring an Address for Point-to-Point Messaging
 
 Point-to-point messaging is a common scenario in which a message sent by a producer has only one consumer. AMQP and JMS message producers and consumers can make use of point-to-point messaging queues, for example. Define an anycast routing type for an address so that its queues receive messages in a point-to-point manner.
 
 When a message is received on an address using anycast, Apache ActiveMQ Artemis locates the queue associated with the address and routes the message to it. When consumers request to consume from the address, the broker locates the relevant queue and associates this queue with the appropriate consumers. If multiple consumers are connected to the same queue, messages are distributed amongst each consumer equally, providing the consumers are equally able to handle them.
 
-Publish-Subscribe
-Figure 1. Point-to-Point
-Configuring an Address to Use the Anycast Routing Type
+![Point to Point](images/addressing-model-p2p.png)
+Figure 1. Point to Point Messaging
+
+### Configuring an Address to Use the Anycast Routing Type
+
 Open the file <broker-instance>/etc/broker.xml for editing.
 
-(Optional) Add an address configuration element and its associated queue if they do not exist already.
+Add an address configuration element and its associated queue if they do not exist already.
 
-<configuration ...>
-  <core ...>
-    ...
-    <address name="address.foo">
-        <queue name="q1"/>
-    </address>
-  </core>
-</configuration>
-Wrap an anycast configuration element around the queue element in the address.
-
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -52,28 +47,24 @@ Wrap an anycast configuration element around the queue element in the address.
     </address>
   </core>
 </configuration>
-Configuring an Address for Publish-Subscribe Messaging
+```
+
+## Configuring an Address for Publish-Subscribe Messaging
 
 In a publish-subscribe scenario, messages are sent to every consumer subscribed to an address. JMS topics and MQTT subscriptions are two examples of publish-subscribe messaging. An example of a publish-subscribe Assign a multicast routing type for an address so that its queues receive messages in a pubish-subscribe manner.
 
 When a message is received on an address with a multicast routing type, Apache ActiveMQ Artemis will route a copy of the message (in reality only a message reference to reduce the overhead of copying) to each queue.
 
-Publish-Subscribe
+![Point to Point](images/addressing-model-p2p.png)
 Figure 2. Publish-Subscribe
-Configuring an Address to Use the Multicast Routing Type
+
+### Configuring an Address to Use the Multicast Routing Type
+
 Open the file <broker-instance>/etc/broker.xml for editing.
 
-(Optional) Add an address configuration element if one does not exist already.
+Add an address configuration element with multicast routing type.
 
-<configuration ...>
-  <core ...>
-    ...
-    <address name="topic.foo">
-    </address>
-  </core>
-</configuration>
-Add and empty multicast configuration element to the address
-
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -82,8 +73,11 @@ Add and empty multicast configuration element to the address
     </address>
   </core>
 </configuration>
+```
+
 (Optional) Add one more queue elements to the address and wrap the multicast element around them. This step is typically not needed since the broker will automatically create a queue for each subscription requested by a client.
 
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -95,29 +89,26 @@ Add and empty multicast configuration element to the address
     </address>
   </core>
 </configration>
-Configuring a Point-to-Point Address with Two Queues
+```
+
+![Point to Point](images/addressing-model-pubsub.png)
+Figure 3. Point-to-Point with Two Queues
+
+### Configuring a Point-to-Point Address with Two Queues
 
 It is actually possible to define more than one queue on an address with an anycast routing type. When messages are received on such an address, they are firstly distributed evenly across all the defined queues. Using Fully Qualified Queue Names described later, clients are able to select the queue that they’d like to subscribe to. Should more than one consumer connect direct to a single queue, Apache ActiveMQ Artemis will take care of distributing messages between them, as in the example above.
 
-Point-to-Point with Two Queues
+![Point to Point](images/addressing-model-p2p2.png)
 Figure 3. Point-to-Point with Two Queues
-Note
+
+#### Note
 This is how Apache ActiveMQ Artemis handles load balancing of queues across multiple nodes in a cluster.
 Configuring a Point-to-Point Address with Two Queues
 Open the file <broker-instance>/etc/broker.xml for editing.
 
-(Optional) Add an address configuration element and its associated queues if they do not exist already.
+Add an address configuration with Anycast routing type element and its associated queues.
 
-<configuration ...>
-  <core ...>
-    ...
-    <address name="address.foo">
-        <queue name="q1"/>
-    </address>
-  </core>
-</configuration>
-Wrap an anycast configuration element around the queue elements in the address.
-
+```xml
 <configuration ...>
   <core ...>
     ...
@@ -129,13 +120,15 @@ Wrap an anycast configuration element around the queue elements in the address.
     </address>
   </core>
 </configuration>
-Configuring an Address to Use Point-to-Point and Publish-Subscribe
+```
+
+## Configuring an Address to Use Point-to-Point and Publish-Subscribe
 
 It is possible to define an address with both point-to-point and publish-subscribe semantics enabled. While not typically recommend, this can be useful when you want, for example, a JMS Queue say orders and a JMS Topic named orders. The different routing types make the addresses appear to be distinct.
 
 Using an example of JMS Clients, the messages sent by a JMS queue producer will be routed using the anycast routing type. Messages sent by a JMS topic producer will use the multicast routing type. In addition when a JMS topic consumer attaches it will be attached to it’s own subscription queue. JMS queue consumer will be attached to the anycast queue.
 
-Point-to-Point and Publish-Subscribe
+![Point to Point](images/addressing-model-p2p-pubsub.png)
 Figure 4. [Point-to-Point and Publish-Subscribe
 Note
 The behavior in this scenario is dependent on the protocol being used. For JMS there is a clear distinction between topic and queue producers and consumers, which make the logic straight forward. Other protocols like AMQP do not make this distinction. A message being sent via AMQP will be routed by both anycast and multicast and consumers will default to anycast. For more information, please check the behavior of each protocol in the sections on protocols.
