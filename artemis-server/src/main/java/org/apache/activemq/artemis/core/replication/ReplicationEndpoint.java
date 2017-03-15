@@ -209,7 +209,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
          ActiveMQServerLogger.LOGGER.errorHandlingReplicationPacket(e, packet);
          response = new ActiveMQExceptionMessage(ActiveMQMessageBundle.BUNDLE.replicationUnhandledError(e));
       }
-      channel.send(response);
+      channel.sendAndFlush(response);
    }
 
    /**

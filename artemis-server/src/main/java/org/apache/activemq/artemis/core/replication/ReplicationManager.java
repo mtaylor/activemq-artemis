@@ -356,7 +356,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
       synchronized (replicationLock) {
          if (enabled) {
             pendingTokens.add(repliToken);
-            replicatingChannel.send(packet);
+            replicatingChannel.sendAndFlush(packet);
          } else {
             // Already replicating channel failed, so just play the action now
             runItNow = true;
