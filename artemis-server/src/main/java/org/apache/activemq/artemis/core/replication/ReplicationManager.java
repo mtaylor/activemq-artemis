@@ -390,6 +390,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
             long now = System.currentTimeMillis();
             long deadline = now + timeout;
             while (!writable.get() && now < deadline) {
+               replicatingChannel.getConnection().flush();
                replicationLock.wait(deadline - now);
                now = System.currentTimeMillis();
             }
