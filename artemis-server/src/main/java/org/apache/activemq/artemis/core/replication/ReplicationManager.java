@@ -356,9 +356,6 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
       synchronized (replicationLock) {
          if (enabled) {
             pendingTokens.add(repliToken);
-            if (!flowControl()) {
-               return repliToken;
-            }
             replicatingChannel.send(packet);
          } else {
             // Already replicating channel failed, so just play the action now
@@ -373,43 +370,6 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
       }
 
       return repliToken;
-   }
-
-   /**
-    * This was written as a refactoring of sendReplicatePacket.
-    * In case you refactor this in any way, this method must hold a lock on replication lock. .
-    */
-   private boolean flowControl() {
-      // synchronized (replicationLock) { -- I'm not adding this because the caller already has it
-      // future maintainers of this code please be aware that the intention here is hold the lock on replication lock
-      if (!replicatingChannel.getConnection().isWritable(this)) {
-         try {
-            logger.trace("flowControl waiting on writable");
-            writable.set(false);
-            //don't wait for ever as this may hang tests etc, we've probably been closed anyway
-            long now = System.currentTimeMillis();
-            long deadline = now + timeout;
-            while (!writable.get() && now < deadline) {
-               replicationLock.wait(deadline - now);
-               now = System.currentTimeMillis();
-            }
-            logger.trace("flow control done");
-
-            if (!writable.get()) {
-               ActiveMQServerLogger.LOGGER.slowReplicationResponse();
-               logger.tracef("There was no response from replication backup after %s seconds, server being stopped now", System.currentTimeMillis() - now);
-               try {
-                  stop();
-               } catch (Exception e) {
-                  logger.warn(e.getMessage(), e);
-               }
-               return false;
-            }
-         } catch (InterruptedException e) {
-            throw new ActiveMQInterruptedException(e);
-         }
-      }
-      return true;
    }
 
    @Override
