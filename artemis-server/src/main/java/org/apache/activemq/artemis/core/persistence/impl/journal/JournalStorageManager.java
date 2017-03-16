@@ -518,6 +518,7 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
 
       // We first do a compact without any locks, to avoid copying unnecessary data over the network.
       // We do this without holding the storageManager lock, so the journal stays open while compact is being done
+      System.out.println("11111111111111111 FIRST SCHEDULE AND COMPACT");
       originalMessageJournal.scheduleCompactAndBlock(-1);
       originalBindingsJournal.scheduleCompactAndBlock(-1);
 
@@ -530,6 +531,8 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
 
       try {
          Map<SimpleString, Collection<Integer>> pageFilesToSync;
+
+         System.out.println("11111111111111111 LOCKING STORAGE MANAGER");
          storageManagerLock.writeLock().lock();
          try {
             if (isReplicated())
@@ -537,15 +540,18 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
             replicator = replicationManager;
 
             // Establishes lock
+            System.out.println("11111111111111111 LOCKING JOURNALS");
             originalMessageJournal.synchronizationLock();
             originalBindingsJournal.synchronizationLock();
 
             try {
+               System.out.println("11111111111111111 PRESEVING OLD FILES");
                originalBindingsJournal.replicationSyncPreserveOldFiles();
                originalMessageJournal.replicationSyncPreserveOldFiles();
 
                pagingManager.lock();
                try {
+                  System.out.println("11111111111111111 PREPARING JOURNALS FOR COPY");
                   pagingManager.disableCleanup();
                   messageFiles = prepareJournalForCopy(originalMessageJournal, JournalContent.MESSAGES, nodeID, autoFailBack);
                   bindingsFiles = prepareJournalForCopy(originalBindingsJournal, JournalContent.BINDINGS, nodeID, autoFailBack);
@@ -558,6 +564,8 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
                originalMessageJournal.synchronizationUnlock();
                originalBindingsJournal.synchronizationUnlock();
             }
+
+            System.out.println("11111111111111111 CREATING NEW REPLICATED JOURNALS");
             bindingsJournal = new ReplicatedJournal(((byte) 0), originalBindingsJournal, replicator);
             messageJournal = new ReplicatedJournal((byte) 1, originalMessageJournal, replicator);
 
@@ -568,14 +576,23 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
             storageManagerLock.writeLock().unlock();
          }
 
+         System.out.println("11111111111111111 SENDING MESSAGE JOURNAL FILES");
          sendJournalFile(messageFiles, JournalContent.MESSAGES);
+
+         System.out.println("11111111111111111 SENDING BINDINGS FILES");
          sendJournalFile(bindingsFiles, JournalContent.BINDINGS);
+
+         System.out.println("11111111111111111 SENDING LARGE MESSAGES");
          sendLargeMessageFiles(pendingLargeMessages);
+
+         System.out.println("11111111111111111 SENDING PAGING FILES");
          sendPagesToBackup(pageFilesToSync, pagingManager);
 
+         System.out.println("11111111111111111 LOCKING STORAGE MANAGER");
          storageManagerLock.writeLock().lock();
          try {
             if (replicator != null) {
+               System.out.println("11111111111111111 SENDING SYNC DONE");
                replicator.sendSynchronizationDone(nodeID, initialReplicationSyncTimeout);
                performCachedLargeMessageDeletes();
             }

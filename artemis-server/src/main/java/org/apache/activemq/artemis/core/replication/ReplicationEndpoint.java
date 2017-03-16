@@ -169,6 +169,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
             return;
          }
 
+         System.out.println("2222222222222 RECEIVED PACKET: " + packet.getClass().getName());
          if (type == PacketImpl.REPLICATION_APPEND) {
             handleAppendAddRecord((ReplicationAddMessage) packet);
          } else if (type == PacketImpl.REPLICATION_APPEND_TX) {

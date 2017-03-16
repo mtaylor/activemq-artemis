@@ -255,6 +255,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
 
    @Override
    public synchronized void start() throws ActiveMQException {
+      System.out.println("********************** Using Latest Version *********************");
       if (started) {
          throw new IllegalStateException("ReplicationManager is already started");
       }
@@ -597,6 +598,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
                                     AbstractJournalStorageManager.JournalContent contentType,
                                     String nodeID,
                                     boolean allowsAutoFailBack) throws ActiveMQException {
+      System.out.println("11111111111111 SENDING REPLICATION START MESSAGE");
       if (enabled)
          sendReplicatePacket(new ReplicationStartSyncMessage(datafiles, contentType, nodeID, allowsAutoFailBack));
    }
@@ -610,6 +612,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
     * @param nodeID
     */
    public void sendSynchronizationDone(String nodeID, long initialReplicationSyncTimeout) {
+      System.out.println("11111111111111 SENDING SYNC DONE MESSAGE");
       if (enabled) {
 
          if (logger.isTraceEnabled()) {
