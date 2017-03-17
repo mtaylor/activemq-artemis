@@ -559,7 +559,7 @@ public final class ChannelImpl implements Channel {
             logger.trace("ChannelImpl::flushConfirmation flushing confirmation " + confirmed);
          }
 
-         doWrite(confirmed);
+         doWrite(confirmed, true);
       }
    }
 
@@ -630,12 +630,15 @@ public final class ChannelImpl implements Channel {
    }
 
    private void doWrite(final Packet packet) {
+      doWrite(packet, false);
+   }
+
+   private void doWrite(final Packet packet, boolean flush) {
       final ActiveMQBuffer buffer = packet.encode(connection);
 
-      connection.getTransportConnection().write(buffer, false, false);
+      connection.getTransportConnection().write(buffer, flush, false);
 
       buffer.release();
-
    }
 
    private void addResendPacket(Packet packet) {

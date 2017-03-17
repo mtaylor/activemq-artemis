@@ -302,6 +302,11 @@ public class NettyConnection implements Connection {
 
             EventLoop eventLoop = channel.eventLoop();
             boolean inEventLoop = eventLoop.inEventLoop();
+
+            if (buffer.readableBytes() > channel.unsafe().outboundBuffer().bytesBeforeUnwritable()) {
+               channel.flush();
+            }
+
             if (!inEventLoop) {
                if (futureListener != null) {
                   channel.writeAndFlush(buf, promise).addListener(futureListener);
@@ -333,6 +338,9 @@ public class NettyConnection implements Connection {
                      boolean ok = promise.await(10000);
 
                      if (!ok) {
+                        System.out.println("Bytes before unwritable: " + channel.unsafe().outboundBuffer().bytesBeforeUnwritable());
+                        System.out.println("Bytes before writable: " + channel.unsafe().outboundBuffer().bytesBeforeWritable());
+                        System.out.println("Pending bytes: " + channel.unsafe().outboundBuffer().totalPendingWriteBytes());
                         ActiveMQClientLogger.LOGGER.timeoutFlushingPacket();
                      }
 
