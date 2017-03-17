@@ -396,17 +396,6 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
                now = System.currentTimeMillis();
             }
             logger.trace("flow control done");
-
-            if (!writable.get()) {
-               ActiveMQServerLogger.LOGGER.slowReplicationResponse();
-               logger.tracef("There was no response from replication backup after %s seconds, server being stopped now", System.currentTimeMillis() - now);
-               try {
-                  stop();
-               } catch (Exception e) {
-                  logger.warn(e.getMessage(), e);
-               }
-               return false;
-            }
          } catch (InterruptedException e) {
             throw new ActiveMQInterruptedException(e);
          }

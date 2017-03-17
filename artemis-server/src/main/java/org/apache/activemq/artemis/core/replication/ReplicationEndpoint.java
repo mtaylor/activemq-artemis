@@ -157,6 +157,8 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       if (logger.isTraceEnabled()) {
          logger.trace("handlePacket::handling " + packet);
       }
+
+
       PacketImpl response = new ReplicationResponseMessage();
       final byte type = packet.getType();
 
