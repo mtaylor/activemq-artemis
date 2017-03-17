@@ -357,11 +357,11 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
       synchronized (replicationLock) {
          if (enabled) {
             pendingTokens.add(repliToken);
-            if (!flowControl()) {
-               System.out.println("Unable to send: " + packet.toString() + " Blocked flow control");
-               return repliToken;
+
+            while (!writable.get()) {
             }
-            replicatingChannel.send(packet);
+
+            replicatingChannel.sendAndFlush(packet);
          } else {
             // Already replicating channel failed, so just play the action now
             runItNow = true;
@@ -392,7 +392,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
             long now = System.currentTimeMillis();
             long deadline = now + 30000;
             while (!writable.get() && now < deadline) {
-               replicationLock.wait(deadline - now);
+               replicationLock.wait();
                now = System.currentTimeMillis();
             }
             logger.trace("flow control done");

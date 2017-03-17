@@ -563,6 +563,7 @@ public final class ChannelImpl implements Channel {
       }
    }
 
+
    @Override
    public void confirm(final Packet packet) {
       if (resendCache != null && packet.isRequiresConfirmations()) {
