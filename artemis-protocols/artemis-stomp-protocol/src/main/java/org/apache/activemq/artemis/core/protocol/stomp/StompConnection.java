@@ -743,4 +743,9 @@ public final class StompConnection implements RemotingConnection {
    public boolean isSupportsFlowControl() {
       return false;
    }
+
+   @Override
+   public void flushTransport() {
+      getTransportConnection().flush();
+   }
 }

@@ -231,4 +231,9 @@ public class MQTTConnection implements RemotingConnection {
    public boolean isSupportsFlowControl() {
       return false;
    }
+
+   @Override
+   public void flushTransport() {
+      getTransportConnection().flush();
+   }
 }

@@ -208,4 +208,7 @@ public interface RemotingConnection extends BufferHandler {
     * @return
     */
    boolean isSupportsFlowControl();
+
+   void flushTransport();
+
 }

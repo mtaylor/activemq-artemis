@@ -255,6 +255,11 @@ public class NettyConnection implements Connection {
    }
 
    @Override
+   public void flush() {
+      channel.flush();
+   }
+
+   @Override
    public void write(ActiveMQBuffer buffer,
                      final boolean flush,
                      final boolean batched,

@@ -163,6 +163,14 @@ public class InVMConnection implements Connection {
       return id;
    }
 
+   /**
+    * Flush the connection
+    */
+   @Override
+   public void flush() {
+
+   }
+
    @Override
    public void checkFlushBatchBuffer() {
    }

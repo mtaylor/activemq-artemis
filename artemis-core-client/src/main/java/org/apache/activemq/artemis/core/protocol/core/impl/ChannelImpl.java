@@ -572,7 +572,7 @@ public final class ChannelImpl implements Channel {
          if (logger.isTraceEnabled()) {
             logger.trace("ChannelImpl::confirming packet " + packet + " last commandID=" + lastConfirmedCommandID);
          }
-
+R
          receivedBytes += packet.getPacketSize();
 
          if (receivedBytes >= confWindowSize) {

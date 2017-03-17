@@ -358,7 +358,14 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
          if (enabled) {
             pendingTokens.add(repliToken);
 
-            while (!writable.get()) {
+            try {
+               while (!writable.get()) {
+                  replicatingChannel.getConnection().flushTransport();
+                  wait();
+               }
+            }
+            catch (InterruptedException e) {
+               System.out.println("Interrupted");
             }
 
             replicatingChannel.sendAndFlush(packet);

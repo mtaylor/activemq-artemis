@@ -59,6 +59,11 @@ public interface Connection {
    Object getID();
 
    /**
+    * Flush the connection
+    */
+   void flush();
+
+   /**
     * writes the buffer to the connection and if flush is true returns only when the buffer has been physically written to the connection.
     *
     * @param buffer  the buffer to write

@@ -77,6 +77,11 @@ public abstract class AbstractRemotingConnection implements RemotingConnection {
       }
    }
 
+   @Override
+   public void flushTransport() {
+      getTransportConnection().flush();
+   }
+
    protected void callClosingListeners() {
       final List<CloseListener> listenersClone = new ArrayList<>(closeListeners);
 
