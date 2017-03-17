@@ -488,6 +488,7 @@ public class JournalStorageManager extends AbstractJournalStorageManager {
          if (!started)
             return;
          replicator.syncJournalFile(jf, type);
+         Thread.sleep(5000);
       }
    }
 

@@ -396,6 +396,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
                now = System.currentTimeMillis();
             }
             logger.trace("flow control done");
+
          } catch (InterruptedException e) {
             throw new ActiveMQInterruptedException(e);
          }
