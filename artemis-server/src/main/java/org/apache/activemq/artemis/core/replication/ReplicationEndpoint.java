@@ -196,6 +196,8 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
             handleLargeMessageEnd((ReplicationLargeMessageEndMessage) packet);
          } else if (type == PacketImpl.REPLICATION_START_FINISH_SYNC) {
             response = handleStartReplicationSynchronization((ReplicationStartSyncMessage) packet);
+            channel.sendAndFlush(response);
+            return;
          } else if (type == PacketImpl.REPLICATION_SYNC_FILE) {
             handleReplicationSynchronization((ReplicationSyncFileMessage) packet);
          } else if (type == PacketImpl.REPLICATION_SCHEDULED_FAILOVER) {

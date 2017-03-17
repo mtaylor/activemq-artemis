@@ -358,6 +358,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
          if (enabled) {
             pendingTokens.add(repliToken);
             if (!flowControl()) {
+               System.out.println("Unable to send: " + packet.toString() + " Blocked flow control");
                return repliToken;
             }
             replicatingChannel.send(packet);
@@ -389,9 +390,8 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
             writable.set(false);
             //don't wait for ever as this may hang tests etc, we've probably been closed anyway
             long now = System.currentTimeMillis();
-            long deadline = now + timeout;
+            long deadline = now + 30000;
             while (!writable.get() && now < deadline) {
-               replicatingChannel.getConnection().flush();
                replicationLock.wait(deadline - now);
                now = System.currentTimeMillis();
             }
@@ -464,8 +464,11 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
          if (packet.getType() == PacketImpl.REPLICATION_RESPONSE || packet.getType() == PacketImpl.REPLICATION_RESPONSE_V2) {
             replicated();
             if (packet.getType() == PacketImpl.REPLICATION_RESPONSE_V2) {
+               System.out.println("RECEIVED REPLICATION RESPONSE V2");
                ReplicationResponseMessageV2 replicationResponseMessage = (ReplicationResponseMessageV2) packet;
                if (replicationResponseMessage.isSynchronizationIsFinishedAcknowledgement()) {
+                  System.out.println("SYNC FINIDHED");
+                  System.out.println("Sync finished count: " + synchronizationIsFinishedAcknowledgement.getCount());
                   synchronizationIsFinishedAcknowledgement.countDown();
                }
             }
@@ -609,7 +612,7 @@ public final class ReplicationManager implements ActiveMQComponent, ReadyListene
             logger.trace("sendSynchronizationDone ::" + nodeID + ", " + initialReplicationSyncTimeout);
          }
 
-         synchronizationIsFinishedAcknowledgement.countUp();
+         synchronizationIsFinishedAcknowledgement.setCount(1);
          sendReplicatePacket(new ReplicationStartSyncMessage(nodeID));
          try {
             if (!synchronizationIsFinishedAcknowledgement.await(initialReplicationSyncTimeout)) {

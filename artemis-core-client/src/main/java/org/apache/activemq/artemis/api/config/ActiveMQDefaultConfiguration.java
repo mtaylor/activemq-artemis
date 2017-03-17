@@ -388,7 +388,7 @@ public final class ActiveMQDefaultConfiguration {
    private static boolean DEFAULT_ALLOW_AUTO_FAILBACK = true;
 
    // When a replica comes online this is how long the replicating server will wait for a confirmation from the replica that the replication synchronization process is complete
-   private static long DEFAULT_INITIAL_REPLICATION_SYNC_TIMEOUT = 30000;
+   private static long DEFAULT_INITIAL_REPLICATION_SYNC_TIMEOUT = 90000;
 
    // Will this backup server come live on a normal server shutdown
    private static boolean DEFAULT_FAILOVER_ON_SERVER_SHUTDOWN = false;
