@@ -63,6 +63,8 @@ public class InVMConnection implements Connection {
 
    private RemotingConnection protocolConnection;
 
+   private boolean bufferPoolingEnabled = TransportConstants.DEFAULT_BUFFER_POOLING;
+
    public InVMConnection(final int serverID,
                          final BufferHandler handler,
                          final BaseConnectionLifeCycleListener listener,
@@ -95,6 +97,10 @@ public class InVMConnection implements Connection {
       this.executor = executor;
 
       this.defaultActiveMQPrincipal = defaultActiveMQPrincipal;
+   }
+
+   public void setEnableBufferPooling(boolean enableBufferPooling) {
+      this.bufferPoolingEnabled = enableBufferPooling;
    }
 
    @Override
@@ -151,7 +157,7 @@ public class InVMConnection implements Connection {
 
    @Override
    public ActiveMQBuffer createTransportBuffer(final int size, boolean pooled) {
-      if ( pooled ) {
+      if ( pooled && bufferPoolingEnabled) {
          return ActiveMQBuffers.pooledBuffer( size );
       } else {
          return ActiveMQBuffers.dynamicBuffer( size );
@@ -183,7 +189,7 @@ public class InVMConnection implements Connection {
                      final boolean batch,
                      final ChannelFutureListener futureListener) {
 
-      final ActiveMQBuffer copied = ActiveMQBuffers.pooledBuffer(buffer.capacity());
+      final ActiveMQBuffer copied = createTransportBuffer(buffer.capacity(), true);
       int read = buffer.readerIndex();
       int writ = buffer.writerIndex();
       copied.writeBytes(buffer,read,writ - read);
