@@ -19,8 +19,9 @@ package org.apache.activemq.artemis.api.core;
 import java.nio.ByteBuffer;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
 
 /**
@@ -29,7 +30,7 @@ import org.apache.activemq.artemis.core.buffers.impl.ChannelBufferWrapper;
 public final class ActiveMQBuffers {
 
 
-   private static final PooledByteBufAllocator ALLOCATOR = PooledByteBufAllocator.DEFAULT;
+   private static final ByteBufAllocator ALLOCATOR = UnpooledByteBufAllocator.DEFAULT;
 
    /**
     * Creates a <em>self-expanding</em> ActiveMQBuffer with the given initial size
