@@ -97,5 +97,13 @@ under the License.
          </security-setting>
       </security-settings>
 
+      <addresses>
+         <address name="exampleQueue">
+            <anycast>
+               <queue name="exampleQueue"/>
+            </anycast>
+         </address>
+      </addresses>
+
    </core>
 </configuration>
