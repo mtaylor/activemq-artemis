@@ -1963,7 +1963,7 @@ public class JournalImpl extends JournalBase implements TestableJournal, Journal
    }
 
    private void checkCompact() throws Exception {
-      if (compactMinFiles == 0) {
+      if (true) {
          // compacting is disabled
          return;
       }
