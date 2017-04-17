@@ -103,13 +103,16 @@ public abstract class AbstractJDBCDriver {
       if (connection == null) {
          if (dataSource != null) {
             try {
+               System.out.println("Using connection from DataSource");
                connection = dataSource.getConnection();
             } catch (SQLException e) {
                logger.error(JDBCUtils.appendSQLExceptionDetails(new StringBuilder(), e));
+               System.out.println("Error with datasource");
                throw e;
             }
          } else {
             try {
+               System.out.println("Using connection outside datasource");
                if (jdbcDriverClass == null || jdbcDriverClass.isEmpty()) {
                   throw new IllegalStateException("jdbcDriverClass is null or empty!");
                }
