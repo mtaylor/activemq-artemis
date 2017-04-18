@@ -30,9 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.ActiveMQExceptionType;
-import org.apache.activemq.artemis.api.core.ActiveMQIOErrorException;
 import org.apache.activemq.artemis.core.io.IOCriticalErrorListener;
 import org.apache.activemq.artemis.core.io.SequentialFileFactory;
 import org.apache.activemq.artemis.core.journal.EncodingSupport;
@@ -180,7 +178,6 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
       TransactionHolder holder;
 
       try {
-
          connection.setAutoCommit(false);
 
          for (JDBCJournalRecord record : recordRef) {
@@ -210,23 +207,25 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
                   // Default we add a new record to the DB
                   record.writeRecord(insertJournalRecords);
                   break;
-               }
             }
+         }
 
-            insertJournalRecords.executeBatch();
-            deleteJournalRecords.executeBatch();
-            deleteJournalTxRecords.executeBatch();
+         insertJournalRecords.executeBatch();
+         deleteJournalRecords.executeBatch();
+         deleteJournalTxRecords.executeBatch();
 
-            connection.commit();
+         connection.commit();
 
-            cleanupTxRecords(deletedRecords, committedTransactions);
-            executeCallbacks(recordRef, true);
+         cleanupTxRecords(deletedRecords, committedTransactions);
+         executeCallbacks(recordRef, true);
 
-            return recordRef.size();
+         return recordRef.size();
 
       } catch (Exception e) {
          criticalIOErrorListener.onIOException(e, "Critical IO Error.  Failed to process JDBC Record statements", null);
+         started = false;
          executeCallbacks(recordRef, false);
+         performRollback(recordRef);
          return 0;
       }
    }
@@ -300,14 +299,13 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
    }
 
    private void appendRecord(JDBCJournalRecord record) throws Exception {
+
+      record.storeLineUp();
       if (!started) {
          if (record.getIoCompletion() != null) {
             record.getIoCompletion().onError(ActiveMQExceptionType.IO_ERROR.getCode(), "JDBC Journal not started");
-            throw new Exception("JDBC Journal not started");
          }
       }
-
-      record.storeLineUp();
 
       SimpleWaitIOCallback callback = null;
       if (record.isSync() && record.getIoCompletion() == null) {
