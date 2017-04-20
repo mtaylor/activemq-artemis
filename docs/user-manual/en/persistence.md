@@ -298,9 +298,9 @@ The message journal is configured using the following attributes in
     data files on the journal
 
     The default for this parameter is `30`
-    
+
 -   `journal-datasync` (default: true)
-    
+
     This will disable the use of fdatasync on journal writes.
 
 ### An important note on disabling disk write cache.
@@ -424,6 +424,12 @@ To configure Apache ActiveMQ Artemis to use a database for persisting messages a
 
     The fully qualified class name of the desired database Driver.
 
+-   `jdbc-network-timeout`
+
+    The JDBC network connection timeout in milliseconds. The default value
+    is 30000 milliseconds (ie 30 seconds).
+
+Note that some DBMS (e.g. Oracle, 30 chars) have restrictions on the size of table names, this should be taken into consideration when configuring table names for the Artemis database store, pay particular attention to the page store table name, which can be appended with a unique ID of up to 20 characters.  (for Oracle this would mean configuring a page-store-table-name of max size of 10 chars).
 
 ## Configuring Apache ActiveMQ Artemis for Zero Persistence
 
