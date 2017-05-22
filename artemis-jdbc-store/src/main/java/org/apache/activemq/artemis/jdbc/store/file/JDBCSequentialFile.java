@@ -316,6 +316,8 @@ public class JDBCSequentialFile implements SequentialFile {
 
    @Override
    public long size() throws Exception {
+      fileFactory.getDbDriver().loadFile(this);
+      System.out.println("############### Size of file: " + writePosition);
       return writePosition;
    }
 
