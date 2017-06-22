@@ -66,10 +66,6 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
 
    private PreparedStatement countJournalRecords;
 
-   private PreparedStatement deleteJournalRecords;
-
-   private PreparedStatement deleteJournalTxRecords;
-
    private boolean started;
 
    private AtomicBoolean failed = new AtomicBoolean(false);
@@ -136,8 +132,6 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
       insertJournalRecords = connection.prepareStatement(sqlProvider.getInsertJournalRecordsSQL());
       selectJournalRecords = connection.prepareStatement(sqlProvider.getSelectJournalRecordsSQL());
       countJournalRecords = connection.prepareStatement(sqlProvider.getCountJournalRecordsSQL());
-      deleteJournalRecords = connection.prepareStatement(sqlProvider.getDeleteJournalRecordsSQL());
-      deleteJournalTxRecords = connection.prepareStatement(sqlProvider.getDeleteJournalTxRecordsSQL());
    }
 
    @Override
@@ -176,7 +170,6 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
          return 0;
       }
 
-
       // We keep a list of deleted records and committed tx (used for cleaning up old transaction data).
       List<Long> deletedRecords = new ArrayList<>();
       List<Long> committedTransactions = new ArrayList<>();
@@ -191,41 +184,10 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
             if (logger.isTraceEnabled()) {
                logger.trace("sync::preparing JDBC statment for " + record);
             }
-
-
-
-            switch (record.getRecordType()) {
-               case JDBCJournalRecord.DELETE_RECORD:
-                  // Standard SQL Delete Record, Non transactional delete
-                  deletedRecords.add(record.getId());
-                  record.writeDeleteRecord(deleteJournalRecords);
-                  break;
-               case JDBCJournalRecord.ROLLBACK_RECORD:
-                  // Roll back we remove all records associated with this TX ID.  This query is always performed last.
-                  deleteJournalTxRecords.setLong(1, record.getTxId());
-                  deleteJournalTxRecords.addBatch();
-                  break;
-               case JDBCJournalRecord.COMMIT_RECORD:
-                  // We perform all the deletes and add the commit record in the same Database TX
-                  holder = transactions.get(record.getTxId());
-                  for (RecordInfo info : holder.recordsToDelete) {
-                     deletedRecords.add(record.getId());
-                     deleteJournalRecords.setLong(1, info.id);
-                     deleteJournalRecords.addBatch();
-                  }
-                  record.writeRecord(insertJournalRecords);
-                  committedTransactions.add(record.getTxId());
-                  break;
-               default:
-                  // Default we add a new record to the DB
-                  record.writeRecord(insertJournalRecords);
-                  break;
-            }
+            record.writeRecord(insertJournalRecords);
          }
 
          insertJournalRecords.executeBatch();
-         deleteJournalRecords.executeBatch();
-         deleteJournalTxRecords.executeBatch();
 
          connection.commit();
          if (logger.isTraceEnabled()) {
@@ -294,8 +256,6 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
          }
 
          if (h.recordInfos.isEmpty() && h.committed) {
-            deleteJournalTxRecords.setLong(1, h.transactionID);
-            deleteJournalTxRecords.addBatch();
             transactions.remove(h.transactionID);
          }
       }
