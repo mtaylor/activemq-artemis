@@ -284,7 +284,7 @@ public class JDBCSequentialFile implements SequentialFile {
    @Override
    public void close() throws Exception {
       isOpen.set(false);
-      //sync();
+      sync();
       fileFactory.sequentialFileClosed(this);
    }
 
