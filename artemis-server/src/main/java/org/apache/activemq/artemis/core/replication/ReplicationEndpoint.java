@@ -329,7 +329,7 @@ public final class ReplicationEndpoint implements ChannelHandler, ActiveMQCompon
       this.channel = channel;
    }
 
-   private void finishSynchronization(String liveID) throws Exception {
+   private synchronized void finishSynchronization(String liveID) throws Exception {
       if (logger.isTraceEnabled()) {
          logger.trace("finishSynchronization::" + liveID);
       }
