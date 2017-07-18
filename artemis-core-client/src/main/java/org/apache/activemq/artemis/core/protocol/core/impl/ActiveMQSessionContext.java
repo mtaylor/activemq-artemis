@@ -815,6 +815,7 @@ public class ActiveMQSessionContext extends SessionContext {
          final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(elapsedFlowControl);
          ActiveMQClientLogger.LOGGER.timeoutStreamingLargeMessage();
          logger.debug("try to write " + expectedEncodeSize + " bytes after blocked " + elapsedMillis + " ms on a not writable connection: [" + connection.getID() + "]");
+         return 0;
       }
       if (requiresResponse) {
          // When sending it blocking, only the last chunk will be blocking.
