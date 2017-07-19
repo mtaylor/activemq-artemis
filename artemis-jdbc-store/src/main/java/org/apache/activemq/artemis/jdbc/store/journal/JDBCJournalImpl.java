@@ -357,15 +357,10 @@ public class JDBCJournalImpl extends AbstractJDBCDriver implements Journal {
          record.setIoCompletion(callback);
       }
 
-      synchronized (this) {
-         if (record.isTransactional() || record.getRecordType() == JDBCJournalRecord.PREPARE_RECORD) {
-            addTxRecord(record);
-         }
-
-         synchronized (records) {
-            records.add(record);
-         }
+      if (record.isTransactional() || record.getRecordType() == JDBCJournalRecord.PREPARE_RECORD) {
+         addTxRecord(record);
       }
+      records.add(record);
 
       syncTimer.delay();
       if (callback != null) callback.waitCompletion();
