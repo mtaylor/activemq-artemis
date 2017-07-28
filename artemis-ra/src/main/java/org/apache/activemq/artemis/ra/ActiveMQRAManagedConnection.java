@@ -255,7 +255,7 @@ public final class ActiveMQRAManagedConnection implements ManagedConnection, Exc
       }
 
       try {
-         connectionFactory.close();
+         connection.close();
       } catch (Exception e) {
          logger.debug(e.getMessage(), e);
       }
