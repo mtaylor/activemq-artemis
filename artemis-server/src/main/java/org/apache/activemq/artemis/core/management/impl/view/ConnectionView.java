@@ -17,6 +17,7 @@
 package org.apache.activemq.artemis.core.management.impl.view;
 
 import javax.json.JsonObjectBuilder;
+import java.util.Date;
 
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
@@ -27,6 +28,7 @@ public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
    private static final String defaultSortColumn = "creationTime";
 
    private final ActiveMQServer server;
+
 
    public ConnectionView(ActiveMQServer server) {
       super();
@@ -40,11 +42,16 @@ public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
 
    @Override
    public JsonObjectBuilder toJson(RemotingConnection connection) {
+
       return JsonLoader.createObjectBuilder()
-         .add("connectionID", connection.getID().toString())
-         .add("clientAddress", connection.getRemoteAddress())
-         .add("creationTime", connection.getCreationTime())
-         .add("implementation", connection.getClass().getSimpleName())
+         .add("connectionID", toString(connection.getID()))
+         .add("remoteAddress", toString(connection.getRemoteAddress()))
+         .add("username", "Coming soon")
+         .add("createdAt", new Date(connection.getCreationTime()).toString())
+         .add("implementation", toString(toString(connection.getClass().getSimpleName())))
+         .add("protocol", toString(connection.getProtocolName()))
+         .add("clientID", toString(connection.getClientID()))
+         .add("localAddress", toString(connection.getTransportConnection().getLocalAddress()))
          .add("sessionCount", server.getSessions(connection.getID().toString()).size());
    }
 
