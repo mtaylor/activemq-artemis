@@ -26,6 +26,7 @@ import org.apache.activemq.artemis.core.client.ActiveMQClientLogger;
 import org.apache.activemq.artemis.protocol.amqp.proton.AMQPConnectionContext;
 import org.apache.activemq.artemis.protocol.amqp.proton.AmqpSupport;
 import org.apache.activemq.artemis.spi.core.protocol.AbstractRemotingConnection;
+import org.apache.activemq.artemis.spi.core.protocol.ProtocolManagerFactory;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 
@@ -147,5 +148,20 @@ public class ActiveMQProtonRemotingConnection extends AbstractRemotingConnection
    @Override
    public void killMessage(SimpleString nodeID) {
       //unsupported
+   }
+
+   /**
+    * Returns the name of the protocol for this Remoting Connection
+    *
+    * @return
+    */
+   @Override
+   public String getProtocolName() {
+      return ProtonProtocolManagerFactory.AMQP_PROTOCOL_NAME;
+   }
+
+   @Override
+   public String getClientID() {
+      return amqpConnection.getContainer();
    }
 }
