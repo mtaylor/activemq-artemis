@@ -25,13 +25,15 @@ import java.util.List;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import org.apache.activemq.artemis.core.management.impl.view.predicate.ActiveMQFilterPredicate;
+import org.apache.activemq.artemis.core.management.impl.view.predicate.SessionFilterPredicate;
 import org.apache.activemq.artemis.utils.JsonLoader;
 
 public abstract class ActiveMQAbstractView<T> {
 
    protected Collection<T> collection;
 
-   protected ActiveMQPredicate<T> predicate;
+   protected ActiveMQFilterPredicate<T> predicate;
 
    protected String sortColumn;
 

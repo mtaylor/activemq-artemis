@@ -1080,5 +1080,10 @@ public interface ActiveMQServerControl {
    String listConnections(@Parameter(name = "Filter String") String filter,
                           @Parameter(name = "Page Number") int page,
                           @Parameter(name = "Page Size") int pageSize) throws Exception;
+
+   @Operation(desc = "Search for Sessions", impact = MBeanOperationInfo.INFO)
+   String listSessions(@Parameter(name = "Filter String") String filter,
+                       @Parameter(name = "Page Number") int page,
+                       @Parameter(name = "Page Size") int pageSize) throws Exception;
 }
 

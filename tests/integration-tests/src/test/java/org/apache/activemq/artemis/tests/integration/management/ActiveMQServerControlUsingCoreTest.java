@@ -887,6 +887,13 @@ public class ActiveMQServerControlUsingCoreTest extends ActiveMQServerControlTes
          public String listConnections(String filter, int page, int pageSize) throws Exception {
             return (String) proxy.invokeOperation("listAddresses", filter, page, pageSize);
          }
+
+         @Override
+         public String listSessions(@Parameter(name = "Filter String") String filter,
+                                    @Parameter(name = "Page Number") int page,
+                                    @Parameter(name = "Page Size") int pageSize) throws Exception {
+            return null;
+         }
       };
    }
 

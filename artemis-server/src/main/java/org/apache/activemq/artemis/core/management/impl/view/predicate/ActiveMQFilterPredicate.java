@@ -14,14 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.artemis.core.management.impl.view;
+package org.apache.activemq.artemis.core.management.impl.view.predicate;
 
 import com.google.common.base.Predicate;
 
-public class ActiveMQPredicate<T> implements Predicate {
+public class ActiveMQFilterPredicate<T> implements Predicate<T> {
+
+   protected final String filter;
+
+   public ActiveMQFilterPredicate(String filter) {
+      this.filter = filter;
+   }
 
    @Override
-   public boolean apply(Object input) {
+   public boolean apply(T input) {
       return true;
    }
 }
