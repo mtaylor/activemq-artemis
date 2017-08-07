@@ -113,6 +113,9 @@ var ARTEMIS = (function(ARTEMIS) {
          })
          .when('/artemis/connections', {
             templateUrl: ARTEMIS.templatePath + 'connections.html'
+         })
+         .when('/artemis/sessions', {
+           templateUrl: ARTEMIS.templatePath + 'sessions.html'
          });
    });
 
@@ -216,19 +219,27 @@ var ARTEMIS = (function(ARTEMIS) {
       href: function () { return "#/artemis/sendMessage"; }
       });
 
-      workspace.subLevelTabs.push({
-          content: '<i class="icon-picture"></i> Diagram',
-          title: "View a diagram of the producers, destinations and consumers",
-          isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
-          href: function () { return "#/artemis/diagram"; }
-      });
-
        workspace.subLevelTabs.push({
            content: '<i class="icon-signal"></i> Connections',
            title: "Manage Connections",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/connections"; }
        });
+
+       workspace.subLevelTabs.push({
+           content: '<i class="icon-tasks"></i> Sessions',
+           title: "Manage Sessions",
+           isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
+           href: function () { return "#/artemis/sessions"; }
+       });
+
+
+       workspace.subLevelTabs.push({
+          content: '<i class="icon-picture"></i> Diagram',
+          title: "View a diagram of the producers, destinations and consumers",
+          isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
+          href: function () { return "#/artemis/diagram"; }
+      });
 });
 
 

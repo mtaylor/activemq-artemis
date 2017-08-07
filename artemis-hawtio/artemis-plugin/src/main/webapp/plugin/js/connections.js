@@ -53,8 +53,18 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             },
             {
-                field: 'clientAddress',
-                displayName: 'Client Address',
+                field: 'clientID',
+                displayName: 'Client ID',
+                width: '*'
+            },
+            {
+                field: 'username',
+                displayName: 'User',
+                width: '*'
+            },
+            {
+                field: 'protocol',
+                displayName: 'Protocol',
                 width: '*'
             },
             {
@@ -63,8 +73,13 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             },
             {
-                field: 'implementation',
-                displayName: 'Implementation',
+                field: 'remoteAddress',
+                displayName: 'Remote Address',
+                width: '*'
+            },
+            {
+                field: 'localAddress',
+                displayName: 'Local Address',
                 width: '*'
             },
             {

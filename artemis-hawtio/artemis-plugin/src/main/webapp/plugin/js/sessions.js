@@ -19,12 +19,12 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ConnectionsController = function ($scope, workspace, ARTEMISService, jolokia, localStorage) {
+    ARTEMIS.SessionsController = function ($scope, workspace, ARTEMISService, jolokia, localStorage) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
         $scope.workspace = workspace;
-        $scope.connections = [];
+        $scope.sessions = [];
         $scope.totalServerItems = 0;
         $scope.pagingOptions = {
             pageSizes: [50, 100, 200],
@@ -48,23 +48,18 @@ var ARTEMIS = (function(ARTEMIS) {
         var refreshed = false;
         var attributes = [
             {
-                field: 'connectionID',
+                field: 'sessionID',
                 displayName: 'ID',
                 width: '*'
             },
             {
-                field: 'clientAddress',
-                displayName: 'Client Address',
+                field: 'connectionID',
+                displayName: 'Connection ID',
                 width: '*'
             },
             {
-                field: 'sessionCount',
-                displayName: 'Session Count',
-                width: '*'
-            },
-            {
-                field: 'implementation',
-                displayName: 'Implementation',
+                field: 'consumerCount',
+                displayName: 'Consumer Count',
                 width: '*'
             },
             {
@@ -76,7 +71,7 @@ var ARTEMIS = (function(ARTEMIS) {
 
         $scope.gridOptions = {
             selectedItems: [],
-            data: 'connections',
+            data: 'sessions',
             showFooter: true,
             showFilter: true,
             showColumnMenu: true,
@@ -112,19 +107,19 @@ var ARTEMIS = (function(ARTEMIS) {
             $scope.connectionFilter.sortOrder = $scope.sortOptions.directions[0];
             var mbean = getBrokerMBean(jolokia);
             if (mbean) {
-                var method = 'listConnections(java.lang.String, int, int)';
+                var method = 'listSessions(java.lang.String, int, int)';
                 jolokia.request({ type: 'exec', mbean: mbean, operation: method, arguments: [JSON.stringify($scope.connectionFilter), $scope.pagingOptions.currentPage, $scope.pagingOptions.pageSize] }, onSuccess(populateTable, { error: onError }));
             }
         };
         function onError() {
-            Core.notification("error", "Could not retrieve connection list from broker.");
+            Core.notification("error", "Could not retrieve session list from broker.");
             $scope.workspace.selectParentNode();
         }
         function populateTable(response) {
             var data = JSON.parse(response.value);
-            $scope.connections = [];
+            $scope.sessions = [];
             angular.forEach(data, function (value, idx) {
-                $scope.connections.push(value);
+                $scope.sessions.push(value);
             });
             $scope.totalServerItems = data["count"];
             if (refreshed == true) {
