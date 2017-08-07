@@ -1,0 +1,55 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.activemq.artemis.core.management.impl.view;
+
+import javax.json.JsonObjectBuilder;
+
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
+import org.apache.activemq.artemis.utils.JsonLoader;
+
+public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
+
+   private static final String defaultSortColumn = "creationTime";
+
+   private final ActiveMQServer server;
+
+   public ConnectionView(ActiveMQServer server) {
+      super();
+      this.server = server;
+   }
+
+   @Override
+   public Class getClassT() {
+      return RemotingConnection.class;
+   }
+
+   @Override
+   public JsonObjectBuilder toJson(RemotingConnection connection) {
+      return JsonLoader.createObjectBuilder()
+         .add("connectionID", connection.getID().toString())
+         .add("clientAddress", connection.getRemoteAddress())
+         .add("creationTime", connection.getCreationTime())
+         .add("implementation", connection.getClass().getSimpleName())
+         .add("sessionCount", server.getSessions(connection.getID().toString()).size());
+   }
+
+   @Override
+   public String getDefaultOrderColumn() {
+      return defaultSortColumn;
+   }
+}

@@ -882,6 +882,11 @@ public class ActiveMQServerControlUsingCoreTest extends ActiveMQServerControlTes
          public String listAddresses(@Parameter(name = "separator", desc = "Separator used on the string listing") String separator) throws Exception {
             return (String) proxy.invokeOperation("listAddresses", separator);
          }
+
+         @Override
+         public String listConnections(String filter, int page, int pageSize) throws Exception {
+            return (String) proxy.invokeOperation("listAddresses", filter, page, pageSize);
+         }
       };
    }
 
