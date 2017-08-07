@@ -110,6 +110,9 @@ var ARTEMIS = (function(ARTEMIS) {
          })
          .when('/artemis/sendMessage', {
             templateUrl: ARTEMIS.templatePath + 'sendMessage.html'
+         })
+         .when('/artemis/connections', {
+            templateUrl: ARTEMIS.templatePath + 'connections.html'
          });
    });
 
@@ -219,6 +222,13 @@ var ARTEMIS = (function(ARTEMIS) {
           isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
           href: function () { return "#/artemis/diagram"; }
       });
+
+       workspace.subLevelTabs.push({
+           content: '<i class="icon-signal"></i> Connections',
+           title: "Manage Connections",
+           isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
+           href: function () { return "#/artemis/connections"; }
+       });
 });
 
 
@@ -229,7 +239,7 @@ var ARTEMIS = (function(ARTEMIS) {
    function isAddressFolder(workspace, domain) {
       return workspace.selectionHasDomainAndLastFolderName(domain, 'addresses');
    }
-                                                                                          
+
    function isAddress(workspace, domain) {
       return workspace.hasDomainAndProperties(domain, {'component': 'addresses'}) && !workspace.hasDomainAndProperties(domain, {'subcomponent': 'queues'});
    }
