@@ -23,29 +23,8 @@ var ARTEMIS = (function(ARTEMIS) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
-        $scope.workspace = workspace;
-        $scope.connections = [];
-        $scope.totalServerItems = 0;
-        $scope.pagingOptions = {
-            pageSizes: [50, 100, 200],
-            pageSize: 100,
-            currentPage: 1
-        };
-        $scope.connectionFilter = {
-            name: '',
-            filter: '',
-            sortColumn: '',
-            sortOrder: ''
-        };
-        $scope.connectionFilterOptions = [
-            { id: "noConsumer", name: "No Consumer" }
-        ];
-        $scope.connectionFilter;
-        $scope.sortOptions = {
-            fields: ["name"],
-            directions: ["asc"]
-        };
-        var refreshed = false;
+        var objectType = "connection"
+        var method = 'listConnections(java.lang.String, int, int)';
         var attributes = [
             {
                 field: 'connectionID',
@@ -58,8 +37,8 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             },
             {
-                field: 'username',
-                displayName: 'User',
+                field: 'users',
+                displayName: 'Users',
                 width: '*'
             },
             {
@@ -88,10 +67,47 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             }
         ];
+        $scope.filter = {
+            fieldOptions: [
+                {id: 'ID', name: 'ID'},
+                {id: 'CLIENT_ID', name: 'Client ID'},
+                {id: 'USERS', name: 'Users'},
+                {id: 'PROTOCOL', name: 'Protocol'},
+                {id: 'SESSION_COUNT', name: 'Session Count'},
+                {id: 'REMOTE_ADDRESS', name: 'Remote Address'},
+                {id: 'LOCAL_ADDRESS', name: 'Local Address'},
+                {id: 'SESSION_ID', name: 'Session ID'}
+            ],
+            operationOptions: [
+                {id: 'EQUALS', name: 'Equals'},
+                {id: 'CONTAINS', name: 'Contains'}
+            ],
+            values: {
+                field: "",
+                operation: "",
+                value: "",
+                sortOrder: "asc",
+                sortBy: "ID"
+            }
+        }
+
+        $scope.workspace = workspace;
+        $scope.objects = [];
+        $scope.totalServerItems = 0;
+        $scope.pagingOptions = {
+            pageSizes: [50, 100, 200],
+            pageSize: 100,
+            currentPage: 1
+        };
+        $scope.sort = {
+            fields: ["ID"],
+            directions: ["asc"]
+        };
+        var refreshed = false;
 
         $scope.gridOptions = {
             selectedItems: [],
-            data: 'connections',
+            data: 'objects',
             showFooter: true,
             showFilter: true,
             showColumnMenu: true,
@@ -104,10 +120,6 @@ var ARTEMIS = (function(ARTEMIS) {
             multiSelect: false,
             displaySelectionCheckbox: false,
             pagingOptions: $scope.pagingOptions,
-            filterOptions: {
-                filterText: '',
-                useExternalFilter: true
-            },
             enablePaging: true,
             totalServerItems: 'totalServerItems',
             maintainColumnRatios: false,
@@ -115,31 +127,36 @@ var ARTEMIS = (function(ARTEMIS) {
             enableFiltering: true,
             useExternalFiltering: true,
             sortInfo: $scope.sortOptions,
-            useExternalSorting: true
+            useExternalSorting: true,
         };
         $scope.refresh = function () {
             refreshed = true;
             $scope.loadTable();
         };
+        $scope.reset = function () {
+            $scope.filter.values.field = "";
+            $scope.filter.values.operation = "";
+            $scope.filter.values.value = "";
+            $scope.loadTable();
+        };
         $scope.loadTable = function () {
-            $scope.connectionFilter.name = $scope.gridOptions.filterOptions.filterText;
-            $scope.connectionFilter.sortColumn = $scope.sortOptions.fields[0];
-            $scope.connectionFilter.sortOrder = $scope.sortOptions.directions[0];
+            $scope.filter.values.sortColumn = $scope.sort.fields[0];
+            $scope.filter.values.sortBy = $scope.sort.directions[0];
             var mbean = getBrokerMBean(jolokia);
             if (mbean) {
-                var method = 'listConnections(java.lang.String, int, int)';
-                jolokia.request({ type: 'exec', mbean: mbean, operation: method, arguments: [JSON.stringify($scope.connectionFilter), $scope.pagingOptions.currentPage, $scope.pagingOptions.pageSize] }, onSuccess(populateTable, { error: onError }));
+                var filter = JSON.stringify($scope.filter.values);
+                console.log("Filter string: " + filter);
+                jolokia.request({ type: 'exec', mbean: mbean, operation: method, arguments: [filter, $scope.pagingOptions.currentPage, $scope.pagingOptions.pageSize] }, onSuccess(populateTable, { error: onError }));
             }
         };
         function onError() {
-            Core.notification("error", "Could not retrieve connection list from broker.");
-            $scope.workspace.selectParentNode();
+            Core.notification("error", "Could not retrieve " + objectType + " list from Artemis.");
         }
         function populateTable(response) {
             var data = JSON.parse(response.value);
-            $scope.connections = [];
+            $scope.objects = [];
             angular.forEach(data, function (value, idx) {
-                $scope.connections.push(value);
+                $scope.objects.push(value);
             });
             $scope.totalServerItems = data["count"];
             if (refreshed == true) {
@@ -166,7 +183,8 @@ var ARTEMIS = (function(ARTEMIS) {
             mbean = "" + folderNames[0] + ":broker=" + folderNames[1];
             ARTEMIS.log.info("broker=" + mbean);
             return mbean;
-        }
+        };
+        $scope.reset();
     };
     return ARTEMIS;
 } (ARTEMIS || {}));
