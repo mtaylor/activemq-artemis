@@ -31,7 +31,7 @@ var ARTEMIS = (function(ARTEMIS) {
         var method = 'listSessions(java.lang.String, int, int)';
         var attributes = [
             {
-                field: 'ID',
+                field: 'id',
                 displayName: 'ID',
                 width: '*'
             },
@@ -42,12 +42,24 @@ var ARTEMIS = (function(ARTEMIS) {
                 cellTemplate: '<div class="ngCellText"><a ng-click="selectConnection(row)">{{row.entity.connectionID}}</a></div>'
             },
             {
-                field: 'consumerCount',
-                displayName: 'Consumer Count',
+                field: 'user',
+                displayName: 'User',
                 width: '*'
             },
             {
-                field: 'creationTime',
+                field: 'consumerCount',
+                displayName: 'Consumer Count',
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectConsumers(row)">{{row.entity.connectionID}}</a></div>'
+            },
+            {
+                field: 'producerCount',
+                displayName: 'Producer Count',
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectProducers(row)">{{row.entity.connectionID}}</a></div>'
+            },
+            {
+                field: 'Creation Time',
                 displayName: 'creationTime',
                 width: '*'
             },
@@ -57,6 +69,11 @@ var ARTEMIS = (function(ARTEMIS) {
                 {id: 'ID', name: 'ID'},
                 {id: 'CONNECTION_ID', name: 'Connection ID'},
                 {id: 'CONSUMER_COUNT', name: 'Consumer Count'},
+                {id: 'USER', name: 'User'},
+                {id: 'PROTOCOL', name: 'Protocol'},
+                {id: 'CLIENT_ID', name: 'Client ID'},
+                {id: 'LOCAL_ADDRESS', name: 'Local Address'},
+                {id: 'REMOTE_ADDRESS', name: 'Remote Address'},
             ],
             operationOptions: [
                 {id: 'EQUALS', name: 'Equals'},
@@ -74,6 +91,14 @@ var ARTEMIS = (function(ARTEMIS) {
         $scope.selectConnection = function (row) {
             artemisConnection.connection = row.entity.connectionID;
             $location.path("artemis/connections");
+        };
+
+        $scope.selectProducers = function (row) {
+            alert("TODO");
+        };
+
+        $scope.selectConsumers = function (row) {
+            alert("TODO");
         };
 
         if (artemisConnection.connection) {

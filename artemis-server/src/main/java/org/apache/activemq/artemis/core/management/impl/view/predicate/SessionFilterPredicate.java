@@ -16,19 +16,47 @@
  */
 package org.apache.activemq.artemis.core.management.impl.view.predicate;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ServerSession;
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 
 public class SessionFilterPredicate extends ActiveMQFilterPredicate<ServerSession> {
 
-   public SessionFilterPredicate(String filter) {
+   enum Field {
+      ID, CONNECTION_ID, CONSUMER_COUNT, PRODUCER_COUNT, USER, PROTOCOL, CLIENT_ID, LOCAL_ADDRESS, REMOTE_ADDRESS
+   }
+
+   private Field f;
+
+   public SessionFilterPredicate() {
       super();
    }
 
    @Override
    public boolean apply(ServerSession session) {
-//      if (filter.startsWith("connectionId=")) {
-//         return session.getConnectionID().equals(filter.substring(filter.indexOf("=")) +1);
-//      }
+      // Using switch over enum vs string comparison is better for perf.
+      if (f == null) return true;
+      switch (f) {
+         case ID:              return matches(session.getName());
+         case CONNECTION_ID:   return matches(session.getConnectionID());
+         case CONSUMER_COUNT:  return matches(session.getServerConsumers().size());
+         case PRODUCER_COUNT:  return true; //TODO
+         case PROTOCOL:        return matches(session.getRemotingConnection().getProtocolName());
+         case CLIENT_ID:       return matches(session.getRemotingConnection().getClientID());
+         case LOCAL_ADDRESS:   return matches(session.getRemotingConnection().getTransportConnection().getLocalAddress());
+         case REMOTE_ADDRESS:  return matches(session.getRemotingConnection().getTransportConnection().getRemoteAddress());
+      }
       return true;
+   }
+
+   @Override
+   public void setField(String field) {
+      if (field != null && !field.equals("")) {
+         this.f = Field.valueOf(field.toUpperCase());
+      }
    }
 }

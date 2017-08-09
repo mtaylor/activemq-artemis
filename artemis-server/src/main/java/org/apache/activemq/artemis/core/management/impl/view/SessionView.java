@@ -18,6 +18,7 @@ package org.apache.activemq.artemis.core.management.impl.view;
 
 import javax.json.JsonObjectBuilder;
 
+import org.apache.activemq.artemis.core.management.impl.view.predicate.ConnectionFilterPredicate;
 import org.apache.activemq.artemis.core.management.impl.view.predicate.SessionFilterPredicate;
 import org.apache.activemq.artemis.core.server.ServerSession;
 import org.apache.activemq.artemis.utils.JsonLoader;
@@ -28,6 +29,7 @@ public class SessionView extends ActiveMQAbstractView<ServerSession> {
 
    public SessionView() {
       super();
+      this.predicate = new SessionFilterPredicate();
    }
 
    @Override
@@ -38,17 +40,13 @@ public class SessionView extends ActiveMQAbstractView<ServerSession> {
    @Override
    public JsonObjectBuilder toJson(ServerSession session) {
       JsonObjectBuilder obj = JsonLoader.createObjectBuilder()
-         .add("sessionID", session.getName())
+         .add("id", session.getName())
+         .add("user", session.getUsername())
          .add("creationTime", session.getCreationTime())
          .add("consumerCount", session.getServerConsumers().size())
+         .add("producerCount", "TODO")
          .add("connectionID", session.getConnectionID().toString());
       return obj;
-   }
-
-   @Override
-   public void setOptions(String filter) {
-      super.setOptions(filter);
-      predicate = new SessionFilterPredicate(filter);
    }
 
    @Override
