@@ -59,8 +59,8 @@ var ARTEMIS = (function(ARTEMIS) {
                 cellTemplate: '<div class="ngCellText"><a ng-click="selectProducers(row)">{{row.entity.producerCount}}</a></div>'
             },
             {
-                field: 'Creation Time',
-                displayName: 'creationTime',
+                field: 'creationTime',
+                displayName: 'Creation Time',
                 width: '*'
             },
         ];
