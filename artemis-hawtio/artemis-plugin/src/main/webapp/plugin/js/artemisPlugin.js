@@ -121,7 +121,13 @@ var ARTEMIS = (function(ARTEMIS) {
 
    ARTEMIS.module.factory('artemisMessage', function () {
         return { 'message': null };
-    });
+   });
+   ARTEMIS.module.factory('artemisConnection', function () {
+        return { 'connection': null };
+   });
+   ARTEMIS.module.factory('artemisSession', function () {
+        return { 'session': null };
+   });
 
    // one-time initialization happens in the run function
    // of our module

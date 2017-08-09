@@ -19,9 +19,13 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ConnectionsController = function ($scope, workspace, ARTEMISService, jolokia, localStorage) {
+    ARTEMIS.ConnectionsController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
+
+        /**
+         *  Required For Each Object Type
+         */
 
         var objectType = "connection"
         var method = 'listConnections(java.lang.String, int, int)';
@@ -49,7 +53,8 @@ var ARTEMIS = (function(ARTEMIS) {
             {
                 field: 'sessionCount',
                 displayName: 'Session Count',
-                width: '*'
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectSessions(row)">{{row.entity.sessionCount}}</a></div>',
             },
             {
                 field: 'remoteAddress',
@@ -89,7 +94,26 @@ var ARTEMIS = (function(ARTEMIS) {
                 sortOrder: "asc",
                 sortBy: "ID"
             }
+        };
+
+        // Configure Parent/Child click through relationships
+        if (artemisConnection.connection) {
+            $scope.filter.values.field = "CONNECTION_ID";
+            $scope.filter.values.operation = "EQUALS";
+            $scope.filter.values.value = artemisConnection.connection;
+            artemisConnection.connection = null;
         }
+
+        $scope.selectSessions = function (connection) {
+            artemisConnection.connection = connection.entity;
+            $location.path("artemis/sessions");
+        };
+
+        /**
+         *  Below here is utility.
+         *
+         *  TODO Refactor into new separate files
+         */
 
         $scope.workspace = workspace;
         $scope.objects = [];
@@ -184,7 +208,7 @@ var ARTEMIS = (function(ARTEMIS) {
             ARTEMIS.log.info("broker=" + mbean);
             return mbean;
         };
-        $scope.reset();
+        $scope.refresh();
     };
     return ARTEMIS;
 } (ARTEMIS || {}));

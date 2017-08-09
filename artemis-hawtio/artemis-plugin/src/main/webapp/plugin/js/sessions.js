@@ -19,43 +19,27 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.SessionsController = function ($scope, workspace, ARTEMISService, jolokia, localStorage) {
+    ARTEMIS.SessionsController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
-        $scope.workspace = workspace;
-        $scope.sessions = [];
-        $scope.totalServerItems = 0;
-        $scope.pagingOptions = {
-            pageSizes: [50, 100, 200],
-            pageSize: 100,
-            currentPage: 1
-        };
-        $scope.connectionFilter = {
-            name: '',
-            filter: '',
-            sortColumn: '',
-            sortOrder: ''
-        };
-        $scope.connectionFilterOptions = [
-            { id: "noConsumer", name: "No Consumer" }
-        ];
-        $scope.connectionFilter;
-        $scope.sortOptions = {
-            fields: ["name"],
-            directions: ["asc"]
-        };
-        var refreshed = false;
+        /**
+         *  Required For Each Object Type
+         */
+
+        var objectType = "sessions"
+        var method = 'listSessions(java.lang.String, int, int)';
         var attributes = [
             {
-                field: 'sessionID',
+                field: 'ID',
                 displayName: 'ID',
                 width: '*'
             },
             {
                 field: 'connectionID',
-                displayName: 'Connection ID',
-                width: '*'
+                displayName: 'Connection',
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectConnection(row)">{{row.entity.connectionID}}</a></div>'
             },
             {
                 field: 'consumerCount',
@@ -64,14 +48,68 @@ var ARTEMIS = (function(ARTEMIS) {
             },
             {
                 field: 'creationTime',
-                displayName: 'Creation Time',
+                displayName: 'creationTime',
                 width: '*'
-            }
+            },
         ];
+        $scope.filter = {
+            fieldOptions: [
+                {id: 'ID', name: 'ID'},
+                {id: 'CONNECTION_ID', name: 'Connection ID'},
+                {id: 'CONSUMER_COUNT', name: 'Consumer Count'},
+            ],
+            operationOptions: [
+                {id: 'EQUALS', name: 'Equals'},
+                {id: 'CONTAINS', name: 'Contains'}
+            ],
+            values: {
+                field: "",
+                operation: "",
+                value: "",
+                sortOrder: "asc",
+                sortBy: "ID"
+            }
+        };
+        // Configure Parent/Child click through relationships
+        $scope.selectConnection = function (row) {
+            artemisConnection.connection = row.entity.connectionID;
+            $location.path("artemis/connections");
+        };
+
+        if (artemisConnection.connection) {
+            ARTEMIS.log.info("navigating to connection = " + artemisConnection.connection);
+        }
+        else if (artemisSession.session) {
+            ARTEMIS.log.info("navigating to connection = " + artemisSession.session);
+        }
+
+        //refresh after use
+        artemisSession.session = null;
+
+
+        /**
+         *  Below here is utility.
+         *
+         *  TODO Refactor into new separate files
+         */
+
+        $scope.workspace = workspace;
+        $scope.objects = [];
+        $scope.totalServerItems = 0;
+        $scope.pagingOptions = {
+            pageSizes: [50, 100, 200],
+            pageSize: 100,
+            currentPage: 1
+        };
+        $scope.sort = {
+            fields: ["ID"],
+            directions: ["asc"]
+        };
+        var refreshed = false;
 
         $scope.gridOptions = {
             selectedItems: [],
-            data: 'sessions',
+            data: 'objects',
             showFooter: true,
             showFilter: true,
             showColumnMenu: true,
@@ -84,10 +122,6 @@ var ARTEMIS = (function(ARTEMIS) {
             multiSelect: false,
             displaySelectionCheckbox: false,
             pagingOptions: $scope.pagingOptions,
-            filterOptions: {
-                filterText: '',
-                useExternalFilter: true
-            },
             enablePaging: true,
             totalServerItems: 'totalServerItems',
             maintainColumnRatios: false,
@@ -95,31 +129,36 @@ var ARTEMIS = (function(ARTEMIS) {
             enableFiltering: true,
             useExternalFiltering: true,
             sortInfo: $scope.sortOptions,
-            useExternalSorting: true
+            useExternalSorting: true,
         };
         $scope.refresh = function () {
             refreshed = true;
             $scope.loadTable();
         };
+        $scope.reset = function () {
+            $scope.filter.values.field = "";
+            $scope.filter.values.operation = "";
+            $scope.filter.values.value = "";
+            $scope.loadTable();
+        };
         $scope.loadTable = function () {
-            $scope.connectionFilter.name = $scope.gridOptions.filterOptions.filterText;
-            $scope.connectionFilter.sortColumn = $scope.sortOptions.fields[0];
-            $scope.connectionFilter.sortOrder = $scope.sortOptions.directions[0];
+            $scope.filter.values.sortColumn = $scope.sort.fields[0];
+            $scope.filter.values.sortBy = $scope.sort.directions[0];
             var mbean = getBrokerMBean(jolokia);
             if (mbean) {
-                var method = 'listSessions(java.lang.String, int, int)';
-                jolokia.request({ type: 'exec', mbean: mbean, operation: method, arguments: [JSON.stringify($scope.connectionFilter), $scope.pagingOptions.currentPage, $scope.pagingOptions.pageSize] }, onSuccess(populateTable, { error: onError }));
+                var filter = JSON.stringify($scope.filter.values);
+                console.log("Filter string: " + filter);
+                jolokia.request({ type: 'exec', mbean: mbean, operation: method, arguments: [filter, $scope.pagingOptions.currentPage, $scope.pagingOptions.pageSize] }, onSuccess(populateTable, { error: onError }));
             }
         };
         function onError() {
-            Core.notification("error", "Could not retrieve session list from broker.");
-            $scope.workspace.selectParentNode();
+            Core.notification("error", "Could not retrieve " + objectType + " list from Artemis.");
         }
         function populateTable(response) {
             var data = JSON.parse(response.value);
-            $scope.sessions = [];
+            $scope.objects = [];
             angular.forEach(data, function (value, idx) {
-                $scope.sessions.push(value);
+                $scope.objects.push(value);
             });
             $scope.totalServerItems = data["count"];
             if (refreshed == true) {
@@ -146,7 +185,8 @@ var ARTEMIS = (function(ARTEMIS) {
             mbean = "" + folderNames[0] + ":broker=" + folderNames[1];
             ARTEMIS.log.info("broker=" + mbean);
             return mbean;
-        }
+        };
+        $scope.refresh();
     };
     return ARTEMIS;
 } (ARTEMIS || {}));

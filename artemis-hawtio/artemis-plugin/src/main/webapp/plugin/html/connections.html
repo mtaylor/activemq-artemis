@@ -24,8 +24,7 @@
                     &nbsp;<span class="label label-default">Filter</span>
                     &nbsp;&nbsp;
                     <select ng-model="filter.values.field" id="filter.values.field">
-                        <option ng-repeat="option in filter.fieldOptions" value="{{option.id}}">{{option.name}}
-                        </option>
+                        <option ng-repeat="option in filter.fieldOptions" value="{{option.id}}">{{option.name}}</option>
                     </select>
                     <select ng-model="filter.values.operation" id="filter.values.operation">
                         <option ng-repeat="option in filter.operationOptions" value="{{option.id}}">{{option.name}}
