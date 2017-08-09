@@ -50,13 +50,13 @@ var ARTEMIS = (function(ARTEMIS) {
                 field: 'consumerCount',
                 displayName: 'Consumer Count',
                 width: '*',
-                cellTemplate: '<div class="ngCellText"><a ng-click="selectConsumers(row)">{{row.entity.connectionID}}</a></div>'
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectConsumers(row)">{{row.entity.consumerCount}}</a></div>'
             },
             {
                 field: 'producerCount',
                 displayName: 'Producer Count',
                 width: '*',
-                cellTemplate: '<div class="ngCellText"><a ng-click="selectProducers(row)">{{row.entity.connectionID}}</a></div>'
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectProducers(row)">{{row.entity.producerCount}}</a></div>'
             },
             {
                 field: 'Creation Time',
