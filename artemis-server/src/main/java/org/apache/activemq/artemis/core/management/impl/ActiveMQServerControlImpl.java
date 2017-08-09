@@ -65,6 +65,7 @@ import org.apache.activemq.artemis.core.config.ConnectorServiceConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.filter.Filter;
 import org.apache.activemq.artemis.core.management.impl.view.ConnectionView;
+import org.apache.activemq.artemis.core.management.impl.view.ConsumerView;
 import org.apache.activemq.artemis.core.management.impl.view.SessionView;
 import org.apache.activemq.artemis.core.messagecounter.MessageCounterManager;
 import org.apache.activemq.artemis.core.messagecounter.impl.MessageCounterManagerImpl;
@@ -1603,6 +1604,24 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
       try {
          SessionView view = new SessionView();
          view.setCollection(server.getSessions());
+         view.setOptions(options);
+         return view.getResultsAsJson(page, pageSize);
+      } finally {
+         blockOnIO();
+      }
+   }
+
+   @Override
+   public String listConsumers(String options, int page, int pageSize) throws Exception {
+      checkStarted();
+      clearIO();
+      try {
+         Set<ServerConsumer> consumers = new HashSet();
+         for(ServerSession session : server.getSessions()) {
+            consumers.addAll(session.getServerConsumers());
+         }
+         ConsumerView view = new ConsumerView(server);
+         view.setCollection(consumers);
          view.setOptions(options);
          return view.getResultsAsJson(page, pageSize);
       } finally {

@@ -1085,5 +1085,10 @@ public interface ActiveMQServerControl {
    String listSessions(@Parameter(name = "Options") String options,
                        @Parameter(name = "Page Number") int page,
                        @Parameter(name = "Page Size") int pageSize) throws Exception;
+
+   @Operation(desc = "Search for Consumers", impact = MBeanOperationInfo.INFO)
+   String listConsumers(@Parameter(name = "Options") String options,
+                       @Parameter(name = "Page Number") int page,
+                       @Parameter(name = "Page Size") int pageSize) throws Exception;
 }
 

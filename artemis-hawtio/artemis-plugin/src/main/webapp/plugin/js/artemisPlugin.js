@@ -115,7 +115,10 @@ var ARTEMIS = (function(ARTEMIS) {
             templateUrl: ARTEMIS.templatePath + 'connections.html'
          })
          .when('/artemis/sessions', {
-           templateUrl: ARTEMIS.templatePath + 'sessions.html'
+            templateUrl: ARTEMIS.templatePath + 'sessions.html'
+         })
+         .when('/artemis/consumers', {
+              templateUrl: ARTEMIS.templatePath + 'consumers.html'
          });
    });
 
@@ -239,6 +242,12 @@ var ARTEMIS = (function(ARTEMIS) {
            href: function () { return "#/artemis/sessions"; }
        });
 
+       workspace.subLevelTabs.push({
+           content: '<i class="icon-download"></i> Consumers',
+           title: "Manage Consumers",
+           isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
+           href: function () { return "#/artemis/consumers"; }
+       });
 
        workspace.subLevelTabs.push({
           content: '<i class="icon-picture"></i> Diagram',
