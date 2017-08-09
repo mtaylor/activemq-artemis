@@ -291,4 +291,8 @@ public interface ServerSession extends SecurityAuth {
     */
    Pair<SimpleString, Set<RoutingType>> getAddressAndRoutingTypes(SimpleString address,
                                                                   Set<RoutingType> defaultRoutingTypes);
+
+   void addProducer(ServerProducer serverProducer);
+
+   void removeProducer(String ID);
 }
