@@ -21,14 +21,14 @@ import org.apache.activemq.artemis.core.server.ServerSession;
 public class SessionFilterPredicate extends ActiveMQFilterPredicate<ServerSession> {
 
    public SessionFilterPredicate(String filter) {
-      super(filter);
+      super();
    }
 
    @Override
    public boolean apply(ServerSession session) {
-      if (filter.startsWith("connectionId=")) {
-         return session.getConnectionID().equals(filter.substring(filter.indexOf("=")) +1);
-      }
+//      if (filter.startsWith("connectionId=")) {
+//         return session.getConnectionID().equals(filter.substring(filter.indexOf("=")) +1);
+//      }
       return true;
    }
 }

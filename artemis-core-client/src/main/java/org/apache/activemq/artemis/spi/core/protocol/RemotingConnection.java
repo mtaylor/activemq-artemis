@@ -217,11 +217,11 @@ public interface RemotingConnection extends BufferHandler {
     * Sets the client ID associated with this connection
     * @return
     */
-   public void setClientID(String cID);
+   void setClientID(String cID);
 
    /**
     * Returns the Client ID associated with this connection
     * @return
     */
-   public String getClientID();
+   String getClientID();
 }

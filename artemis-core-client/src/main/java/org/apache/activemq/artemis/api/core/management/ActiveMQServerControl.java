@@ -1077,12 +1077,12 @@ public interface ActiveMQServerControl {
    String listAddresses(@Parameter(name = "separator", desc = "Separator used on the string listing") String separator) throws Exception;
 
    @Operation(desc = "Search for Connections", impact = MBeanOperationInfo.INFO)
-   String listConnections(@Parameter(name = "Filter String") String filter,
+   String listConnections(@Parameter(name = "Options") String options,
                           @Parameter(name = "Page Number") int page,
                           @Parameter(name = "Page Size") int pageSize) throws Exception;
 
    @Operation(desc = "Search for Sessions", impact = MBeanOperationInfo.INFO)
-   String listSessions(@Parameter(name = "Filter String") String filter,
+   String listSessions(@Parameter(name = "Options") String options,
                        @Parameter(name = "Page Number") int page,
                        @Parameter(name = "Page Size") int pageSize) throws Exception;
 }

@@ -16,6 +16,56 @@
  */
 package org.apache.activemq.artemis.core.management.impl.view.predicate;
 
-public class ConnectionFilterPredicate extends ActiveMQFilterPredicate {
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.ServerSession;
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
+import org.apache.activemq.artemis.utils.StringUtil;
+
+public class ConnectionFilterPredicate extends ActiveMQFilterPredicate<RemotingConnection> {
+
+   enum Field {
+      ID, CLIENT_ID, USERS, PROTOCOL, SESSION_COUNT, REMOTE_ADDRESS, LOCAL_ADDRESS, SESSION_ID
+   }
+
+   private Field f;
+
+   private ActiveMQServer server;
+
+   public ConnectionFilterPredicate(ActiveMQServer server) {
+      this.server = server;
+   }
+
+   @Override
+   public boolean apply(RemotingConnection connection) {
+      // Using switch over enum vs string comparison is better for perf.
+      if (f == null) return true;
+      switch (f) {
+         case ID:             return matches(connection.getID());
+         case CLIENT_ID:      return matches(connection.getClientID());
+         case USERS:          List<ServerSession> sessions = server.getSessions(connection.getID().toString());
+                              Set<String> users = new HashSet<>();
+                              for (ServerSession session : sessions) {
+                                 String username = session.getUsername() == null ? "" : session.getUsername();
+                                 users.add(username);
+                              }
+                              return matchAny(users);
+         case PROTOCOL:       return matches(connection.getProtocolName());
+         case SESSION_COUNT:  return matches(server.getSessions(connection.getID().toString()).size());
+         case REMOTE_ADDRESS: return matches(connection.getTransportConnection().getRemoteAddress());
+         case LOCAL_ADDRESS:  return matches(connection.getTransportConnection().getLocalAddress());
+         case SESSION_ID:     return matchAny(server.getSessions(connection.getID().toString()));
+      }
+      return true;
+   }
+
+   @Override
+   public void setField(String field) {
+      if (field != null && !field.equals("")) {
+         this.f = Field.valueOf(field.toUpperCase());
+      }
+   }
 }

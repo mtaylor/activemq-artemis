@@ -1578,27 +1578,32 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
    }
 
    @Override
-   public String listConnections(String filter, int page, int pageSize) throws Exception {
+   public String listConnections(String options, int page, int pageSize) throws Exception {
       checkStarted();
       clearIO();
       try {
          ConnectionView view = new ConnectionView(server);
          view.setCollection(server.getRemotingService().getConnections());
-         view.setFilter(filter);
+         view.setOptions(options);
          return view.getResultsAsJson(page, pageSize);
-      } finally {
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+         return "";
+      }
+      finally {
          blockOnIO();
       }
    }
 
    @Override
-   public String listSessions(String filter, int page, int pageSize) throws Exception {
+   public String listSessions(String options, int page, int pageSize) throws Exception {
       checkStarted();
       clearIO();
       try {
          SessionView view = new SessionView();
          view.setCollection(server.getSessions());
-         view.setFilter(filter);
+         view.setOptions(options);
          return view.getResultsAsJson(page, pageSize);
       } finally {
          blockOnIO();

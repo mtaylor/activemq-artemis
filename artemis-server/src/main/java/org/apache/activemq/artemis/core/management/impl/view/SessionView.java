@@ -19,9 +19,7 @@ package org.apache.activemq.artemis.core.management.impl.view;
 import javax.json.JsonObjectBuilder;
 
 import org.apache.activemq.artemis.core.management.impl.view.predicate.SessionFilterPredicate;
-import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ServerSession;
-import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.utils.JsonLoader;
 
 public class SessionView extends ActiveMQAbstractView<ServerSession> {
@@ -48,8 +46,8 @@ public class SessionView extends ActiveMQAbstractView<ServerSession> {
    }
 
    @Override
-   public void setFilter(String filter) {
-      super.setFilter(filter);
+   public void setOptions(String filter) {
+      super.setOptions(filter);
       predicate = new SessionFilterPredicate(filter);
    }
 

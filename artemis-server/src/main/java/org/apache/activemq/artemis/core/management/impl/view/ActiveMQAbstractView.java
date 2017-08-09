@@ -17,19 +17,27 @@
 package org.apache.activemq.artemis.core.management.impl.view;
 
 import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import org.apache.activemq.artemis.api.core.JsonUtil;
 import org.apache.activemq.artemis.core.management.impl.view.predicate.ActiveMQFilterPredicate;
-import org.apache.activemq.artemis.core.management.impl.view.predicate.SessionFilterPredicate;
 import org.apache.activemq.artemis.utils.JsonLoader;
 
 public abstract class ActiveMQAbstractView<T> {
+
+   private static final String FILTER_FIELD = "field";
+
+   private static final String FILTER_OPERATION = "operation";
+
+   private static final String FILTER_VALUE = "value";
 
    protected Collection<T> collection;
 
@@ -39,7 +47,7 @@ public abstract class ActiveMQAbstractView<T> {
 
    protected String sortOrder;
 
-   protected String filter;
+   protected String options;
 
    private Method getter;
 
@@ -54,6 +62,7 @@ public abstract class ActiveMQAbstractView<T> {
 
    public String getResultsAsJson(int page, int pageSize) {
       JsonArrayBuilder array = JsonLoader.createArrayBuilder();
+      collection = Collections2.filter(collection, getPredicate());
       for (T element : getPagedResult(page, pageSize)) {
          array.add(toJson(element));
       }
@@ -113,8 +122,6 @@ public abstract class ActiveMQAbstractView<T> {
    }
 
    public static Method findGetterMethod(Class clazz, String sortColumn) {
-      // Build the method name.
-      // TODO (mtaylor) This is pretty brittle only works with camel case names
       String name = "get" + Character.toUpperCase(sortColumn.charAt(0)) + sortColumn.substring(1);
       Method[] methods = clazz.getMethods();
       for (Method method : methods) {
@@ -126,12 +133,13 @@ public abstract class ActiveMQAbstractView<T> {
       return null;
    }
 
-   public void setFilter(String filter) {
-      this.filter = filter;
-   }
-
-   public String getFilter() {
-      return filter;
+   public void setOptions(String options) {
+      JsonObject json = JsonUtil.readJsonObject(options);
+      if (predicate != null) {
+         predicate.setField(json.getString(FILTER_FIELD));
+         predicate.setOperation(json.getString(FILTER_OPERATION));
+         predicate.setValue(json.getString(FILTER_VALUE));
+      }
    }
 
    public abstract Class getClassT();
@@ -147,6 +155,6 @@ public abstract class ActiveMQAbstractView<T> {
     * @return
     */
    protected String toString(Object o) {
-      return o == null ? "null" : o.toString();
+      return o == null ? "" : o.toString();
    }
 }

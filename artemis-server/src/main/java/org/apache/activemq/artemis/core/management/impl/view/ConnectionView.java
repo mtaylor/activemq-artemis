@@ -18,10 +18,17 @@ package org.apache.activemq.artemis.core.management.impl.view;
 
 import javax.json.JsonObjectBuilder;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.apache.activemq.artemis.core.management.impl.view.predicate.ActiveMQFilterPredicate;
+import org.apache.activemq.artemis.core.management.impl.view.predicate.ConnectionFilterPredicate;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.ServerSession;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.utils.JsonLoader;
+import org.apache.activemq.artemis.utils.StringUtil;
 
 public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
 
@@ -29,10 +36,10 @@ public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
 
    private final ActiveMQServer server;
 
-
    public ConnectionView(ActiveMQServer server) {
       super();
       this.server = server;
+      this.predicate = new ConnectionFilterPredicate(server);
    }
 
    @Override
@@ -43,10 +50,18 @@ public class ConnectionView extends ActiveMQAbstractView<RemotingConnection> {
    @Override
    public JsonObjectBuilder toJson(RemotingConnection connection) {
 
+      List<ServerSession> sessions = server.getSessions(connection.getID().toString());
+      Set<String> users = new HashSet<>();
+
+      for (ServerSession session : sessions) {
+         String username = session.getUsername() == null ? "" : session.getUsername();
+         users.add(username);
+      }
+
       return JsonLoader.createObjectBuilder()
          .add("connectionID", toString(connection.getID()))
          .add("remoteAddress", toString(connection.getRemoteAddress()))
-         .add("username", "Coming soon")
+         .add("users", StringUtil.joinStringList(users, ","))
          .add("createdAt", new Date(connection.getCreationTime()).toString())
          .add("implementation", toString(toString(connection.getClass().getSimpleName())))
          .add("protocol", toString(connection.getProtocolName()))

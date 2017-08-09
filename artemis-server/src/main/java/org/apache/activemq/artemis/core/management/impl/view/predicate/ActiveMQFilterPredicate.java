@@ -16,18 +16,85 @@
  */
 package org.apache.activemq.artemis.core.management.impl.view.predicate;
 
+import java.util.Collection;
+
 import com.google.common.base.Predicate;
 
 public class ActiveMQFilterPredicate<T> implements Predicate<T> {
 
-   protected final String filter;
+   enum Operation {
+      CONTAINS, EQUALS;
+   }
 
-   public ActiveMQFilterPredicate(String filter) {
-      this.filter = filter;
+   protected String field;
+
+   protected String value;
+
+   protected Operation operation;
+
+   public static boolean contains(String field, String value) {
+      return field.contains(value);
+   }
+
+   public ActiveMQFilterPredicate() {
    }
 
    @Override
    public boolean apply(T input) {
       return true;
+   }
+
+   public String getField() {
+      return field;
+   }
+
+   public void setField(String field) {
+      this.field = field;
+   }
+
+   public String getValue() {
+      return value;
+   }
+
+   public void setValue(String value) {
+      this.value = value;
+   }
+
+   public Operation getOperation() {
+      return operation;
+   }
+
+   public void setOperation(String operation) {
+      if (operation != null && !operation.equals("")) {
+         this.operation = Operation.valueOf(operation);
+      }
+   }
+
+   public boolean matches(Object field) {
+      if (operation != null) {
+         switch (operation) {
+            case EQUALS: return equals(field, value);
+            case CONTAINS: return contains(field, value);
+         }
+      }
+      return true;
+   }
+
+   public boolean matchAny(Collection objects) {
+      for (Object o : objects) {
+         if (matches(o)) return true;
+      }
+      return false;
+   }
+
+   private boolean equals(Object field, Object value) {
+      if (field == null) {
+         return (value.equals("") || value == null);
+      }
+      return field.toString().equals(value);
+   }
+
+   private boolean contains(Object field, Object value) {
+      return field.toString().contains(value.toString());
    }
 }
