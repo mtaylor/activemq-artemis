@@ -89,7 +89,7 @@ var ARTEMIS = (function(ARTEMIS) {
         };
         // Configure Parent/Child click through relationships
         $scope.selectConnection = function (row) {
-            artemisConnection.connection = row.entity.connectionID;
+            artemisConnection.session = row.entity;
             $location.path("artemis/connections");
         };
 
@@ -102,14 +102,14 @@ var ARTEMIS = (function(ARTEMIS) {
         };
 
         if (artemisConnection.connection) {
-            ARTEMIS.log.info("navigating to connection = " + artemisConnection.connection);
-        }
-        else if (artemisSession.session) {
-            ARTEMIS.log.info("navigating to connection = " + artemisSession.session);
+            ARTEMIS.log.info("navigating to connection = " + artemisConnection.connection.connectionID);
+            $scope.filter.values.field = 'CONNECTION_ID';
+            $scope.filter.values.operation = 'EQUALS';
+            $scope.filter.values.value = artemisConnection.connection.connectionID;
         }
 
         //refresh after use
-        artemisSession.session = null;
+        artemisSession.connection = null;
 
 
         /**

@@ -28,7 +28,7 @@ import org.apache.activemq.artemis.utils.StringUtil;
 public class ConnectionFilterPredicate extends ActiveMQFilterPredicate<RemotingConnection> {
 
    enum Field {
-      ID, CLIENT_ID, USERS, PROTOCOL, SESSION_COUNT, REMOTE_ADDRESS, LOCAL_ADDRESS, SESSION_ID
+      CONNECTION_ID, CLIENT_ID, USERS, PROTOCOL, SESSION_COUNT, REMOTE_ADDRESS, LOCAL_ADDRESS, SESSION_ID
    }
 
    private Field f;
@@ -44,7 +44,7 @@ public class ConnectionFilterPredicate extends ActiveMQFilterPredicate<RemotingC
       // Using switch over enum vs string comparison is better for perf.
       if (f == null) return true;
       switch (f) {
-         case ID:             return matches(connection.getID());
+         case CONNECTION_ID:             return matches(connection.getID());
          case CLIENT_ID:      return matches(connection.getClientID());
          case USERS:          List<ServerSession> sessions = server.getSessions(connection.getID().toString());
                               Set<String> users = new HashSet<>();
