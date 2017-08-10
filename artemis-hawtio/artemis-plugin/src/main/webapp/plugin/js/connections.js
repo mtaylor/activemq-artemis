@@ -98,7 +98,7 @@ var ARTEMIS = (function(ARTEMIS) {
 
         // Configure Parent/Child click through relationships
         if (artemisConnection.session) {
-            $scope.filter.values.field = "ID";
+            $scope.filter.values.field = "CONNECTION_ID";
             $scope.filter.values.operation = "EQUALS";
             $scope.filter.values.value = artemisConnection.session.connectionID;
             artemisConnection.session = null;
