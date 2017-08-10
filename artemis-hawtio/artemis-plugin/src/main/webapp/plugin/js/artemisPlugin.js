@@ -140,6 +140,12 @@ var ARTEMIS = (function(ARTEMIS) {
    ARTEMIS.module.factory('artemisSession', function () {
         return { 'session': null };
    });
+   ARTEMIS.module.factory('artemisConsumer', function () {
+        return { 'consumer': null };
+   });
+   ARTEMIS.module.factory('artemisProducer', function () {
+        return { 'producer': null };
+   });
 
    // one-time initialization happens in the run function
    // of our module

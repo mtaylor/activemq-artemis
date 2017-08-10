@@ -74,7 +74,7 @@ var ARTEMIS = (function(ARTEMIS) {
         ];
         $scope.filter = {
             fieldOptions: [
-                {id: 'ID', name: 'ID'},
+                {id: 'CONNECTION_ID', name: 'Connection ID'},
                 {id: 'CLIENT_ID', name: 'Client ID'},
                 {id: 'USERS', name: 'Users'},
                 {id: 'PROTOCOL', name: 'Protocol'},
@@ -92,16 +92,16 @@ var ARTEMIS = (function(ARTEMIS) {
                 operation: "",
                 value: "",
                 sortOrder: "asc",
-                sortBy: "ID"
+                sortBy: "CONNECTION_ID"
             }
         };
 
         // Configure Parent/Child click through relationships
-        if (artemisConnection.session) {
-            $scope.filter.values.field = "CONNECTION_ID";
-            $scope.filter.values.operation = "EQUALS";
-            $scope.filter.values.value = artemisConnection.session.connectionID;
-            artemisConnection.session = null;
+        if (artemisSession.session) {
+            $scope.filter.values.field = $scope.filter.fieldOptions[0].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
+            $scope.filter.values.value = artemisSession.session.connectionID;
+            artemisSession.session = null;
         }
 
         $scope.selectSessions = function (connection) {

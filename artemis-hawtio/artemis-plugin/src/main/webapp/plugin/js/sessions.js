@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.SessionsController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.SessionsController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession, artemisConsumer) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -89,28 +89,37 @@ var ARTEMIS = (function(ARTEMIS) {
         };
         // Configure Parent/Child click through relationships
         $scope.selectConnection = function (row) {
-            artemisConnection.session = row.entity;
+            artemisSession.session = row.entity;
             $location.path("artemis/connections");
         };
 
         $scope.selectProducers = function (row) {
-            alert("TODO");
+           artemisSession.session = row.entity;
+           $location.path("artemis/producers");
         };
 
         $scope.selectConsumers = function (row) {
-            alert("TODO");
+           artemisSession.session = row.entity;
+           $location.path("artemis/consumers");
         };
 
         if (artemisConnection.connection) {
             ARTEMIS.log.info("navigating to connection = " + artemisConnection.connection.connectionID);
-            $scope.filter.values.field = 'CONNECTION_ID';
-            $scope.filter.values.operation = 'EQUALS';
+            $scope.filter.values.field = $scope.filter.fieldOptions[1].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
             $scope.filter.values.value = artemisConnection.connection.connectionID;
+        }
+
+        if (artemisConsumer.consumer) {
+            ARTEMIS.log.info("navigating to connection = " + artemisConnection.connection.connectionID);
+            $scope.filter.values.field = $scope.filter.fieldOptions[0].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
+            $scope.filter.values.value = artemisConsumer.consumer.session;
         }
 
         //refresh after use
         artemisSession.connection = null;
-
+        artemisConsumer.consumer = null;
 
         /**
          *  Below here is utility.

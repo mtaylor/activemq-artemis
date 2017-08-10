@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ConsumersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.ConsumersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession, artemisConsumer) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -38,7 +38,8 @@ var ARTEMIS = (function(ARTEMIS) {
             {
                 field: 'session',
                 displayName: 'Session',
-                width: '*'
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectSession(row)">{{row.entity.session}}</a></div>'
             },
             {
                 field: 'clientID',
@@ -100,6 +101,21 @@ var ARTEMIS = (function(ARTEMIS) {
                 sortBy: "ID"
             }
         };
+
+        $scope.selectSession = function (row) {
+            artemisConsumer.consumer = row.entity;
+            $location.path("artemis/sessions");
+        };
+
+        // Configure Parent/Child click through relationships
+        if (artemisSession.session) {
+            $scope.filter.values.field = $scope.filter.fieldOptions[1].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
+            $scope.filter.values.value = artemisSession.session.id;
+            artemisSession.session = null;
+        }
+
+        artemisSession.session = null;
 
         /**
          *  Below here is utility.
