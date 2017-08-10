@@ -894,6 +894,13 @@ public class ActiveMQServerControlUsingCoreTest extends ActiveMQServerControlTes
                                     @Parameter(name = "Page Size") int pageSize) throws Exception {
             return null;
          }
+
+         @Override
+         public String listConsumers(@Parameter(name = "Options") String options,
+                                     @Parameter(name = "Page Number") int page,
+                                     @Parameter(name = "Page Size") int pageSize) throws Exception {
+            return null;
+         }
       };
    }
 

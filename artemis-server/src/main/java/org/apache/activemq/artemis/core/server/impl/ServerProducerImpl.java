@@ -29,6 +29,7 @@ public class ServerProducerImpl implements ServerProducer {
       this.protocol = protocol;
    }
 
+   @Override
    public String getProtocol() {
       return protocol;
    }
@@ -44,10 +45,12 @@ public class ServerProducerImpl implements ServerProducer {
       this.connectionID = connectionID;
    }
 
+   @Override
    public String getSessionID() {
       return sessionID;
    }
 
+   @Override
    public String getConnectionID() {
       return connectionID;
    }
