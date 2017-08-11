@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ProducersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.ProducersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisAddress) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -58,7 +58,8 @@ var ARTEMIS = (function(ARTEMIS) {
             {
                 field: 'address',
                 displayName: 'Address',
-                width: '*'
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectAddress(row)">{{row.entity.address}}</a></div>'
             },
             {
                 field: 'remoteAddress',
@@ -106,6 +107,11 @@ var ARTEMIS = (function(ARTEMIS) {
          *  TODO Refactor into new separate files
          */
 
+
+        $scope.selectAddress = function (row) {
+           artemisAddress.address = row.entity;
+           $location.path("artemis/addresses");
+        };
         $scope.workspace = workspace;
         $scope.objects = [];
         $scope.totalServerItems = 0;

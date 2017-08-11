@@ -203,7 +203,7 @@ public class AMQPSessionContext extends ProtonInitializable {
          ProtonServerReceiverContext protonReceiver = new ProtonServerReceiverContext(sessionSPI, connection, this, receiver);
          protonReceiver.initialise();
          receivers.put(receiver, protonReceiver);
-         ServerProducer serverProducer = new ServerProducerImpl(receiver.getName(), "AMQP");
+         ServerProducer serverProducer = new ServerProducerImpl(receiver.getName(), "AMQP", receiver.getTarget().getAddress());
          sessionSPI.addProducer(serverProducer);
          receiver.setContext(protonReceiver);
          connection.lock();

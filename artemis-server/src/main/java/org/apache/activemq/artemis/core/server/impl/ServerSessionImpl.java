@@ -1747,4 +1747,9 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
    public Map<String, ServerProducer> getServerProducers() {
       return Collections.unmodifiableMap(new HashMap(producers));
    }
+
+   @Override
+   public String getDefaultAddress() {
+      return defaultAddress != null ? defaultAddress.toString() : null;
+   }
 }

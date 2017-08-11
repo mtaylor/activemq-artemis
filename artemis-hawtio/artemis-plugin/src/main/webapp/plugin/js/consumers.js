@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ConsumersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession, artemisConsumer) {
+    ARTEMIS.ConsumersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession, artemisConsumer, artemisQueue, artemisAddress) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -54,12 +54,19 @@ var ARTEMIS = (function(ARTEMIS) {
             {
                 field: 'queue',
                 displayName: 'Queue',
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectQueue(row)">{{row.entity.queue}}</a></div>'
+            },
+            {
+                field: 'queueType',
+                displayName: 'Queue Type',
                 width: '*'
             },
             {
                 field: 'address',
                 displayName: 'Address',
-                width: '*'
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="selectAddress(row)">{{row.entity.address}}</a></div>'
             },
             {
                 field: 'remoteAddress',
@@ -105,6 +112,16 @@ var ARTEMIS = (function(ARTEMIS) {
         $scope.selectSession = function (row) {
             artemisConsumer.consumer = row.entity;
             $location.path("artemis/sessions");
+        };
+
+        $scope.selectQueue = function (row) {
+           artemisQueue.queue = row.entity;
+           $location.path("artemis/queues");
+        };
+
+        $scope.selectAddress = function (row) {
+           artemisAddress.address = row.entity;
+           $location.path("artemis/addresses");
         };
 
         // Configure Parent/Child click through relationships

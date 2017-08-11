@@ -17,6 +17,8 @@
 package org.apache.activemq.artemis.core.server;
 
 public interface ServerProducer {
+   String getAddress();
+
    String getProtocol();
 
    void setSessionID(String sessionID);
@@ -28,4 +30,6 @@ public interface ServerProducer {
    String getConnectionID();
 
    String getID();
+
+   long getCreationTime();
 }

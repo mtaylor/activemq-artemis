@@ -21,12 +21,23 @@ import org.apache.activemq.artemis.core.server.ServerProducer;
 public class ServerProducerImpl implements ServerProducer {
    private final String ID;
    private final String protocol;
+   private final long creationTime;
+
+
+   private final String address;
    private String sessionID;
    private String connectionID;
 
-   public ServerProducerImpl(String ID, String protocol) {
+   public ServerProducerImpl(String ID, String protocol, String address) {
       this.ID = ID;
       this.protocol = protocol;
+      this.address = address;
+      this.creationTime = System.currentTimeMillis();
+   }
+
+   @Override
+   public String getAddress() {
+      return address;
    }
 
    @Override
@@ -58,5 +69,10 @@ public class ServerProducerImpl implements ServerProducer {
    @Override
    public String getID() {
       return ID;
+   }
+
+   @Override
+   public long getCreationTime() {
+      return creationTime;
    }
 }

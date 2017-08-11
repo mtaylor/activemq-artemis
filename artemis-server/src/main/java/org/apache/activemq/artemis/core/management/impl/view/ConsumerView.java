@@ -52,6 +52,7 @@ public class ConsumerView extends ActiveMQAbstractView<ServerConsumer> {
          .add("user", toString(session.getUsername()))
          .add("protocol", toString(session.getRemotingConnection().getProtocolName()))
          .add("queue", toString(consumer.getQueue().getName()))
+         .add("queueType", toString(consumer.getQueue().getRoutingType()).toLowerCase())
          .add("address", toString(consumer.getQueue().getAddress().toString()))
          .add("localAddress", toString(session.getRemotingConnection().getTransportConnection().getLocalAddress()))
          .add("remoteAddress", toString(session.getRemotingConnection().getTransportConnection().getRemoteAddress()))

@@ -298,4 +298,6 @@ public interface ServerSession extends SecurityAuth {
    void removeProducer(String ID);
 
    Map<String, ServerProducer> getServerProducers();
+
+   String getDefaultAddress();
 }

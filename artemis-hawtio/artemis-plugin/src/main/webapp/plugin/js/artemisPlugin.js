@@ -146,6 +146,12 @@ var ARTEMIS = (function(ARTEMIS) {
    ARTEMIS.module.factory('artemisProducer', function () {
         return { 'producer': null };
    });
+   ARTEMIS.module.factory('artemisQueue', function () {
+        return { 'queue': null };
+   });
+   ARTEMIS.module.factory('artemisAddress', function () {
+        return { 'address': null };
+   });
 
    // one-time initialization happens in the run function
    // of our module

@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.QueuesController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.QueuesController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession, artemisQueue) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -30,6 +30,12 @@ var ARTEMIS = (function(ARTEMIS) {
         var objectType = "queue";
         var method = 'listQueues(java.lang.String, int, int)';
         var attributes = [
+            {
+                field: 'manage',
+                displayName: 'manage',
+                width: '*',
+                cellTemplate: '<div class="ngCellText"><a ng-click="navigateToQueueAtts(row)">attributes</a>&nbsp;<a ng-click="navigateToQueueOps(row)">operations</a></div>'
+            },
             {
                 field: 'id',
                 displayName: 'ID',
@@ -179,7 +185,20 @@ var ARTEMIS = (function(ARTEMIS) {
          *
          *  TODO Refactor into new separate files
          */
+        if (artemisQueue.queue) {
+            $scope.filter.values.field = $scope.filter.fieldOptions[1].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
+            $scope.filter.values.value = artemisQueue.queue.queue;
+            artemisQueue.queue = null;
+        }
 
+        artemisSession.session = null;
+        $scope.navigateToQueueAtts = function (row) {
+            $location.path("jmx/attributes").search({"tab": "artemis", "nid": ARTEMIS.getQueueNid(row.entity, $location)});
+        };
+        $scope.navigateToQueueOps = function (row) {
+            $location.path("jmx/attributes").search({"tab": "artemis", "nid": ARTEMIS.getQueueNid(row.entity, $location)});
+        };
         $scope.workspace = workspace;
         $scope.objects = [];
         $scope.totalServerItems = 0;

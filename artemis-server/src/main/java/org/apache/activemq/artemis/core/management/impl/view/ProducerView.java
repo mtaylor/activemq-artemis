@@ -51,10 +51,10 @@ public class ProducerView extends ActiveMQAbstractView<ServerProducer> {
          .add("clientID", toString(session.getRemotingConnection().getClientID()))
          .add("user", toString(session.getUsername()))
          .add("protocol", toString(session.getRemotingConnection().getProtocolName()))
-         .add("address", toString("TODO"))
+         .add("address", toString(producer.getAddress() != null ? producer.getAddress() : session.getDefaultAddress()))
          .add("localAddress", toString(session.getRemotingConnection().getTransportConnection().getLocalAddress()))
          .add("remoteAddress", toString(session.getRemotingConnection().getTransportConnection().getRemoteAddress()))
-         .add("creationTime", toString("TODO"));
+         .add("creationTime", toString(producer.getCreationTime()));
       return obj;
    }
 

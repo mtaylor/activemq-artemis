@@ -32,8 +32,6 @@ import org.apache.activemq.artemis.core.io.IOCallback;
 import org.apache.activemq.artemis.core.message.impl.CoreMessage;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.ServerConsumer;
-import org.apache.activemq.artemis.core.server.ServerProducer;
-import org.apache.activemq.artemis.core.server.impl.ServerProducerImpl;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.jboss.logging.Logger;
 
@@ -67,8 +65,6 @@ public class MQTTPublishManager {
    synchronized void start() throws Exception {
       this.state = session.getSessionState();
       this.outboundStore = state.getOutboundStore();
-      ServerProducer serverProducer = new ServerProducerImpl(session.getServerSession().getName(), "MQTT");
-      session.getServerSession().addProducer(serverProducer);
    }
 
    synchronized void stop() throws Exception {

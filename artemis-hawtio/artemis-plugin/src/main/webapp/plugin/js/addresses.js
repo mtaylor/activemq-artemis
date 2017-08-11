@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.AddressesController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.AddressesController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisAddress) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -30,7 +30,13 @@ var ARTEMIS = (function(ARTEMIS) {
         var objectType = "address";
         var method = 'listAddresses(java.lang.String, int, int)';
         var attributes = [
-            {
+           {
+               field: 'manage',
+               displayName: 'manage',
+               width: '*',
+               cellTemplate: '<div class="ngCellText"><a ng-click="navigateToAddressAtts(row)">attributes</a>&nbsp;<a ng-click="navigateToAddressOps(row)">operations</a></div>'
+           },
+           {
                 field: 'id',
                 displayName: 'ID',
                 width: '*'
@@ -77,6 +83,20 @@ var ARTEMIS = (function(ARTEMIS) {
          *  TODO Refactor into new separate files
          */
 
+
+        if (artemisAddress.address) {
+            $scope.filter.values.field = $scope.filter.fieldOptions[1].id;
+            $scope.filter.values.operation = $scope.filter.operationOptions[0].id;
+            $scope.filter.values.value = artemisAddress.address.address;
+            artemisAddress.address = null;
+        }
+
+        $scope.navigateToAddressAtts = function (row) {
+            $location.path("jmx/attributes").search({"tab": "artemis", "nid": ARTEMIS.getAddressNid(row.entity, $location)});
+        };
+        $scope.navigateToAddressOps = function (row) {
+            $location.path("jmx/operations").search({"tab": "artemis", "nid": ARTEMIS.getAddressNid(row.entity, $location)});
+        };
         $scope.workspace = workspace;
         $scope.objects = [];
         $scope.totalServerItems = 0;
