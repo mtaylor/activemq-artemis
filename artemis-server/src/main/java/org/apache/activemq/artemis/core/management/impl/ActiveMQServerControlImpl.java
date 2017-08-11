@@ -66,6 +66,7 @@ import org.apache.activemq.artemis.core.config.Configuration;
 import org.apache.activemq.artemis.core.config.ConnectorServiceConfiguration;
 import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.filter.Filter;
+import org.apache.activemq.artemis.core.management.impl.view.AddressView;
 import org.apache.activemq.artemis.core.management.impl.view.ConnectionView;
 import org.apache.activemq.artemis.core.management.impl.view.ConsumerView;
 import org.apache.activemq.artemis.core.management.impl.view.ProducerView;
@@ -1588,6 +1589,7 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
       checkStarted();
       clearIO();
       try {
+         server.getPostOffice().getAddresses();
          ConnectionView view = new ConnectionView(server);
          view.setCollection(server.getRemotingService().getConnections());
          view.setOptions(options);
@@ -1627,6 +1629,22 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
          }
          ConsumerView view = new ConsumerView(server);
          view.setCollection(consumers);
+         view.setOptions(options);
+         return view.getResultsAsJson(page, pageSize);
+      } finally {
+         blockOnIO();
+      }
+   }
+
+   @Override
+   public String listAddresses(String options, int page, int pageSize) throws Exception {
+      checkStarted();
+
+      clearIO();
+      try {
+         final Set<SimpleString> addresses = server.getPostOffice().getAddresses();
+         AddressView view = new AddressView(server);
+         view.setCollection(addresses);
          view.setOptions(options);
          return view.getResultsAsJson(page, pageSize);
       } finally {
