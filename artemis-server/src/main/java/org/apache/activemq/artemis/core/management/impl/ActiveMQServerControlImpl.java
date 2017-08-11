@@ -1660,18 +1660,9 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
       clearIO();
       try {
          Set<ServerProducer> producers = new HashSet<>();
-
-         ServerProducer p1 = new ServerProducerImpl(UUID.randomUUID().toString(), "AMQP");
-         p1.setConnectionID(UUID.randomUUID().toString());
-         p1.setSessionID(UUID.randomUUID().toString());
-
-         ServerProducer p2 = new ServerProducerImpl(UUID.randomUUID().toString(), "CORE");
-         p2.setConnectionID(UUID.randomUUID().toString());
-         p2.setSessionID(UUID.randomUUID().toString());
-
-         producers.add(p1);
-         producers.add(p2);
-
+         for (ServerSession session : server.getSessions()) {
+            producers.addAll(session.getServerProducers().values());
+         }
          ProducerView view = new ProducerView(server);
          view.setCollection(producers);
          view.setOptions(options);

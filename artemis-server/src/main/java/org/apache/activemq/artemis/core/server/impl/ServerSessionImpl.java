@@ -1742,4 +1742,9 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
    public void removeProducer(String ID) {
       producers.remove(ID);
    }
+
+   @Override
+   public Map<String, ServerProducer> getServerProducers() {
+      return Collections.unmodifiableMap(new HashMap(producers));
+   }
 }
