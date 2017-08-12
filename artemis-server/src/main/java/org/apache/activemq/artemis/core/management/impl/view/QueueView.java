@@ -18,43 +18,55 @@ package org.apache.activemq.artemis.core.management.impl.view;
 
 import javax.json.JsonObjectBuilder;
 
-import org.apache.activemq.artemis.core.management.impl.view.predicate.ConsumerFilterPredicate;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.management.QueueControl;
+import org.apache.activemq.artemis.core.management.impl.view.predicate.QueueFilterPredicate;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
-import org.apache.activemq.artemis.core.server.ServerConsumer;
+import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.ServerSession;
 import org.apache.activemq.artemis.utils.JsonLoader;
 
-public class QueueView extends ActiveMQAbstractView<ServerConsumer> {
+public class QueueView extends ActiveMQAbstractView<QueueControl> {
 
-   private static final String defaultSortColumn = "creationTime";
+   private static final String defaultSortColumn = "name";
 
-   private final ActiveMQServer server;
+   private ActiveMQServer server;
 
    public QueueView(ActiveMQServer server) {
       super();
+      this.predicate = new QueueFilterPredicate(server);
       this.server = server;
-      this.predicate = new ConsumerFilterPredicate(server);
    }
 
    @Override
    public Class getClassT() {
-      return ServerConsumer.class;
+      return QueueControl.class;
    }
 
    @Override
-   public JsonObjectBuilder toJson(ServerConsumer consumer) {
-      ServerSession session = server.getSessionByID(consumer.getSessionID());
+   public JsonObjectBuilder toJson(QueueControl queue) {
+      Queue q = server.locateQueue(new SimpleString(queue.getName()));
       JsonObjectBuilder obj = JsonLoader.createObjectBuilder()
-         .add("id", toString(consumer.getID()))
-         .add("session", toString(session.getName()))
-         .add("clientID", toString(session.getRemotingConnection().getClientID()))
-         .add("user", toString(session.getUsername()))
-         .add("protocol", toString(session.getRemotingConnection().getProtocolName()))
-         .add("queue", toString(consumer.getQueue().getName()))
-         .add("address", toString(consumer.getQueue().getAddress().toString()))
-         .add("localAddress", toString(session.getRemotingConnection().getTransportConnection().getLocalAddress()))
-         .add("remoteAddress", toString(session.getRemotingConnection().getTransportConnection().getRemoteAddress()))
-         .add("creationTime", toString(consumer.getCreationTime()));
+         .add("id", toString(queue.getID()))
+         .add("name", toString(queue.getName()))
+         .add("address", toString(queue.getAddress()))
+         .add("filter", toString(queue.getFilter()))
+         .add("rate", toString(q.getRate()))
+         .add("durable", toString(queue.isDurable()))
+         .add("paused", toString(q.isPaused()))
+         .add("temporary", toString(queue.isTemporary()))
+         .add("purgeOnNoConsumers", toString(queue.isPurgeOnNoConsumers()))
+         .add("consumerCount", toString(queue.getConsumerCount()))
+         .add("maxConsumers", toString(queue.getMaxConsumers()))
+         .add("autoCreated", toString(q.isAutoCreated()))
+         .add("user", toString(q.getUser()))
+         .add("routingType", toString(queue.getRoutingType()))
+         .add("messagesAdded", toString(queue.getMessagesAdded()))
+         .add("messageCount", toString(queue.getMessageCount()))
+         .add("messagesAcked", toString(queue.getMessagesAcknowledged()))
+         .add("deliveringCount", toString(queue.getDeliveringCount()))
+         .add("messagesKilled", toString(queue.getMessagesKilled()))
+         .add("deliverDeliver", toString(q.isDirectDeliver()));
       return obj;
    }
 

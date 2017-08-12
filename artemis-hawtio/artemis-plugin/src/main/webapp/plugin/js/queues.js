@@ -19,7 +19,7 @@
  */
 var ARTEMIS = (function(ARTEMIS) {
 
-    ARTEMIS.ConsumersController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
+    ARTEMIS.QueuesController = function ($scope, $location, workspace, ARTEMISService, jolokia, localStorage, artemisConnection, artemisSession) {
 
         var artemisJmxDomain = localStorage['artemisJmxDomain'] || "org.apache.activemq.artemis";
 
@@ -27,8 +27,8 @@ var ARTEMIS = (function(ARTEMIS) {
          *  Required For Each Object Type
          */
 
-        var objectType = "consumer";
-        var method = 'listConsumers(java.lang.String, int, int)';
+        var objectType = "queue";
+        var method = 'listQueues(java.lang.String, int, int)';
         var attributes = [
             {
                 field: 'id',
@@ -36,23 +36,8 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             },
             {
-                field: 'session',
-                displayName: 'Session',
-                width: '*'
-            },
-            {
-                field: 'clientID',
-                displayName: 'Client ID',
-                width: '*'
-            },
-            {
-                field: 'protocol',
-                displayName: 'Protocol',
-                width: '*'
-            },
-            {
-                field: 'queue',
-                displayName: 'Queue',
+                field: 'name',
+                displayName: 'Name',
                 width: '*'
             },
             {
@@ -61,32 +46,120 @@ var ARTEMIS = (function(ARTEMIS) {
                 width: '*'
             },
             {
-                field: 'remoteAddress',
-                displayName: 'Remote Address',
+                field: 'routingType',
+                displayName: 'Routing Type',
                 width: '*'
             },
             {
-                field: 'localAddress',
-                displayName: 'Local Address',
+                field: 'filter',
+                displayName: 'Filter',
                 width: '*'
             },
             {
-                field: 'creationTime',
-                displayName: 'Creation Time',
+                field: 'durable',
+                displayName: 'Durable',
                 width: '*'
+            },
+            {
+                field: 'maxConsumers',
+                displayName: 'Max Consumers',
+                width: '*'
+            },
+            {
+                field: 'purgeOnNoConsumers',
+                displayName: 'Purge On No Consumers',
+                width: '*'
+            },
+            {
+                field: 'consumerCount',
+                displayName: 'Consumer Count',
+                width: '*'
+            },
+            {
+                field: 'rate',
+                displayName: 'Rate',
+                width: '*'
+            },
+            {
+                field: 'messageCount',
+                displayName: 'Message Count',
+                width: '*'
+            },
+
+            // Hidden
+            {
+                field: 'paused',
+                displayName: 'Paused',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'temporary',
+                displayName: 'Temporary',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'autoCreated',
+                displayName: 'Auto Created',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'user',
+                displayName: 'User',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'messagesAdded',
+                displayName: 'Total Messages Added',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'messagesAcked',
+                displayName: 'Total Messages Acked',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'deliveringCount',
+                displayName: 'Deliveing Count',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'messagesKilled',
+                displayName: 'Messages Killed',
+                width: '*',
+                visible: false
+            },
+            {
+                field: 'directDeliver',
+                displayName: 'Deliveing Count',
+                width: '*',
+                visible: false
             }
         ];
+
         $scope.filter = {
             fieldOptions: [
                 {id: 'ID', name: 'ID'},
-                {id: 'SESSION_ID', name: 'Session ID'},
-                {id: 'CLIENT_ID', name: 'Client ID'},
-                {id: 'USER', name: 'User'},
+                {id: 'NAME', name: 'Name'},
+                {id: 'CONSUMER_ID', name: 'Consumer ID'},
                 {id: 'ADDRESS', name: 'Address'},
-                {id: 'QUEUE', name: 'Queue'},
-                {id: 'PROTOCOL', name: 'Protocol'},
-                {id: 'REMOTE_ADDRESS', name: 'Remote Address'},
-                {id: 'LOCAL_ADDRESS', name: 'Local Address'}
+                {id: 'FILTER', name: 'Filter'},
+                {id: 'MAX_CONSUMERS', name: 'maxConsumers'},
+                {id: 'ROUTING_TYPE', name: 'Routing Type'},
+                {id: 'PURGE_ON_NO_CONSUMERS', name: 'Purge On No Consumers'},
+                {id: 'USER', name: 'User'},
+                {id: 'MESSAGE_COUNT', name: 'Message Count'},
+                {id: 'DELIVERING_COUNT', name: 'Delivering Count'},
+                {id: 'PAUSED', name: 'Paused'},
+                {id: 'TEMPORARY', name: 'Temporary'},
+                {id: 'AUTO_CREATED', name: 'Auto Created'},
+                {id: 'RATE', name: 'Rate'},
             ],
             operationOptions: [
                 {id: 'EQUALS', name: 'Equals'},

@@ -1100,5 +1100,10 @@ public interface ActiveMQServerControl {
    String listAddresses(@Parameter(name = "Options") String options,
                         @Parameter(name = "Page Number") int page,
                         @Parameter(name = "Page Size") int pageSize) throws Exception;
+
+   @Operation(desc = "Search for Queues", impact = MBeanOperationInfo.INFO)
+   String listQueues(@Parameter(name = "Options") String options,
+                     @Parameter(name = "Page Number") int page,
+                     @Parameter(name = "Page Size") int pageSize) throws Exception;
 }
 

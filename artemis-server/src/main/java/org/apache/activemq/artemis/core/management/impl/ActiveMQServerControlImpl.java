@@ -32,6 +32,7 @@ import javax.management.NotificationListener;
 import javax.transaction.xa.Xid;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -70,6 +71,7 @@ import org.apache.activemq.artemis.core.management.impl.view.AddressView;
 import org.apache.activemq.artemis.core.management.impl.view.ConnectionView;
 import org.apache.activemq.artemis.core.management.impl.view.ConsumerView;
 import org.apache.activemq.artemis.core.management.impl.view.ProducerView;
+import org.apache.activemq.artemis.core.management.impl.view.QueueView;
 import org.apache.activemq.artemis.core.management.impl.view.SessionView;
 import org.apache.activemq.artemis.core.messagecounter.MessageCounterManager;
 import org.apache.activemq.artemis.core.messagecounter.impl.MessageCounterManagerImpl;
@@ -1650,6 +1652,29 @@ public class ActiveMQServerControlImpl extends AbstractControl implements Active
       } finally {
          blockOnIO();
       }
+   }
+
+   @Override
+   public String listQueues(String options, int page, int pageSize) throws Exception {
+      checkStarted();
+
+      clearIO();
+      try {
+         List<QueueControl> queues = new ArrayList<>();
+         Object[] qs = server.getManagementService().getResources(QueueControl.class);
+         for (int i = 0; i < qs.length; i++) {
+            queues.add((QueueControl) qs[i]);
+         }
+         QueueView view = new QueueView(server);
+         view.setCollection(queues);
+         view.setOptions(options);
+         return view.getResultsAsJson(page, pageSize);
+      } catch (Throwable e) {
+         e.printStackTrace();
+      } finally {
+         blockOnIO();
+      }
+      return "";
    }
 
    @Override

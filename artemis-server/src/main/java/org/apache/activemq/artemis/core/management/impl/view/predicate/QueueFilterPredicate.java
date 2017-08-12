@@ -16,18 +16,26 @@
  */
 package org.apache.activemq.artemis.core.management.impl.view.predicate;
 
-import org.apache.activemq.artemis.core.server.ActiveMQServer;
-import org.apache.activemq.artemis.core.server.ServerConsumer;
+import java.util.HashSet;
+import java.util.Set;
 
-public class QueueFilterPredicate extends ActiveMQFilterPredicate<ServerConsumer> {
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.management.QueueControl;
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.Consumer;
+import org.apache.activemq.artemis.core.server.Queue;
+
+public class QueueFilterPredicate extends ActiveMQFilterPredicate<QueueControl> {
 
    enum Field {
-      ID, SESSION_ID, QUEUE, ADDRESS, USER, PROTOCOL, CLIENT_ID, LOCAL_ADDRESS, REMOTE_ADDRESS
+      ID, NAME, CONSUMER_ID, QUEUE, ADDRESS, MAX_CONSUMERS, FILTER, MESSAGE_COUNT, CONSUMER_COUNT, DELIVERING_COUNT,
+      MESSAGES_ADDED, MESSAGES_ACKED, RATE, ROUTING_TYPE, USER, AUTO_CREATED, DURABLE, PAUSED, TEMPORARY,
+      PURGE_ON_NO_CONSUMERS, MESSAGES_KILLED, DIRECT_DELIVER
    }
 
    private Field f;
 
-   private final ActiveMQServer server;
+   private ActiveMQServer server;
 
    public QueueFilterPredicate(ActiveMQServer server) {
       super();
@@ -35,21 +43,41 @@ public class QueueFilterPredicate extends ActiveMQFilterPredicate<ServerConsumer
    }
 
    @Override
-   public boolean apply(ServerConsumer consumer) {
+   public boolean apply(QueueControl queue) {
       // Using switch over enum vs string comparison is better for perf.
-      if (f == null) return true;
-      switch (f) {
-         case ID:              return matches(consumer.getID());
-         case SESSION_ID:      return matches(consumer.getSessionID());
-         case USER:            return matches(server.getSessionByID(consumer.getSessionID()).getUsername());
-         case ADDRESS:         return matches(consumer.getQueue().getAddress());
-         case QUEUE:           return matches(consumer.getQueue().getName());
-         case PROTOCOL:        return matches(server.getSessionByID(consumer.getSessionID()).getRemotingConnection().getProtocolName());
-         case CLIENT_ID:       return matches(server.getSessionByID(consumer.getSessionID()).getRemotingConnection().getClientID());
-         case LOCAL_ADDRESS:   return matches(server.getSessionByID(consumer.getSessionID()).getRemotingConnection().getTransportConnection().getLocalAddress());
-         case REMOTE_ADDRESS:  return matches(server.getSessionByID(consumer.getSessionID()).getRemotingConnection().getTransportConnection().getRemoteAddress());
+      try {
+         if (f == null) return true;
+         switch (f) {
+            case ID:                    return matches(queue.getID());
+            case NAME:                  return matches(queue.getName());
+            case CONSUMER_ID:           Queue q = server.locateQueue(new SimpleString(queue.getName()));
+                                        for (Consumer consumer : q.getConsumers()) {
+                                           if (value.equals(consumer.sequentialID())) return true;
+                                        }
+                                        return false;
+            case MAX_CONSUMERS:         return matches(queue.getMaxConsumers());
+            case ADDRESS:               return matches(queue.getAddress());
+            case FILTER:                return matches(queue.getFilter());
+            case MESSAGE_COUNT:         return matches(queue.getMessageCount());
+            case CONSUMER_COUNT:        return matches(queue.getConsumerCount());
+            case DELIVERING_COUNT:      return matches(queue.getDeliveringCount());
+            case MESSAGES_ADDED:        return matches(queue.getMessagesAdded());
+            case MESSAGES_ACKED:        return matches(queue.getMessagesAcknowledged());
+            case RATE:                  return matches(queue.getMessagesExpired());
+            case ROUTING_TYPE:          return matches(queue.getRoutingType());
+            case AUTO_CREATED:          return matches(server.locateQueue(new SimpleString(queue.getName())).isAutoCreated());
+            case DURABLE:               return matches(queue.isDurable());
+            case PAUSED:                return matches(queue.isPaused());
+            case TEMPORARY:             return matches(queue.isTemporary());
+            case PURGE_ON_NO_CONSUMERS: return matches(queue.isPurgeOnNoConsumers());
+            case MESSAGES_KILLED:       return matches(queue.getMessagesKilled());
+         }
+         return true;
       }
-      return true;
+      catch (Exception e) {
+         return true;
+      }
+
    }
 
    @Override

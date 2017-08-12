@@ -125,7 +125,10 @@ var ARTEMIS = (function(ARTEMIS) {
          })
         .when('/artemis/addresses', {
             templateUrl: ARTEMIS.templatePath + 'addresses.html'
-         });
+         })
+        .when('/artemis/queues', {
+            templateUrl: ARTEMIS.templatePath + 'queues.html'
+        });
    });
 
    ARTEMIS.module.factory('artemisMessage', function () {
@@ -239,6 +242,13 @@ var ARTEMIS = (function(ARTEMIS) {
            title: "View a diagram of the producers, destinations and consumers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/diagram"; }
+       });
+
+       workspace.subLevelTabs.unshift({
+           content: '<i class="icon-upload"></i> Queues',
+           title: "Manage Producers",
+           isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
+           href: function () { return "#/artemis/queues"; }
        });
 
        workspace.subLevelTabs.unshift({
