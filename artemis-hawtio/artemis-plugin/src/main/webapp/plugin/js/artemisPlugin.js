@@ -245,14 +245,14 @@ var ARTEMIS = (function(ARTEMIS) {
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-upload"></i> Queues',
+           content: '<i class="icon-ellipsis-h"></i> Queues',
            title: "Manage Producers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/queues"; }
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-upload"></i> Addresses',
+           content: '<i class="icon-at"></i> Addresses',
            title: "Manage Producers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/addresses"; }
