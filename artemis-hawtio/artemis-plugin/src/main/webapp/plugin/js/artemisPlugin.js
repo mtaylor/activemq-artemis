@@ -238,35 +238,35 @@ var ARTEMIS = (function(ARTEMIS) {
       });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-picture"></i> Diagram|',
+           content: '<i class="icon-picture"></i> Diagram&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|',
            title: "View a diagram of the producers, destinations and consumers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/diagram"; }
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-ellipsis-h"></i> Queues',
-           title: "Manage Producers",
+           content: '<i class="icon-th-list"></i> Queues',
+           title: "Manage Queues",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/queues"; }
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-at"></i> Addresses',
-           title: "Manage Producers",
+           content: '<i class="icon-book"></i> Addresses',
+           title: "Manage Addresses",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/addresses"; }
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-upload"></i> Producers',
+           content: '<i class="icon-upload-alt"></i> Producers',
            title: "Manage Producers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/producers"; }
        });
 
        workspace.subLevelTabs.unshift({
-           content: '<i class="icon-download"></i> Consumers',
+           content: '<i class="icon-download-alt"></i> Consumers',
            title: "Manage Consumers",
            isValid: function (workspace) { return workspace.isTopTabActive("artemis") || workspace.selectionHasDomain(artemisJmxDomain); },
            href: function () { return "#/artemis/consumers"; }
