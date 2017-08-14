@@ -60,7 +60,7 @@ var ARTEMIS = (function(ARTEMIS) {
         $scope.filter = {
             fieldOptions: [
                 {id: 'ID', name: 'ID'},
-                {id: 'NAME', name: 'Session ID'},
+                {id: 'NAME', name: 'Name'},
                 {id: 'ROUTING_TYPES', name: 'Routing Types'},
                 {id: 'QUEUE_COUNT', name: 'Queue Count'},
             ],

@@ -70,11 +70,6 @@ var ARTEMIS = (function(ARTEMIS) {
                 field: 'localAddress',
                 displayName: 'Local Address',
                 width: '*'
-            },
-            {
-                field: 'creationTime',
-                displayName: 'Creation Time',
-                width: '*'
             }
         ];
         $scope.filter = {
