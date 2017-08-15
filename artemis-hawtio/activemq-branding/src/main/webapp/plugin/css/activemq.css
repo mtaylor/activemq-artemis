@@ -1825,11 +1825,11 @@ div[ng-controller='Core.LoginController']:after {
 }
 
 .login-logo>img {
-  height: 150px;
+  height: 80px;
 }
 
 .login-logo {
-  top: -200px;
+  top: -120px;
   /* with no app title */
   /* left: 183px; */
   left: 45px;
