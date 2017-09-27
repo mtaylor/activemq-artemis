@@ -22,9 +22,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -103,9 +105,29 @@ public class ProtocolHandler {
 
       private final boolean httpEnabled;
 
+      private ScheduledFuture timeoutFuture;
+
+      private boolean protocolDataReceived = false;
+
       ProtocolDecoder(boolean http, boolean httpEnabled) {
          this.http = http;
          this.httpEnabled = httpEnabled;
+      }
+
+      @Override
+      public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+         timeoutFuture = scheduledThreadPool.schedule(new Runnable() {
+            @Override
+            public void run() {
+               ctx.channel().close();
+            }
+         }, 10, TimeUnit.SECONDS);
+         ctx.fireChannelRegistered();
+      }
+
+      private void removeTimeout() {
+         timeoutFuture.cancel(true);
+         timeoutFuture = null;
       }
 
       @Override
@@ -139,6 +161,7 @@ public class ProtocolHandler {
          if (in.readableBytes() < 8) {
             return;
          }
+         removeTimeout();
 
          final int magic1 = in.getUnsignedByte(in.readerIndex());
          final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
