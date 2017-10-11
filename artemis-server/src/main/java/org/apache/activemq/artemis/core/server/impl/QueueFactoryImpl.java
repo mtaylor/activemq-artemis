@@ -8,7 +8,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ * Unless required by applicable law or agnreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -18,8 +18,8 @@ package org.apache.activemq.artemis.core.server.impl;
 
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.core.config.QueuePolicyConfiguration;
 import org.apache.activemq.artemis.core.filter.Filter;
 import org.apache.activemq.artemis.core.paging.cursor.PageSubscription;
 import org.apache.activemq.artemis.core.persistence.StorageManager;
@@ -28,6 +28,9 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.QueueConfig;
 import org.apache.activemq.artemis.core.server.QueueFactory;
+import org.apache.activemq.artemis.core.server.queue.policy.Policy;
+import org.apache.activemq.artemis.core.server.queue.policy.impl.Default;
+import org.apache.activemq.artemis.core.server.queue.policy.impl.LVQ;
 import org.apache.activemq.artemis.core.settings.HierarchicalRepository;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.utils.ExecutorFactory;
@@ -73,15 +76,47 @@ public class QueueFactoryImpl implements QueueFactory {
    @Override
    public Queue createQueueWith(final QueueConfig config) {
       final AddressSettings addressSettings = addressSettingsRepository.getMatch(config.address().toString());
-      final Queue queue;
-      if (addressSettings.isLastValueQueue()) {
-         queue = new LastValueQueue(config.id(), config.address(), config.name(), config.filter(), config.pageSubscription(), config.user(), config.isDurable(), config.isTemporary(), config.isAutoCreated(), config.deliveryMode(), config.maxConsumers(), config.isPurgeOnNoConsumers(), scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executorFactory.getExecutor(), server, this);
-      } else {
-         queue = new QueueImpl(config.id(), config.address(), config.name(), config.filter(), config.pageSubscription(), config.user(), config.isDurable(), config.isTemporary(), config.isAutoCreated(), config.deliveryMode(), config.maxConsumers(), config.isPurgeOnNoConsumers(), scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executorFactory.getExecutor(), server, this);
-      }
+      final QueueImpl queue;
 
+
+      queue = new QueueImpl(config.id(),
+                            config.address(),
+                            config.name(),
+                            config.filter(),
+                            config.pageSubscription(),
+                            config.user(),
+                            config.isDurable(),
+                            config.isTemporary(),
+                            config.isAutoCreated(),
+                            config.deliveryMode(),
+                            config.maxConsumers(),
+                            config.isPurgeOnNoConsumers(),
+                            scheduledExecutor,
+                            postOffice,
+                            storageManager,
+                            addressSettingsRepository,
+                            executorFactory.getExecutor(),
+                            server,
+                            this,
+                            getQueuePolicyFromConfig(addressSettings));
       server.getCriticalAnalyzer().add(queue);
       return queue;
+   }
+
+   private Policy getQueuePolicyFromConfig(AddressSettings addressSettings) {
+      Policy policy;
+      QueuePolicyConfiguration qpc = addressSettings.getQueuePolicyConfiguration();
+      if (qpc == null) {
+         // Check for old configuration.
+         if (addressSettings.isLastValueQueue()) {
+            policy = new LVQ();
+         } else {
+            policy = new Default();
+         }
+      } else {
+         policy = qpc.getInstance();
+      }
+      return policy;
    }
 
    @Deprecated
@@ -101,12 +136,24 @@ public class QueueFactoryImpl implements QueueFactory {
 
       AddressSettings addressSettings = addressSettingsRepository.getMatch(address.toString());
 
-      Queue queue;
-      if (addressSettings.isLastValueQueue()) {
-         queue = new LastValueQueue(persistenceID, address, name, filter, pageSubscription, user, durable, temporary, autoCreated, ActiveMQDefaultConfiguration.getDefaultRoutingType(), ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers(), ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers(),  scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executorFactory.getExecutor(), server, this);
-      } else {
-         queue = new QueueImpl(persistenceID, address, name, filter, pageSubscription, user, durable, temporary, autoCreated, scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executorFactory.getExecutor(), server, this);
-      }
+      QueueImpl queue;
+      queue = new QueueImpl(persistenceID,
+                            address,
+                            name,
+                            filter,
+                            pageSubscription,
+                            user,
+                            durable,
+                            temporary,
+                            autoCreated,
+                            scheduledExecutor,
+                            postOffice,
+                            storageManager,
+                            addressSettingsRepository,
+                            executorFactory.getExecutor(),
+                            server,
+                            this);
+      queue.setPolicy(getQueuePolicyFromConfig(addressSettings));
 
       server.getCriticalAnalyzer().add(queue);
 

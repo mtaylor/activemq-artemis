@@ -14,28 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.artemis.core.server.impl;
+package org.apache.activemq.artemis.core.server.queue.policy.impl;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.activemq.artemis.api.core.Message;
-import org.apache.activemq.artemis.api.core.RoutingType;
 import org.apache.activemq.artemis.api.core.SimpleString;
-import org.apache.activemq.artemis.core.filter.Filter;
-import org.apache.activemq.artemis.core.paging.cursor.PageSubscription;
-import org.apache.activemq.artemis.core.persistence.StorageManager;
-import org.apache.activemq.artemis.core.postoffice.PostOffice;
-import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.MessageReference;
 import org.apache.activemq.artemis.core.server.Queue;
-import org.apache.activemq.artemis.core.server.QueueFactory;
-import org.apache.activemq.artemis.core.settings.HierarchicalRepository;
-import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
+import org.apache.activemq.artemis.core.server.impl.AckReason;
 import org.apache.activemq.artemis.core.transaction.Transaction;
-import org.apache.activemq.artemis.utils.actors.ArtemisExecutor;
 
 /**
  * A queue that will discard messages if a newer message with the same
@@ -45,62 +35,30 @@ import org.apache.activemq.artemis.utils.actors.ArtemisExecutor;
  * This is useful for example, for stock prices, where you're only interested in the latest value
  * for a particular stock
  */
-public class LastValueQueue extends QueueImpl {
-
+public class LVQ extends Default {
    private final Map<SimpleString, HolderReference> map = new ConcurrentHashMap<>();
 
-   public LastValueQueue(final long persistenceID,
-                         final SimpleString address,
-                         final SimpleString name,
-                         final Filter filter,
-                         final PageSubscription pageSubscription,
-                         final SimpleString user,
-                         final boolean durable,
-                         final boolean temporary,
-                         final boolean autoCreated,
-                         final RoutingType routingType,
-                         final Integer maxConsumers,
-                         final Boolean purgeOnNoConsumers,
-                         final ScheduledExecutorService scheduledExecutor,
-                         final PostOffice postOffice,
-                         final StorageManager storageManager,
-                         final HierarchicalRepository<AddressSettings> addressSettingsRepository,
-                         final ArtemisExecutor executor,
-                         final ActiveMQServer server,
-                         final QueueFactory factory) {
-      super(persistenceID, address, name, filter, pageSubscription, user, durable, temporary, autoCreated, routingType, maxConsumers, purgeOnNoConsumers, scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executor, server, factory);
-   }
-
    @Override
-   public synchronized void addTail(final MessageReference ref, final boolean direct) {
-      if (scheduleIfPossible(ref)) {
-         return;
-      }
-
+   public MessageReference beforeAddTail(final MessageReference ref, final boolean direct) {
       SimpleString prop = ref.getMessage().getLastValueProperty();
-
       if (prop != null) {
          HolderReference hr = map.get(prop);
-
          if (hr != null) {
             // We need to overwrite the old ref with the new one and ack the old one
-
             replaceLVQMessage(ref, hr);
-
          } else {
             hr = new HolderReference(prop, ref);
-
             map.put(prop, hr);
-
-            super.addTail(hr, direct);
+            return hr;
          }
       } else {
-         super.addTail(ref, direct);
+         return ref;
       }
+      return null;
    }
 
    @Override
-   public synchronized void addHead(final MessageReference ref, boolean scheduling) {
+   public MessageReference beforeAddHead(final MessageReference ref, boolean scheduling) {
 
       SimpleString lastValueProp = ref.getMessage().getLastValueProperty();
 
@@ -114,31 +72,28 @@ public class LastValueQueue extends QueueImpl {
                replaceLVQMessage(ref, hr);
             } else {
                // We keep the current ref and ack the one we are returning
-
-               super.referenceHandled();
-
+               queue.referenceHandled();
                try {
-                  super.acknowledge(ref);
+                  queue.acknowledge(ref);
                } catch (Exception e) {
                   ActiveMQServerLogger.LOGGER.errorAckingOldReference(e);
                }
             }
          } else {
             hr = new HolderReference(lastValueProp, ref);
-
             map.put(lastValueProp, hr);
-
-            super.addHead(hr, scheduling);
+            return hr;
          }
       } else {
-         super.addHead(ref, scheduling);
+         return ref;
       }
+      return null;
    }
 
    private void replaceLVQMessage(MessageReference ref, HolderReference hr) {
       MessageReference oldRef = hr.getReference();
 
-      referenceHandled();
+      queue.referenceHandled();
 
       try {
          oldRef.acknowledge();
@@ -150,7 +105,7 @@ public class LastValueQueue extends QueueImpl {
    }
 
    @Override
-   protected void refRemoved(MessageReference ref) {
+   public boolean beforeRefRemoved(MessageReference ref) {
       synchronized (this) {
          SimpleString prop = ref.getMessage().getLastValueProperty();
 
@@ -158,8 +113,7 @@ public class LastValueQueue extends QueueImpl {
             map.remove(prop);
          }
       }
-
-      super.refRemoved(ref);
+      return true;
    }
 
    private class HolderReference implements MessageReference {
@@ -330,11 +284,12 @@ public class LastValueQueue extends QueueImpl {
       if (!super.equals(obj)) {
          return false;
       }
-      if (!(obj instanceof LastValueQueue)) {
+      if (!(obj instanceof LVQ)) {
          return false;
       }
-      LastValueQueue other = (LastValueQueue) obj;
-      if (map == null) {
+
+      LVQ other = (LVQ) obj;
+      if (this.map == null) {
          if (other.map != null) {
             return false;
          }

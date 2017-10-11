@@ -522,6 +522,14 @@
             </xsd:annotation>
          </xsd:element>
 
+         <xsd:element name="queue-policy" type="queuePolicyType" maxOccurs="1" minOccurs="0">
+            <xsd:annotation>
+               <xsd:documentation>
+                  The queue policy, defines the behaviour of this queue.  Examples, include LVQ or DEFAULT.
+               </xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+
          <xsd:element name="cluster-connections" type="clusterConnectionChoiceType" maxOccurs="1" minOccurs="0">
             <xsd:annotation>
                <xsd:documentation>
@@ -1859,6 +1867,41 @@
       </xsd:choice>
    </xsd:complexType>
 
+   <xsd:complexType name="queuePolicyType">
+      <xsd:choice>
+         <xsd:element name="default" type="defaultQueuePolicyType" minOccurs="0" maxOccurs="1">
+            <xsd:annotation>
+               <xsd:documentation>
+                  Default Queue behaviour
+               </xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+         <xsd:element name="lvq" type="lvqQueuePolicyType" minOccurs="0" maxOccurs="1">
+            <xsd:annotation>
+               <xsd:documentation>
+                  Queues with this policy will behave as a Last Value Queue.
+               </xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+      </xsd:choice>
+   </xsd:complexType>
+
+   <xsd:complexType name="lvqQueuePolicyType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Sets the LVQ policy for queues
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:complexType>
+
+   <xsd:complexType name="defaultQueuePolicyType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Sets the Default policy for queues
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:complexType>
+
    <xsd:complexType name="haReplicationType">
       <xsd:choice>
          <xsd:element name="master" type="replicatedPolicyType" minOccurs="0" maxOccurs="1">
@@ -2571,7 +2614,15 @@
             <xsd:element name="last-value-queue" type="xsd:boolean" default="false" maxOccurs="1" minOccurs="0">
                <xsd:annotation>
                   <xsd:documentation>
-                     whether to treat the queue as a last value queue
+                     Deprecated.  Please use qwhether to treat the queue as a last value queue
+                  </xsd:documentation>
+               </xsd:annotation>
+            </xsd:element>
+
+            <xsd:element name="queue-policy" type="queuePolicyType" maxOccurs="1" minOccurs="0">
+               <xsd:annotation>
+                  <xsd:documentation>
+                     Defines behavioural policy for a queue, examples include default, last value queue and ring queue.
                   </xsd:documentation>
                </xsd:annotation>
             </xsd:element>

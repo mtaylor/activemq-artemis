@@ -31,6 +31,9 @@ import java.util.Set;
 
 import org.apache.activemq.artemis.ArtemisConstants;
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
+import org.apache.activemq.artemis.core.config.QueuePolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.DefaultQueuePolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.LVQPolicyConfiguration;
 import org.apache.activemq.artemis.utils.critical.CriticalAnalyzerPolicy;
 import org.apache.activemq.artemis.api.core.BroadcastEndpointFactory;
 import org.apache.activemq.artemis.api.core.BroadcastGroupConfiguration;
@@ -216,6 +219,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
    private static final String MAX_CONNECTIONS_NODE_NAME = "max-connections";
 
    private static final String MAX_QUEUES_NODE_NAME = "max-queues";
+
+   private static final String QUEUE_POLICY_NODE_NAME = "queue-policy";
 
    private static final String GLOBAL_MAX_SIZE = "global-max-size";
 
@@ -1029,9 +1034,27 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
             Validators.ROUTING_TYPE.validate(DEFAULT_ADDRESS_ROUTING_TYPE, value);
             RoutingType routingType = RoutingType.valueOf(value);
             addressSettings.setDefaultAddressRoutingType(routingType);
+         } else if (QUEUE_POLICY_NODE_NAME.equalsIgnoreCase(name)) {
+            addressSettings.setQueuePolicyConfiguration(parseQueuePolicyConfiguration(child));
          }
       }
       return setting;
+   }
+
+   protected QueuePolicyConfiguration parseQueuePolicyConfiguration(final Node node) {
+      NodeList children = node.getChildNodes();
+      for (int i = 0; i < children.getLength(); i++) {
+         final Node child = children.item(i);
+         String name = child.getNodeName();
+         if (name != null) {
+            if (name.equalsIgnoreCase("default")) {
+               return new DefaultQueuePolicyConfiguration();
+            } else if (name.equalsIgnoreCase("lvq")) {
+               return new LVQPolicyConfiguration();
+            }
+         }
+      }
+      return new DefaultQueuePolicyConfiguration();
    }
 
    /**

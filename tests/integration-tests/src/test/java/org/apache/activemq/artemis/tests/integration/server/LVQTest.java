@@ -24,6 +24,8 @@ import org.apache.activemq.artemis.api.core.client.ClientProducer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory;
 import org.apache.activemq.artemis.api.core.client.ServerLocator;
+import org.apache.activemq.artemis.core.config.Configuration;
+import org.apache.activemq.artemis.core.config.queue.policy.LVQPolicyConfiguration;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServers;
 import org.apache.activemq.artemis.core.server.Queue;
@@ -644,11 +646,10 @@ public class LVQTest extends ActiveMQTestBase {
    public void setUp() throws Exception {
       super.setUp();
 
-      server = addServer(ActiveMQServers.newActiveMQServer(createDefaultNettyConfig(), true));
+      server = addServer(ActiveMQServers.newActiveMQServer(getServerConfiguration(address), true));
       // start the server
       server.start();
 
-      server.getAddressSettingsRepository().addMatch(address.toString(), new AddressSettings().setLastValueQueue(true));
       // then we create a client as normalServer
       ServerLocator locator = createNettyNonHALocator().setBlockOnAcknowledge(true).setAckBatchSize(0);
 
@@ -658,4 +659,16 @@ public class LVQTest extends ActiveMQTestBase {
       clientSessionTxSends = addClientSession(sf.createSession(false, false, true));
       clientSession.createQueue(address, qName1, null, true);
    }
+
+   protected Configuration getServerConfiguration(SimpleString lvqAddress) throws Exception {
+      Configuration configuration = createDefaultNettyConfig();
+
+      AddressSettings addressSettings = new AddressSettings();
+      addressSettings.setQueuePolicyConfiguration(new LVQPolicyConfiguration());
+      addressSettings.setLastValueQueue(false);
+
+      configuration.getAddressesSettings().put(lvqAddress.toString(), addressSettings);
+      return configuration;
+   }
+
 }

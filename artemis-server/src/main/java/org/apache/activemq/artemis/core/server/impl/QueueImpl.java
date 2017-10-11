@@ -75,6 +75,8 @@ import org.apache.activemq.artemis.core.server.cluster.RemoteQueueBinding;
 import org.apache.activemq.artemis.core.server.cluster.impl.Redistributor;
 import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.core.server.management.Notification;
+import org.apache.activemq.artemis.core.server.queue.policy.Policy;
+import org.apache.activemq.artemis.core.server.queue.policy.impl.Default;
 import org.apache.activemq.artemis.core.settings.HierarchicalRepository;
 import org.apache.activemq.artemis.core.settings.HierarchicalRepositoryChangeListener;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
@@ -264,6 +266,8 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
 
    private final QueueFactory factory;
 
+   private Policy policy;
+
    /**
     * This is to avoid multi-thread races on calculating direct delivery,
     * to guarantee ordering will be always be correct
@@ -386,6 +390,29 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
                     final ArtemisExecutor executor,
                     final ActiveMQServer server,
                     final QueueFactory factory) {
+      this(id, address, name, filter, pageSubscription, user, durable, temporary, autoCreated, routingType, maxConsumers, purgeOnNoConsumers, scheduledExecutor, postOffice, storageManager, addressSettingsRepository, executor, server, factory, new Default());
+   }
+
+   public QueueImpl(final long id,
+                    final SimpleString address,
+                    final SimpleString name,
+                    final Filter filter,
+                    final PageSubscription pageSubscription,
+                    final SimpleString user,
+                    final boolean durable,
+                    final boolean temporary,
+                    final boolean autoCreated,
+                    final RoutingType routingType,
+                    final Integer maxConsumers,
+                    final Boolean purgeOnNoConsumers,
+                    final ScheduledExecutorService scheduledExecutor,
+                    final PostOffice postOffice,
+                    final StorageManager storageManager,
+                    final HierarchicalRepository<AddressSettings> addressSettingsRepository,
+                    final ArtemisExecutor executor,
+                    final ActiveMQServer server,
+                    final QueueFactory factory,
+                    final Policy policy) {
       super(server == null ? EmptyCriticalAnalyzer.getInstance() : server.getCriticalAnalyzer(), CRITICAL_PATHS);
 
       this.id = id;
@@ -443,6 +470,9 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       this.user = user;
 
       this.factory = factory;
+
+      this.policy = policy;
+      this.policy.setQueue(this);
    }
 
    // Bindable implementation -------------------------------------------------------------------------------------
@@ -484,6 +514,7 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
          this.refCountForConsumers = referenceCounter;
       }
    }
+
 
    @Override
    public ReferenceCounter getConsumersRefCount() {
@@ -587,23 +618,30 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       }
    }
 
+   public long getSize() {
+      return queueMemorySize.get();
+   }
+
    /* Called when a message is cancelled back into the queue */
    @Override
-   public void addHead(final MessageReference ref, boolean scheduling) {
+   public void addHead(MessageReference ref, boolean scheduling) {
       enterCritical(CRITICAL_PATH_ADD_HEAD);
-      synchronized (this) {
-         try {
-            flushDeliveriesInTransit();
-            if (!scheduling && scheduledDeliveryHandler.checkAndSchedule(ref, false)) {
-               return;
+      try {
+         /* Notify the Queue Policy that Add Head has been called.  Policy may adjust the reference, or return null
+         if it does not want this ref to be added back to the queue */
+         ref = policy.beforeAddHead(ref, scheduling);
+         if (ref != null) {
+            synchronized (this) {
+               flushDeliveriesInTransit();
+               if (!scheduling && scheduledDeliveryHandler.checkAndSchedule(ref, false)) {
+                  return;
+               }
+               internalAddHead(ref);
+               directDeliver = false;
             }
-
-            internalAddHead(ref);
-
-            directDeliver = false;
-         } finally {
-            leaveCritical(CRITICAL_PATH_ADD_HEAD);
          }
+      } finally {
+         leaveCritical(CRITICAL_PATH_ADD_HEAD);
       }
    }
 
@@ -647,58 +685,63 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
    }
 
    @Override
-   public void addTail(final MessageReference ref, final boolean direct) {
+   public void addTail(MessageReference ref, final boolean direct) {
       enterCritical(CRITICAL_PATH_ADD_TAIL);
       try {
          if (scheduleIfPossible(ref)) {
             return;
          }
 
-         if (supportsDirectDeliver && !directDeliver && direct && System.currentTimeMillis() - lastDirectDeliveryCheck > CHECK_QUEUE_SIZE_PERIOD) {
-            if (logger.isTraceEnabled()) {
-               logger.trace("Checking to re-enable direct deliver on queue " + this.getName());
-            }
-            lastDirectDeliveryCheck = System.currentTimeMillis();
-            synchronized (directDeliveryGuard) {
-               // The checkDirect flag is periodically set to true, if the delivery is specified as direct then this causes the
-               // directDeliver flag to be re-computed resulting in direct delivery if the queue is empty
-               // We don't recompute it on every delivery since executing isEmpty is expensive for a ConcurrentQueue
+         /* Notify the Queue Policy that Add Tail has been called.  Policy may adjust the reference, or return null
+         if it does not want this ref to be added */
+         ref = policy.beforeAddTail(ref, direct);
+         if (ref != null) {
+            if (supportsDirectDeliver && !directDeliver && direct && System.currentTimeMillis() - lastDirectDeliveryCheck > CHECK_QUEUE_SIZE_PERIOD) {
+               if (logger.isTraceEnabled()) {
+                  logger.trace("Checking to re-enable direct deliver on queue " + this.getName());
+               }
+               lastDirectDeliveryCheck = System.currentTimeMillis();
+               synchronized (directDeliveryGuard) {
+                  // The checkDirect flag is periodically set to true, if the delivery is specified as direct then this causes the
+                  // directDeliver flag to be re-computed resulting in direct delivery if the queue is empty
+                  // We don't recompute it on every delivery since executing isEmpty is expensive for a ConcurrentQueue
 
-               if (deliveriesInTransit.getCount() == 0 && getExecutor().isFlushed() && intermediateMessageReferences.isEmpty() && messageReferences.isEmpty() && !pageIterator.hasNext() && !pageSubscription.isPaging()) {
-                  // We must block on the executor to ensure any async deliveries have completed or we might get out of order
-                  // deliveries
-                  // Go into direct delivery mode
-                  directDeliver = supportsDirectDeliver;
-                  if (logger.isTraceEnabled()) {
-                     logger.trace("Setting direct deliverer to " + supportsDirectDeliver);
-                  }
-               } else {
-                  if (logger.isTraceEnabled()) {
-                     logger.trace("Couldn't set direct deliver back");
+                  if (deliveriesInTransit.getCount() == 0 && getExecutor().isFlushed() && intermediateMessageReferences.isEmpty() && messageReferences.isEmpty() && !pageIterator.hasNext() && !pageSubscription.isPaging()) {
+                     // We must block on the executor to ensure any async deliveries have completed or we might get out of order
+                     // deliveries
+                     // Go into direct delivery mode
+                     directDeliver = supportsDirectDeliver;
+                     if (logger.isTraceEnabled()) {
+                        logger.trace("Setting direct deliverer to " + supportsDirectDeliver);
+                     }
+                  } else {
+                     if (logger.isTraceEnabled()) {
+                        logger.trace("Couldn't set direct deliver back");
+                     }
                   }
                }
             }
+
+            if (direct && supportsDirectDeliver && directDeliver && deliveriesInTransit.getCount() == 0 && deliverDirect(ref)) {
+               return;
+            }
+
+            // We only add queueMemorySize if not being delivered directly
+            queueMemorySize.addAndGet(ref.getMessageMemoryEstimate());
+
+            intermediateMessageReferences.add(ref);
+
+            directDeliver = false;
+
+            // Delivery async will both poll for intermediate reference and deliver to clients
+            deliverAsync();
          }
-
-         if (direct && supportsDirectDeliver && directDeliver && deliveriesInTransit.getCount() == 0 && deliverDirect(ref)) {
-            return;
-         }
-
-         // We only add queueMemorySize if not being delivered directly
-         queueMemorySize.addAndGet(ref.getMessageMemoryEstimate());
-
-         intermediateMessageReferences.add(ref);
-
-         directDeliver = false;
-
-         // Delivery async will both poll for intermediate reference and deliver to clients
-         deliverAsync();
       } finally {
          leaveCritical(CRITICAL_PATH_ADD_TAIL);
       }
    }
 
-   protected boolean scheduleIfPossible(MessageReference ref) {
+   public boolean scheduleIfPossible(MessageReference ref) {
       if (scheduledDeliveryHandler.checkAndSchedule(ref, true)) {
          synchronized (this) {
             if (!ref.isPaged()) {
@@ -2005,6 +2048,14 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
 
       QueueImpl qother = (QueueImpl) other;
 
+      /** FIXME
+       * Why dowe need this.  This is ported from LastValueQueue impl which extended equals to check the map. Why when
+       * the name is unique???
+       **/
+      if (!this.policy.equals(qother.getPolicy())) {
+         return false;
+      }
+
       return name.equals(qother.name);
    }
 
@@ -2280,7 +2331,11 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       }
    }
 
-   protected void refRemoved(MessageReference ref) {
+   public void refRemoved(MessageReference ref) {
+      if (policy != null) {
+         policy.beforeRefRemoved(ref);
+      }
+
       queueMemorySize.addAndGet(-ref.getMessageMemoryEstimate());
       if (ref.isPaged()) {
          pagedReferences.decrementAndGet();
@@ -3183,6 +3238,17 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
    @Override
    public void decDelivering(int size) {
       deliveringCount.addAndGet(-size);
+   }
+
+   @Override
+   public Policy getPolicy() {
+      return policy;
+   }
+
+   @Override
+   public void setPolicy(Policy policy) {
+      this.policy = policy;
+      this.policy.setQueue(this);
    }
 
    private void configureExpiry(final AddressSettings settings) {

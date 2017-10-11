@@ -28,6 +28,7 @@ import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.filter.Filter;
 import org.apache.activemq.artemis.core.paging.cursor.PageSubscription;
 import org.apache.activemq.artemis.core.server.impl.AckReason;
+import org.apache.activemq.artemis.core.server.queue.policy.Policy;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.utils.ReferenceCounter;
 import org.apache.activemq.artemis.utils.collections.LinkedListIterator;
@@ -297,5 +298,9 @@ public interface Queue extends Bindable,CriticalComponent {
    SimpleString getUser();
 
    void decDelivering(int size);
+
+   Policy getPolicy();
+
+   void setPolicy(Policy policy);
 
 }

@@ -305,6 +305,9 @@
             <default-max-consumers>15</default-max-consumers>
             <default-queue-routing-type>MULTICAST</default-queue-routing-type>
             <default-address-routing-type>ANYCAST</default-address-routing-type>
+            <queue-policy>
+               <lvq/>
+            </queue-policy>
          </address-setting>
       </address-settings>
       <resource-limit-settings>

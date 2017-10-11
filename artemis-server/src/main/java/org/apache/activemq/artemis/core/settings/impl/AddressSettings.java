@@ -20,9 +20,12 @@ import java.io.Serializable;
 
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
-import org.apache.activemq.artemis.api.core.SimpleString;
-import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.api.core.RoutingType;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.core.config.QueuePolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.DefaultQueuePolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.QueuePolicyConfigurationImpl;
+import org.apache.activemq.artemis.core.journal.EncodingSupport;
 import org.apache.activemq.artemis.core.settings.Mergeable;
 import org.apache.activemq.artemis.utils.BufferHelper;
 import org.apache.activemq.artemis.utils.DataConstants;
@@ -98,6 +101,8 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
    // Default address drop threshold, applied to address settings with BLOCK policy.  -1 means no threshold enabled.
    public static final long DEFAULT_ADDRESS_REJECT_THRESHOLD = -1;
 
+   public static final QueuePolicyConfiguration DEFAULT_QUEUE_POLICY = new DefaultQueuePolicyConfiguration();
+
    private AddressFullMessagePolicy addressFullMessagePolicy = null;
 
    private Long maxSizeBytes = null;
@@ -172,6 +177,8 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
 
    private RoutingType defaultAddressRoutingType = null;
 
+   private QueuePolicyConfiguration queuePolicyConfiguration = null;
+
    //from amq5
    //make it transient
    private transient Integer queuePrefetch = null;
@@ -213,6 +220,7 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       this.defaultPurgeOnNoConsumers = other.defaultPurgeOnNoConsumers;
       this.defaultQueueRoutingType = other.defaultQueueRoutingType;
       this.defaultAddressRoutingType = other.defaultAddressRoutingType;
+      this.queuePolicyConfiguration = other.queuePolicyConfiguration;
    }
 
    public AddressSettings() {
@@ -352,10 +360,18 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       return this;
    }
 
+   /**
+    * @Deprecated This method is deprecated.  Instead use getQueuePolicy to check for LVQ.
+    */
+   @Deprecated
    public boolean isLastValueQueue() {
       return lastValueQueue != null ? lastValueQueue : AddressSettings.DEFAULT_LAST_VALUE_QUEUE;
    }
 
+   /**
+   * @deprecated This configuration option is now deprecated.  Please use the setQueuePolicy method to define LVQ.
+   */
+   @Deprecated
    public AddressSettings setLastValueQueue(final boolean lastValueQueue) {
       this.lastValueQueue = lastValueQueue;
       return this;
@@ -543,6 +559,15 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       return this;
    }
 
+   public QueuePolicyConfiguration getQueuePolicyConfiguration() {
+      return (queuePolicyConfiguration == null) ? AddressSettings.DEFAULT_QUEUE_POLICY : queuePolicyConfiguration;
+   }
+
+   public AddressSettings setQueuePolicyConfiguration(QueuePolicyConfiguration queuePolicyConfiguration) {
+      this.queuePolicyConfiguration = queuePolicyConfiguration;
+      return this;
+   }
+
    /**
     * merge 2 objects in to 1
     *
@@ -655,6 +680,9 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       if (defaultAddressRoutingType == null) {
          defaultAddressRoutingType = merged.defaultAddressRoutingType;
       }
+      if (queuePolicyConfiguration == null) {
+         queuePolicyConfiguration = merged.queuePolicyConfiguration;
+      }
    }
 
    @Override
@@ -751,6 +779,8 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       defaultQueueRoutingType = RoutingType.getType(buffer.readByte());
 
       defaultAddressRoutingType = RoutingType.getType(buffer.readByte());
+
+      queuePolicyConfiguration = QueuePolicyConfigurationImpl.decodePolicy(buffer);
    }
 
    @Override
@@ -788,7 +818,8 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
          BufferHelper.sizeOfNullableInteger(defaultMaxConsumers) +
          BufferHelper.sizeOfNullableBoolean(defaultPurgeOnNoConsumers) +
          DataConstants.SIZE_BYTE +
-         DataConstants.SIZE_BYTE;
+         DataConstants.SIZE_BYTE +
+         queuePolicyConfiguration.getEncodeSize();
    }
 
    @Override
@@ -862,6 +893,8 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       buffer.writeByte(defaultQueueRoutingType == null ? -1 : defaultQueueRoutingType.getType());
 
       buffer.writeByte(defaultAddressRoutingType == null ? -1 : defaultAddressRoutingType.getType());
+
+      queuePolicyConfiguration.encode(buffer);
    }
 
    /* (non-Javadoc)
@@ -907,6 +940,7 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
       result = prime * result + ((defaultPurgeOnNoConsumers == null) ? 0 : defaultPurgeOnNoConsumers.hashCode());
       result = prime * result + ((defaultQueueRoutingType == null) ? 0 : defaultQueueRoutingType.hashCode());
       result = prime * result + ((defaultAddressRoutingType == null) ? 0 : defaultAddressRoutingType.hashCode());
+      result += queuePolicyConfiguration.hashCode();
       return result;
    }
 
@@ -1107,6 +1141,14 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
             return false;
       } else if (!defaultAddressRoutingType.equals(other.defaultAddressRoutingType))
          return false;
+
+      if (queuePolicyConfiguration == null) {
+         if (other.queuePolicyConfiguration != null) {
+            return false;
+         }
+      } else if (!queuePolicyConfiguration.equals(other.queuePolicyConfiguration)) {
+         return false;
+      }
       return true;
    }
 
@@ -1184,6 +1226,7 @@ public class AddressSettings implements Mergeable<AddressSettings>, Serializable
          defaultQueueRoutingType +
          ", defaultAddressRoutingType=" +
          defaultAddressRoutingType +
+         ", " + queuePolicyConfiguration.toString() +
          "]";
    }
 }

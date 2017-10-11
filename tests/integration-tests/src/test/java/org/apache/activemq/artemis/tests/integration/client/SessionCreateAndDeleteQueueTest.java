@@ -24,7 +24,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator;
 import org.apache.activemq.artemis.core.postoffice.Binding;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.Queue;
-import org.apache.activemq.artemis.core.server.impl.LastValueQueue;
+import org.apache.activemq.artemis.core.server.queue.policy.impl.LVQ;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.junit.Assert;
@@ -104,7 +104,7 @@ public class SessionCreateAndDeleteQueueTest extends ActiveMQTestBase {
       SimpleString filterString = new SimpleString("x=y");
       session.createQueue(address, queueName, filterString, false);
       Binding binding = server.getPostOffice().getBinding(queueName);
-      Assert.assertTrue(binding.getBindable() instanceof LastValueQueue);
+      Assert.assertTrue(((Queue) binding.getBindable()).getPolicy() instanceof LVQ);
 
       session.close();
    }

@@ -45,6 +45,7 @@ import org.apache.activemq.artemis.core.server.Consumer;
 import org.apache.activemq.artemis.core.server.MessageReference;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.RoutingContext;
+import org.apache.activemq.artemis.core.server.queue.policy.Policy;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.utils.ActiveMQThreadFactory;
 import org.apache.activemq.artemis.utils.RandomUtil;
@@ -1298,8 +1299,15 @@ public class ScheduledDeliveryHandlerTest extends Assert {
 
       }
 
+      @Override
+      public Policy getPolicy() {
+         return null;
+      }
 
+      @Override
+      public void setPolicy(Policy policy) {
 
+      }
 
    }
 }

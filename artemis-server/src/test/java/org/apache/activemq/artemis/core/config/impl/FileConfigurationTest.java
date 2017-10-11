@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
-import org.apache.activemq.artemis.utils.critical.CriticalAnalyzerPolicy;
 import org.apache.activemq.artemis.api.core.BroadcastGroupConfiguration;
 import org.apache.activemq.artemis.api.core.DiscoveryGroupConfiguration;
 import org.apache.activemq.artemis.api.core.RoutingType;
@@ -45,6 +44,7 @@ import org.apache.activemq.artemis.core.config.DivertConfiguration;
 import org.apache.activemq.artemis.core.config.FileDeploymentManager;
 import org.apache.activemq.artemis.core.config.HAPolicyConfiguration;
 import org.apache.activemq.artemis.core.config.ha.LiveOnlyPolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.LVQPolicyConfiguration;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import org.apache.activemq.artemis.core.security.Role;
 import org.apache.activemq.artemis.core.server.JournalType;
@@ -53,7 +53,9 @@ import org.apache.activemq.artemis.core.server.SecuritySettingPlugin;
 import org.apache.activemq.artemis.core.server.cluster.impl.MessageLoadBalancingType;
 import org.apache.activemq.artemis.core.server.impl.LegacyLDAPSecuritySettingPlugin;
 import org.apache.activemq.artemis.core.server.plugin.ActiveMQServerPlugin;
+import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.core.settings.impl.SlowConsumerPolicy;
+import org.apache.activemq.artemis.utils.critical.CriticalAnalyzerPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -296,6 +298,7 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertTrue(conf.getAddressesSettings().get("a1") != null);
       assertTrue(conf.getAddressesSettings().get("a2") != null);
 
+      assertEquals(conf.getAddressesSettings().get("a1").getQueuePolicyConfiguration(), AddressSettings.DEFAULT_QUEUE_POLICY);
       assertEquals("a1.1", conf.getAddressesSettings().get("a1").getDeadLetterAddress().toString());
       assertEquals("a1.2", conf.getAddressesSettings().get("a1").getExpiryAddress().toString());
       assertEquals(1, conf.getAddressesSettings().get("a1").getRedeliveryDelay());
@@ -315,6 +318,7 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertEquals(RoutingType.ANYCAST, conf.getAddressesSettings().get("a1").getDefaultQueueRoutingType());
       assertEquals(RoutingType.MULTICAST, conf.getAddressesSettings().get("a1").getDefaultAddressRoutingType());
 
+      assertTrue(conf.getAddressesSettings().get("a2").getQueuePolicyConfiguration() instanceof LVQPolicyConfiguration);
       assertEquals("a2.1", conf.getAddressesSettings().get("a2").getDeadLetterAddress().toString());
       assertEquals("a2.2", conf.getAddressesSettings().get("a2").getExpiryAddress().toString());
       assertEquals(5, conf.getAddressesSettings().get("a2").getRedeliveryDelay());
@@ -389,6 +393,8 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertEquals(CriticalAnalyzerPolicy.HALT, conf.getCriticalAnalyzerPolicy());
 
       assertEquals(false, conf.isJournalDatasync());
+
+
    }
 
    private void verifyAddresses() {
