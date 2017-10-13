@@ -309,6 +309,11 @@
                <lvq/>
             </queue-policy>
          </address-setting>
+         <address-setting match="a3">
+            <queue-policy>
+               <ring maxSizeBytes="999999999" maxMessages="999999999"/>
+            </queue-policy>
+         </address-setting>
       </address-settings>
       <resource-limit-settings>
          <resource-limit-setting match="myUser">

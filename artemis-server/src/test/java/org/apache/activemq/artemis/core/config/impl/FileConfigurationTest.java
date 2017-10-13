@@ -45,6 +45,7 @@ import org.apache.activemq.artemis.core.config.FileDeploymentManager;
 import org.apache.activemq.artemis.core.config.HAPolicyConfiguration;
 import org.apache.activemq.artemis.core.config.ha.LiveOnlyPolicyConfiguration;
 import org.apache.activemq.artemis.core.config.queue.policy.LVQPolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.RingQueuePolicyConfiguration;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import org.apache.activemq.artemis.core.security.Role;
 import org.apache.activemq.artemis.core.server.JournalType;
@@ -293,7 +294,7 @@ public class FileConfigurationTest extends ConfigurationImplTest {
          }
       }
 
-      assertEquals(2, conf.getAddressesSettings().size());
+      assertEquals(3, conf.getAddressesSettings().size());
 
       assertTrue(conf.getAddressesSettings().get("a1") != null);
       assertTrue(conf.getAddressesSettings().get("a2") != null);
@@ -337,6 +338,10 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertEquals(15, conf.getAddressesSettings().get("a2").getDefaultMaxConsumers());
       assertEquals(RoutingType.MULTICAST, conf.getAddressesSettings().get("a2").getDefaultQueueRoutingType());
       assertEquals(RoutingType.ANYCAST, conf.getAddressesSettings().get("a2").getDefaultAddressRoutingType());
+
+      RingQueuePolicyConfiguration ringQueuePolicyConfiguration = (RingQueuePolicyConfiguration) conf.getAddressesSettings().get("a3").getQueuePolicyConfiguration();
+      assertEquals(999999999, ringQueuePolicyConfiguration.getMaxMessages());
+      assertEquals(999999999, ringQueuePolicyConfiguration.getMaxSizeBytes());
 
       assertTrue(conf.getResourceLimitSettings().containsKey("myUser"));
       assertEquals(104, conf.getResourceLimitSettings().get("myUser").getMaxConnections());

@@ -673,4 +673,9 @@ public class FakeQueue extends CriticalComponentImpl implements Queue {
 
    }
 
+   @Override
+   public long sizeBytes() {
+      return 0;
+   }
+
 }

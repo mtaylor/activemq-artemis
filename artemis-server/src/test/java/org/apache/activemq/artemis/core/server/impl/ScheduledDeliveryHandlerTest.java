@@ -1309,5 +1309,10 @@ public class ScheduledDeliveryHandlerTest extends Assert {
 
       }
 
+      @Override
+      public long sizeBytes() {
+         return 0;
+      }
+
    }
 }

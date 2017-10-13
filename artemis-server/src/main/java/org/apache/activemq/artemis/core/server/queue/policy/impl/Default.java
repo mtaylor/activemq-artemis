@@ -33,12 +33,12 @@ public class Default implements Policy {
    }
 
    @Override
-   public MessageReference beforeAddTail(MessageReference ref, boolean direct) {
+   public MessageReference beforeAddTail(MessageReference ref, boolean direct) throws Exception {
       return ref;
    }
 
    @Override
-   public MessageReference beforeAddHead(MessageReference ref, boolean scheduling) {
+   public MessageReference beforeAddHead(MessageReference ref, boolean scheduling) throws Exception {
       return ref;
    }
 

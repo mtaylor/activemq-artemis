@@ -24,7 +24,7 @@ import org.apache.activemq.artemis.core.server.queue.policy.Policy;
 public interface QueuePolicyConfiguration extends Serializable, EncodingSupport {
 
    enum TYPE {
-      DEFAULT, LVQ;
+      DEFAULT, LVQ, RING;
 
       public static TYPE getType(byte type) {
          switch (type) {
@@ -32,6 +32,8 @@ public interface QueuePolicyConfiguration extends Serializable, EncodingSupport 
                return TYPE.DEFAULT;
             case 1:
                return TYPE.LVQ;
+            case 2:
+               return TYPE.RING;
             default:
                return null;
          }
@@ -43,6 +45,8 @@ public interface QueuePolicyConfiguration extends Serializable, EncodingSupport 
                return 0;
             case LVQ:
                return 1;
+            case RING:
+               return 2;
             default:
                return -1;
          }

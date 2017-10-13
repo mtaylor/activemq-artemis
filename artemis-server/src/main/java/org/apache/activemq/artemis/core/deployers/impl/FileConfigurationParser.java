@@ -34,6 +34,7 @@ import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.core.config.QueuePolicyConfiguration;
 import org.apache.activemq.artemis.core.config.queue.policy.DefaultQueuePolicyConfiguration;
 import org.apache.activemq.artemis.core.config.queue.policy.LVQPolicyConfiguration;
+import org.apache.activemq.artemis.core.config.queue.policy.RingQueuePolicyConfiguration;
 import org.apache.activemq.artemis.utils.critical.CriticalAnalyzerPolicy;
 import org.apache.activemq.artemis.api.core.BroadcastEndpointFactory;
 import org.apache.activemq.artemis.api.core.BroadcastGroupConfiguration;
@@ -1051,10 +1052,27 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
                return new DefaultQueuePolicyConfiguration();
             } else if (name.equalsIgnoreCase("lvq")) {
                return new LVQPolicyConfiguration();
+            } else if (name.equalsIgnoreCase("ring")) {
+               return parseRingQueuePolicyConfiguration(child);
             }
          }
       }
       return new DefaultQueuePolicyConfiguration();
+   }
+
+   private RingQueuePolicyConfiguration parseRingQueuePolicyConfiguration(Node node) {
+      RingQueuePolicyConfiguration qpc = new RingQueuePolicyConfiguration();
+
+      Node maxSizeBytesValue = node.getAttributes().getNamedItem("maxSizeBytes");
+      if (maxSizeBytesValue != null) {
+         qpc.setMaxSizeBytes(Long.parseLong(maxSizeBytesValue.getNodeValue()));
+      }
+
+      Node maxMessagesValue = node.getAttributes().getNamedItem("maxMessages");
+      if (maxMessagesValue != null) {
+         qpc.setMaxMessages(Long.parseLong(maxMessagesValue.getNodeValue()));
+      }
+      return qpc;
    }
 
    /**

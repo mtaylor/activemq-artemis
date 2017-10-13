@@ -22,9 +22,9 @@ public interface Policy {
 
    void setQueue(Queue queue);
 
-   MessageReference beforeAddTail(MessageReference ref, boolean direct);
+   MessageReference beforeAddTail(MessageReference ref, boolean direct) throws Exception;
 
-   MessageReference beforeAddHead(MessageReference ref, boolean scheduling);
+   MessageReference beforeAddHead(MessageReference ref, boolean scheduling) throws Exception;
 
    boolean beforeRefRemoved(MessageReference ref);
 

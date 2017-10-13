@@ -1883,6 +1883,13 @@
                </xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element name="ring" type="ringQueuePolicyType" minOccurs="0" maxOccurs="1">
+            <xsd:annotation>
+               <xsd:documentation>
+                  Queues with this policy will behave as a Last Value Queue.
+               </xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
       </xsd:choice>
    </xsd:complexType>
 
@@ -1900,6 +1907,30 @@
             Sets the Default policy for queues
          </xsd:documentation>
       </xsd:annotation>
+   </xsd:complexType>
+
+   <xsd:complexType name="ringQueuePolicyType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Sets a Ring policy for the matching queues.  Queue will start removing head, adding tail once full.
+         </xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="maxSizeBytes" type="xsd:long">
+         <xsd:annotation>
+            <xsd:documentation>
+               The maximum size of the queue in bytes.  This is an estimate of the total memory (and PAGE space,
+               if enabled) in bytes.  Default's to integer max value.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="maxMessages" type="xsd:long">
+         <xsd:annotation>
+            <xsd:documentation>
+               The maximum number of messages that this queue can hold, this includes the total number of messages in
+               memory and in PAGE store (if PAGE policy is enabled for the address).
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="haReplicationType">

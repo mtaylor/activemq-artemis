@@ -32,6 +32,7 @@ public abstract class QueuePolicyConfigurationImpl implements QueuePolicyConfigu
          switch(QueuePolicyConfiguration.TYPE.getType(qpOrdinal)) {
             case DEFAULT: qpc = new DefaultQueuePolicyConfiguration(); break;
             case LVQ: qpc = new LVQPolicyConfiguration(); break;
+            case RING: qpc = new RingQueuePolicyConfiguration(); break;
             default: qpc = new DefaultQueuePolicyConfiguration(); break;
          }
          buffer.resetWriterIndex();
@@ -44,7 +45,7 @@ public abstract class QueuePolicyConfigurationImpl implements QueuePolicyConfigu
 
    @Override
    public void encode(ActiveMQBuffer buffer) {
-      buffer.writeByte(QueuePolicyConfiguration.TYPE.DEFAULT.getType());
+      buffer.writeByte(getType().getType());
    }
 
    @Override

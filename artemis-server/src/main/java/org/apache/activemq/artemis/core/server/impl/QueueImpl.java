@@ -38,6 +38,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -629,7 +630,12 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       try {
          /* Notify the Queue Policy that Add Head has been called.  Policy may adjust the reference, or return null
          if it does not want this ref to be added back to the queue */
-         ref = policy.beforeAddHead(ref, scheduling);
+         try {
+            ref = policy.beforeAddHead(ref, scheduling);
+         } catch (Exception e) {
+            logger.error("Exception thrown by Queue Policy: " + e);
+         }
+
          if (ref != null) {
             synchronized (this) {
                flushDeliveriesInTransit();
@@ -694,7 +700,12 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
 
          /* Notify the Queue Policy that Add Tail has been called.  Policy may adjust the reference, or return null
          if it does not want this ref to be added */
-         ref = policy.beforeAddTail(ref, direct);
+         try {
+            ref = policy.beforeAddTail(ref, direct);
+         } catch (Exception e) {
+            logger.error("Exception thrown by queue policy.", e);
+         }
+
          if (ref != null) {
             if (supportsDirectDeliver && !directDeliver && direct && System.currentTimeMillis() - lastDirectDeliveryCheck > CHECK_QUEUE_SIZE_PERIOD) {
                if (logger.isTraceEnabled()) {
@@ -3251,6 +3262,12 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       this.policy.setQueue(this);
    }
 
+   @Override
+   public long sizeBytes() {
+      // FIXME This should also include page files
+      return queueMemorySize.get();
+   }
+
    private void configureExpiry(final AddressSettings settings) {
       this.expiryAddress = settings == null ? null : settings.getExpiryAddress();
    }
@@ -3305,6 +3322,10 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
             ActiveMQServerLogger.LOGGER.AddressSettingsNoExpiryAddress(name);
          }
       }
+   }
+
+   public void ackHead() throws Exception {
+      messageReferences.poll().acknowledge();
    }
 
    private final class SlowConsumerReaperRunnable implements Runnable {

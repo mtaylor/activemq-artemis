@@ -303,4 +303,5 @@ public interface Queue extends Bindable,CriticalComponent {
 
    void setPolicy(Policy policy);
 
+   long sizeBytes();
 }
