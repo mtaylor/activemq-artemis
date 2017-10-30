@@ -100,4 +100,30 @@ public class CriticalSimpleTest extends ActiveMQTestBase {
 
    }
 
+   @Test
+   public void testCriticalLog() throws Exception {
+
+      Configuration configuration = createDefaultConfig(false);
+      configuration.setCriticalAnalyzerCheckPeriod(10).setCriticalAnalyzer(false).setCriticalAnalyzerPolicy(CriticalAnalyzerPolicy.LOG);
+      ActiveMQServer server = createServer(false, configuration, AddressSettings.DEFAULT_PAGE_SIZE, AddressSettings.DEFAULT_MAX_SIZE_BYTES);
+      server.start();
+
+      try {
+         server.getCriticalAnalyzer().add(new CriticalComponent() {
+            @Override
+            public boolean isExpired(long timeout) {
+               return true;
+            }
+         });
+
+         Wait.waitFor(() -> !server.isStarted(), 500, 10);
+
+         Assert.assertTrue(!server.isStarted());
+      } finally {
+         server.stop();
+      }
+
+
+   }
+
 }
