@@ -1048,7 +1048,7 @@ public class ConsumerTest extends ActiveMQTestBase {
       final int forks = 2;
       final int queues = 1;
       final int runs = 1;
-      final int messages = 10000;
+      final int messages = 1000000;
       final ConnectionFactory factorySend = createFactory(1);
       final AtomicLongArray receivedMessages = new AtomicLongArray(forks);
       final Thread[] producersRunners = new Thread[forks];
@@ -1056,6 +1056,10 @@ public class ConsumerTest extends ActiveMQTestBase {
       //parties are forks (1 producer 1 consumer) + 1 controller in the main test thread
       final CyclicBarrier onStartRun = new CyclicBarrier((forks * 2) + 1);
       final CyclicBarrier onFinishRun = new CyclicBarrier((forks * 2) + 1);
+
+      final int messagesSent = forks * messages;
+      final AtomicInteger messagesRecieved = new AtomicInteger(0);
+
       for (int i = 0; i < forks; i++) {
          final int forkIndex = i;
          final String queueName = "q_" + (forkIndex % queues);
@@ -1083,7 +1087,9 @@ public class ConsumerTest extends ActiveMQTestBase {
                e.printStackTrace();
             }
          });
+
          producerRunner.setDaemon(true);
+
          final Thread consumerRunner = new Thread(() -> {
             try (Connection connection = factorySend.createConnection()) {
                connection.start();
@@ -1092,10 +1098,13 @@ public class ConsumerTest extends ActiveMQTestBase {
                   try (MessageConsumer consumer = session.createConsumer(queue)) {
                      for (int r = 0; r < runs; r++) {
                         onStartRun.await();
-                        for (int m = 0; m < messages; m++) {
-                           final BytesMessage receivedMessage = (BytesMessage) consumer.receive();
-                           final int receivedConsumerIndex = receivedMessage.readInt();
-                           receivedMessages.getAndIncrement(receivedConsumerIndex);
+                        while(messagesRecieved.get() != messagesSent) {
+                           final BytesMessage receivedMessage = (BytesMessage) consumer.receive(1000);
+                           if (receivedMessage != null) {
+                              final int receivedConsumerIndex = receivedMessage.readInt();
+                              receivedMessages.getAndIncrement(receivedConsumerIndex);
+                              messagesRecieved.incrementAndGet();
+                           }
                         }
                         onFinishRun.await();
                      }
