@@ -14,16 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.artemis.tests.extras.byteman;
+package org.apache.activemq.artemis.tests.extras.byteman.critical.analyzer;
 
 import javax.jms.DeliveryMode;
 import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
+import java.lang.reflect.Field;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.activemq.artemis.api.core.RoutingType;
 import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient;
 import org.apache.activemq.artemis.core.config.Configuration;
+import org.apache.activemq.artemis.core.persistence.impl.journal.AbstractJournalStorageManager;
+import org.apache.activemq.artemis.core.persistence.impl.journal.JournalStorageManager;
 import org.apache.activemq.artemis.core.server.JournalType;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
 import org.apache.activemq.artemis.tests.util.JMSTestBase;
@@ -32,19 +38,21 @@ import org.apache.activemq.artemis.utils.critical.CriticalAnalyzerPolicy;
 import org.jboss.byteman.contrib.bmunit.BMRule;
 import org.jboss.byteman.contrib.bmunit.BMRules;
 import org.jboss.byteman.contrib.bmunit.BMUnitRunner;
+import org.jgroups.util.UUID;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(BMUnitRunner.class)
-public class CriticalAnalyzerFaultInjectionTest extends JMSTestBase {
+public abstract class CriticalAnalyzerFaultInjectionTestBase extends JMSTestBase {
 
    // Critical Analyzer Settings
    private static long CHECK_PERIOD = 100;
    private static long TIMEOUT = 3000;
-   public static long TEST_TIMEOUT = 60000;
 
    private SimpleString address = SimpleString.toSimpleString("faultInjectionTestAddress");
+
+   private Thread t;
 
    @Override
    @Before
@@ -73,36 +81,30 @@ public class CriticalAnalyzerFaultInjectionTest extends JMSTestBase {
       return true;
    }
 
-   @BMRules(
-      rules = {@BMRule(
-         name = "Sync file data hangs",
-         targetClass = "org.apache.activemq.artemis.core.io.nio.NIOSequentialFile",
-         targetMethod = "sync",
-         targetLocation = "ENTRY",
-         action = "org.apache.activemq.artemis.tests.extras.byteman.CriticalAnalyzerFaultInjectionTest.methodHang();")})
-   @Test(timeout = 60000)
-   public void testSlowDiskSync() throws Exception {
-      sendConsumeDurableMessage();
-      Wait.waitFor(() -> !server.isStarted(), WAIT_TIMEOUT * 5);
-      assertFalse(server.isStarted());
-   }
-
-   private void sendConsumeDurableMessage() throws Exception {
+   void testSendDurableMessage() throws Exception {
       try {
-         Session s = conn.createSession(false, Session.AUTO_ACKNOWLEDGE);
-         Queue jmsQueue = s.createQueue(address.toString());
-         MessageProducer p = s.createProducer(jmsQueue);
-         p.setDeliveryMode(DeliveryMode.PERSISTENT);
-         conn.start();
-         p.send(s.createTextMessage("payload"));
-      } finally {
-         if (conn != null) {
-            conn.close();
-         }
-      }
-   }
+         t = new Thread(() -> {
+            try {
+               Session s = conn.createSession(true, Session.SESSION_TRANSACTED);
 
-   public static void methodHang() throws InterruptedException {
-      Thread.sleep(TEST_TIMEOUT);
+               Queue jmsQueue = s.createQueue(address.toString());
+               MessageProducer p = s.createProducer(jmsQueue);
+               p.setDeliveryMode(DeliveryMode.PERSISTENT);
+               conn.start();
+               for (int i = 0; i < 10; i++) {
+                  p.send(s.createTextMessage("payload"));
+               }
+               s.commit();
+            } catch (Throwable e) {
+               e.printStackTrace();
+            }
+         });
+         t.start();
+
+         Wait.waitFor(() -> !server.isStarted(), WAIT_TIMEOUT * 5);
+         assertFalse(server.isStarted());
+      } finally {
+         t.interrupt();
+      }
    }
 }
