@@ -373,7 +373,7 @@ public class ProducerFlowControlTest extends ActiveMQTestBase {
 
       server = createServer(false, isNetty());
 
-      AddressSettings addressSettings = new AddressSettings().setMaxSizeBytes(1024).setAddressFullMessagePolicy(AddressFullMessagePolicy.BLOCK);
+      AddressSettings addressSettings = new AddressSettings().setMaxSizeBytes(1024).setAddressFullMessagePolicy(AddressFullMessagePolicy.BLOCK).setAutoCreateAddresses(false);
 
       HierarchicalRepository<AddressSettings> repos = server.getAddressSettingsRepository();
       repos.addMatch(address.toString(), addressSettings);

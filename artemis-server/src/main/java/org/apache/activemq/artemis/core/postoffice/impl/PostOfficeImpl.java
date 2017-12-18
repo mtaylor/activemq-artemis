@@ -752,15 +752,12 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
 
       Bindings bindings = addressManager.getBindingsForRoutingAddress(context.getAddress() == null ? message.getAddressSimpleString() : context.getAddress());
 
-      // TODO auto-create queues here?
-      // first check for the auto-queue creation thing
-      if (bindings == null) {
-         // There is no queue with this address, we will check if it needs to be created
-         //         if (queueCreator.create(address)) {
-         // TODO: this is not working!!!!
-         // reassign bindings if it was created
-         //            bindings = addressManager.getBindingsForRoutingAddress(address);
-         //         }
+      if (bindings == null && context.getAddress() != null) {
+         AddressSettings settings = server.getAddressSettingsRepository().getMatch(context.getAddress().toString());
+         if (settings.isAutoCreateQueues()) {
+            server.createQueue(context.getAddress(), context.getRoutingType(), context.getAddress(), null, null, message.isDurable(), false, true, false, true, -1, false, settings.isAutoCreateAddresses());
+            bindings = addressManager.getBindingsForRoutingAddress(context.getAddress() == null ? message.getAddressSimpleString() : context.getAddress());
+         }
       }
 
       if (bindings != null) {

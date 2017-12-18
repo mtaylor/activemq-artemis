@@ -52,9 +52,3 @@ server = new EmbeddedJMS();
 server.setConfiguration(configuration);
 server.setJmsConfiguration(jmsConfiguration);
 server.start();
-
-// uncomment this next statements to validate https://issues.apache.org/jira/browse/ARTEMIS-1561
-if (producer.toString().equals("ARTEMIS-140") && type.equals("ARTEMIS-SNAPSHOT") ||
-    producer.toString().startsWith("HORNETQ")) {
-    server.getJMSServerManager().createQueue(true, "queue", null, true);
-}
