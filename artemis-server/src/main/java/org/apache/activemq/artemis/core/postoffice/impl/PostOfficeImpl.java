@@ -724,6 +724,34 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
       return route(message, context, direct, true);
    }
 
+   private boolean autoCreateAddressQueue(RoutingContext context) throws Exception {
+
+      // First check to see if we need to create the address.
+      AddressSettings settings = null;
+      AddressInfo addressInfo = server.getAddressInfo(context.getAddress());
+      if (addressInfo == null) {
+         settings = server.getAddressSettingsRepository().getMatch(context.getAddress().toString());
+         if (settings.isAutoCreateAddresses()) {
+            RoutingType routingType = context.getRoutingType() == null ? settings.getDefaultAddressRoutingType() : context.getRoutingType();
+            addressInfo = new AddressInfo(context.getAddress(), routingType);
+            server.addAddressInfo(addressInfo);
+         }
+      }
+
+      // Optimisation to avoid lookup twice
+      if (settings == null) {
+         settings = server.getAddressSettingsRepository().getMatch(context.getAddress().toString());
+      }
+
+      // Next create the queue
+      if (addressInfo.getRoutingTypes().contains(RoutingType.ANYCAST) && settings.isAutoCreateQueues()) {
+         server.createQueue(context.getAddress(), RoutingType.ANYCAST, context.getAddress(), null, true, false,
+                            settings.getDefaultMaxConsumers(), false, true);
+         return true;
+      }
+      return false;
+   }
+
    @Override
    public RoutingStatus route(final Message message,
                               final RoutingContext context,
@@ -752,13 +780,16 @@ public class PostOfficeImpl implements PostOffice, NotificationListener, Binding
 
       Bindings bindings = addressManager.getBindingsForRoutingAddress(context.getAddress() == null ? message.getAddressSimpleString() : context.getAddress());
 
-      if (bindings == null && context.getAddress() != null) {
-         AddressSettings settings = server.getAddressSettingsRepository().getMatch(context.getAddress().toString());
-         if (settings.isAutoCreateQueues()) {
-            server.createQueue(context.getAddress(), context.getRoutingType(), context.getAddress(), null, null, message.isDurable(), false, true, false, true, -1, false, settings.isAutoCreateAddresses());
-            bindings = addressManager.getBindingsForRoutingAddress(context.getAddress() == null ? message.getAddressSimpleString() : context.getAddress());
+      try {
+         if (bindings == null && context.getAddress() != null) {
+            if (autoCreateAddressQueue(context)) {
+               bindings = addressManager.getBindingsForRoutingAddress(context.getAddress() == null ? message.getAddressSimpleString() : context.getAddress());
+            }
          }
+      } catch (Exception e) {
+         if (logger.isDebugEnabled()) logger.debug("Exception during queue auto create", e);
       }
+
 
       if (bindings != null) {
          bindings.route(message, context);
