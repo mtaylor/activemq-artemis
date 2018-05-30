@@ -606,14 +606,28 @@ public class AMQPMessage extends RefCountMessage {
 
    @Override
    public AMQPMessage setAddress(String address) {
-      this.address = SimpleString.toSimpleString(address, coreMessageObjectPools == null ? null : coreMessageObjectPools.getAddressStringSimpleStringPool());
+      internalSetAddress(address);
+      setProtonAddress(address);
       return this;
+   }
+
+   private void internalSetAddress(String address) {
+      this.address = SimpleString.toSimpleString(address, coreMessageObjectPools == null ? null : coreMessageObjectPools.getAddressStringSimpleStringPool());
    }
 
    @Override
    public AMQPMessage setAddress(SimpleString address) {
       this.address = address;
+      setProtonAddress(address.toString());
       return this;
+   }
+
+   private void setProtonAddress(String address) {
+      MessageImpl protonMessage = getProtonMessage();
+      if (protonMessage.getProperties() == null) {
+         protonMessage.setProperties(new Properties());
+      }
+      protonMessage.getProperties().setTo(address.toString());
    }
 
    @Override
@@ -621,7 +635,7 @@ public class AMQPMessage extends RefCountMessage {
       if (address == null) {
          Properties properties = getProtonMessage().getProperties();
          if (properties != null) {
-            setAddress(properties.getTo());
+            internalSetAddress(properties.getTo());
          } else {
             return null;
          }
@@ -1261,6 +1275,9 @@ public class AMQPMessage extends RefCountMessage {
          ", messageID=" + getMessageID() +
          ", address=" + getAddress() +
          ", size=" + getEncodeSize() +
+         ", ApplicationProperties=" + getApplicationProperties() +
+         ", properties=" + getProperties() +
+         ", extraProperties = " + getExtraProperties() +
          "]";
    }
 
