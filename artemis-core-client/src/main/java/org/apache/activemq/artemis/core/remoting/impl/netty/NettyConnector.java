@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -631,11 +633,15 @@ public class NettyConnector extends AbstractConnector {
       SSLEngine engine = Subject.doAs(subject, new PrivilegedExceptionAction<SSLEngine>() {
          @Override
          public SSLEngine run() {
-            if (verifyHost) {
-               return context.createSSLEngine(sniHost != null ? sniHost : host, port);
-            } else {
-               return context.createSSLEngine();
-            }
+               String sni = sniHost == null ? host : sniHost;
+               SSLEngine e = context.createSSLEngine(host, port);
+               SSLParameters sslParameters = new SSLParameters();
+               List sniHostNames = new ArrayList(1);
+               sniHostNames.add(new SNIHostName(sni));
+               sslParameters.setServerNames(sniHostNames);
+               e.setSSLParameters(sslParameters);
+               System.out.println("SNI HOST IS SET TO: " + sni);
+               return e;
          }
       });
       return engine;
