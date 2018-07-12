@@ -1108,9 +1108,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
       storageManager = null;
 
       sessions.clear();
-
-      activateCallbacks.clear();
-
+      
       state = SERVER_STATE.STOPPED;
 
       activationLatch.setCount(1);
