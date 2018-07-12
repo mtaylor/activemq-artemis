@@ -753,8 +753,9 @@ public final class ServerLocatorImpl implements ServerLocatorInternal, Discovery
       if (this.getNumInitialConnectors() == 0 && discoveryGroup != null) {
          // Wait for an initial broadcast to give us at least one node in the cluster
          long timeout = clusterConnection ? 0 : discoveryGroupConfiguration.getDiscoveryInitialWaitTimeout();
+         System.out.println("Discovery Group Timeout: " + timeout);
+         System.out.println("Waiting for Broadcast: @ " + System.currentTimeMillis());
          boolean ok = discoveryGroup.waitForBroadcast(timeout);
-
          if (!ok) {
             throw ActiveMQClientMessageBundle.BUNDLE.connectionTimedOutInInitialBroadcast();
          }
