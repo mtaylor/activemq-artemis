@@ -780,7 +780,7 @@ public class ActiveMQServerImpl implements ActiveMQServer {
          @Override
          public void run() {
             try {
-               ActiveMQServerImpl.this.stop(false, criticalIOError, false);
+               ActiveMQServerImpl.this.stop(false, criticalIOError, false, true);
             } catch (Exception e) {
                ActiveMQServerLogger.LOGGER.errorStoppingServer(e);
             }
@@ -970,6 +970,10 @@ public class ActiveMQServerImpl implements ActiveMQServer {
             return;
          }
          state = SERVER_STATE.STOPPING;
+
+         if (criticalIOError) {
+            networkHealthCheck.stop();
+         }
 
          if (fileStoreMonitor != null) {
             fileStoreMonitor.stop();
