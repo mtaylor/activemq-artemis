@@ -189,4 +189,8 @@ public interface ConnectionFactoryConfiguration extends EncodingSupport {
    int getInitialMessagePacketSize();
 
    ConnectionFactoryConfiguration setInitialMessagePacketSize(int size);
+
+   boolean isEnableSharedClientID();
+
+   ConnectionFactoryConfiguration setEnableSharedClientID(boolean enabled);
 }
