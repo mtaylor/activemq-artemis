@@ -128,6 +128,8 @@ public class ConnectionFactoryProperties implements ConnectionFactoryOptions {
 
    private String deserializationWhiteList;
 
+   private Boolean enableSharedClientID;
+
    /**
     * @return the transportType
     */
@@ -738,6 +740,14 @@ public class ConnectionFactoryProperties implements ConnectionFactoryOptions {
       return hasBeenUpdated;
    }
 
+   public void setEnableSharedClientID(boolean enable) {
+      this.enableSharedClientID = enable;
+   }
+
+   public boolean isEnableSharedClientID() {
+      return enableSharedClientID;
+   }
+
    @Override
    public boolean equals(Object obj) {
       if (this == obj)
@@ -975,6 +985,14 @@ public class ConnectionFactoryProperties implements ConnectionFactoryOptions {
             return false;
       } else if (!deserializationWhiteList.equals(other.deserializationWhiteList))
          return false;
+
+      if (enableSharedClientID == null) {
+         if (other.enableSharedClientID != null) {
+            return false;
+         }
+      } else if (!enableSharedClientID == other.enableSharedClientID)
+         return false;
+
       return true;
    }
 
@@ -1027,6 +1045,7 @@ public class ConnectionFactoryProperties implements ConnectionFactoryOptions {
       result = prime * result + ((connectionParameters == null) ? 0 : connectionParameters.hashCode());
       result = prime * result + ((deserializationBlackList == null) ? 0 : deserializationBlackList.hashCode());
       result = prime * result + ((deserializationWhiteList == null) ? 0 : deserializationWhiteList.hashCode());
+      result = prime * result + ((enableSharedClientID == null) ? 0 : enableSharedClientID.hashCode());
       return result;
    }
 }

@@ -673,12 +673,16 @@ public class ActiveMQConnection extends ActiveMQConnectionForContextImpl impleme
       }
    }
 
-   public void authorize() throws JMSException {
+   public void authorize(boolean validateClientId) throws JMSException {
       try {
          initialSession = sessionFactory.createSession(username, password, false, false, false, false, 0);
 
          if (clientID != null) {
-            validateClientID(initialSession, clientID);
+            if (validateClientId) {
+               validateClientID(initialSession, clientID);
+            } else {
+               initialSession.addMetaData(ClientSession.JMS_SESSION_CLIENT_ID_PROPERTY, clientID);
+            }
          }
 
          addSessionMetaData(initialSession);
@@ -712,6 +716,7 @@ public class ActiveMQConnection extends ActiveMQConnectionForContextImpl impleme
    public String getDeserializationWhiteList() {
       return this.factoryReference.getDeserializationWhiteList();
    }
+
 
    // Inner classes --------------------------------------------------------------------------------
 

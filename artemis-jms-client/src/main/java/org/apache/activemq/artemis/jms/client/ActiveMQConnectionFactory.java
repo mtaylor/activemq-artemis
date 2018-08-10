@@ -70,6 +70,8 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
 
    private String clientID;
 
+   private boolean enableSharedClientID = ActiveMQClient.DEFAULT_ENABLED_SHARED_CLIENT_ID;
+
    private int dupsOKBatchSize = ActiveMQClient.DEFAULT_ACK_BATCH_SIZE;
 
    private int transactionBatchSize = ActiveMQClient.DEFAULT_ACK_BATCH_SIZE;
@@ -133,6 +135,7 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
          }
          throw new IOException(e);
       }
+      System.out.println(uri.toString());
       return uri;
    }
 
@@ -212,6 +215,7 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
 
    public ActiveMQConnectionFactory(String brokerURL) {
       setBrokerURL(brokerURL);
+      System.out.println(this.hashCode());
    }
 
    private void setBrokerURL(String brokerURL) {
@@ -448,6 +452,14 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
    public synchronized void setClientID(final String clientID) {
       checkWrite();
       this.clientID = clientID;
+   }
+
+   public boolean isEnableSharedClientID() {
+      return enableSharedClientID;
+   }
+
+   public void setEnableSharedClientID(boolean enableSharedClientID) {
+      this.enableSharedClientID = enableSharedClientID;
    }
 
    public synchronized int getDupsOKBatchSize() {
@@ -846,7 +858,7 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
       connection.setReference(this);
 
       try {
-         connection.authorize();
+         connection.authorize(!isEnableSharedClientID());
       } catch (JMSException e) {
          try {
             connection.close();
@@ -871,6 +883,8 @@ public class ActiveMQConnectionFactory extends JNDIStorable implements Connectio
          transactionBatchSize +
          ", readOnly=" +
          readOnly +
+         "EnableSharedClientID=" +
+         enableSharedClientID +
          "]";
    }
 
