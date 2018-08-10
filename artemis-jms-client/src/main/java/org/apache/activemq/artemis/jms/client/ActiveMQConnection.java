@@ -260,6 +260,8 @@ public class ActiveMQConnection extends ActiveMQConnectionForContextImpl impleme
    private void validateClientID(ClientSession validateSession, String clientID)
          throws InvalidClientIDException, ActiveMQException {
       try {
+         Exception exception = new Exception("Should not come in here");
+         exception.printStackTrace();
          validateSession.addUniqueMetaData(ClientSession.JMS_SESSION_CLIENT_ID_PROPERTY, clientID);
       } catch (ActiveMQException e) {
          if (e.getType() == ActiveMQExceptionType.DUPLICATE_METADATA) {
@@ -673,12 +675,16 @@ public class ActiveMQConnection extends ActiveMQConnectionForContextImpl impleme
       }
    }
 
-   public void authorize() throws JMSException {
+   public void authorize(boolean validateClientId) throws JMSException {
       try {
          initialSession = sessionFactory.createSession(username, password, false, false, false, false, 0);
 
          if (clientID != null) {
-            validateClientID(initialSession, clientID);
+            if (validateClientId) {
+               validateClientID(initialSession, clientID);
+            } else {
+               initialSession.addMetaData(ClientSession.JMS_SESSION_CLIENT_ID_PROPERTY, clientID);
+            }
          }
 
          addSessionMetaData(initialSession);

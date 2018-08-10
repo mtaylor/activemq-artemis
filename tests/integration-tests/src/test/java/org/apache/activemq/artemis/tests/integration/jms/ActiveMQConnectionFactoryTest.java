@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.activemq.artemis.api.core.BroadcastGroupConfiguration;
 import org.apache.activemq.artemis.api.core.DiscoveryGroupConfiguration;
@@ -444,6 +445,7 @@ public class ActiveMQConnectionFactoryTest extends ActiveMQTestBase {
       long retryInterval = RandomUtil.randomPositiveLong();
       double retryIntervalMultiplier = RandomUtil.randomDouble();
       int reconnectAttempts = RandomUtil.randomPositiveInt();
+      boolean enableSharedClientID = true;
 
       try {
          cf.setClientID(clientID);

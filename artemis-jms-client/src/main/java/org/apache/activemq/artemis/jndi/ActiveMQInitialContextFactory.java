@@ -56,6 +56,7 @@ public class ActiveMQInitialContextFactory implements InitialContextFactory {
       Map<String, Object> data = new ConcurrentHashMap<>();
 
       String providerUrl = (String) environment.get(javax.naming.Context.PROVIDER_URL);
+      System.err.println("Provider URL" + providerUrl);
       if (providerUrl != null) {
          try {
             JMSFactoryType providedFactoryType = getFactoryType(providerUrl);
@@ -80,6 +81,7 @@ public class ActiveMQInitialContextFactory implements InitialContextFactory {
             String jndiName = key.substring(connectionFactoryPrefix.length());
             try {
                data.put(jndiName, createConnectionFactory((String) environment.get(key), jndiName));
+               System.err.println(jndiName + " " + environment.get(key));
             } catch (Exception e) {
                e.printStackTrace();
                throw new NamingException("Invalid broker URL");
@@ -181,6 +183,7 @@ public class ActiveMQInitialContextFactory implements InitialContextFactory {
     * Factory method to create a new connection factory from the given environment, with overrides
     */
    protected ConnectionFactory createConnectionFactory(String uri, Map<String, String> overrides, String name) throws Exception {
+      System.err.println(uri);
       ConnectionFactoryParser parser = new ConnectionFactoryParser();
       return parser.newObject(parser.expandURI(uri), overrides, name);
    }
