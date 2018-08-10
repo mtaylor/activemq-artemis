@@ -1766,6 +1766,7 @@ public class ActiveMQResourceAdapter implements ResourceAdapter, Serializable {
          throw new IllegalArgumentException("must provide either TransportType or DiscoveryGroupAddress and DiscoveryGroupPort for ResourceAdapter Connection Factory");
       }
 
+      cf.setEnableSharedClientID(true);
       setParams(cf, overrideProperties);
       return cf;
    }
