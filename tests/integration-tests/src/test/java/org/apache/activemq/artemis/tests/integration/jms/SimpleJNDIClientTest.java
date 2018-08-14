@@ -55,6 +55,8 @@ import org.apache.activemq.artemis.core.security.Role;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServers;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import org.apache.activemq.artemis.jms.client.ActiveMQQueue;
+import org.apache.activemq.artemis.jms.client.ActiveMQTopic;
 import org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory;
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
@@ -676,14 +678,45 @@ public class SimpleJNDIClientTest extends ActiveMQTestBase {
       Context ctx = new InitialContext(props);
 
       ConnectionFactory connectionFactory = (ConnectionFactory) ctx.lookup("ConnectionFactory");
-      ((ActiveMQConnectionFactory)connectionFactory).setEnable1xPrefixes(true);
       Connection connection = connectionFactory.createConnection();
+      connection.start();
       Session session = connection.createSession();
 
-      assertTrue(session.createQueue("testQueue").getQueueName().startsWith(PacketImpl.OLD_QUEUE_PREFIX.toString()));
-      assertTrue(session.createTemporaryQueue().getQueueName().startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX.toString()));
-      assertTrue(session.createTopic("testTopic").getTopicName().startsWith(PacketImpl.OLD_TOPIC_PREFIX.toString()));
-      assertTrue(session.createTemporaryTopic().getTopicName().startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX.toString()));
+      Queue queue = session.createQueue("testQueue");
+      assertTrue(queue.getQueueName().startsWith(PacketImpl.OLD_QUEUE_PREFIX.toString()));
+      MessageProducer producer = session.createProducer(queue);
+      producer.send(session.createMessage());
+      MessageConsumer consumer = session.createConsumer(queue);
+      assertFalse(((ActiveMQQueue)consumer.receive(500).getJMSDestination()).getQueueName().startsWith(PacketImpl.OLD_QUEUE_PREFIX.toString()));
+      consumer.close();
+      producer.close();
+
+      queue = session.createTemporaryQueue();
+      assertTrue(queue.getQueueName().startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX.toString()));
+      producer = session.createProducer(queue);
+      producer.send(session.createMessage());
+      consumer = session.createConsumer(queue);
+      assertFalse(((ActiveMQQueue)consumer.receive(500).getJMSDestination()).getQueueName().startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX.toString()));
+      consumer.close();
+      producer.close();
+
+      Topic topic = session.createTopic("testTopic");
+      assertTrue(topic.getTopicName().startsWith(PacketImpl.OLD_TOPIC_PREFIX.toString()));
+      consumer = session.createConsumer(topic);
+      producer = session.createProducer(topic);
+      producer.send(session.createMessage());
+      assertFalse(((ActiveMQTopic)consumer.receive(500).getJMSDestination()).getTopicName().startsWith(PacketImpl.OLD_TOPIC_PREFIX.toString()));
+      consumer.close();
+      producer.close();
+
+      topic = session.createTemporaryTopic();
+      assertTrue(topic.getTopicName().startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX.toString()));
+      consumer = session.createConsumer(topic);
+      producer = session.createProducer(topic);
+      producer.send(session.createMessage());
+      assertFalse(((ActiveMQTopic)consumer.receive(500).getJMSDestination()).getTopicName().startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX.toString()));
+      consumer.close();
+      producer.close();
 
       connection.close();
 

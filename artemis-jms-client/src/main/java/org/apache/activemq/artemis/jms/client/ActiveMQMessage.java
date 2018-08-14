@@ -46,6 +46,7 @@ import org.apache.activemq.artemis.api.jms.ActiveMQJMSConstants;
 import org.apache.activemq.artemis.core.client.ActiveMQClientMessageBundle;
 import org.apache.activemq.artemis.core.client.impl.ClientMessageInternal;
 import org.apache.activemq.artemis.api.core.RoutingType;
+import org.apache.activemq.artemis.core.protocol.core.impl.PacketImpl;
 import org.apache.activemq.artemis.reader.MessageUtil;
 import org.apache.activemq.artemis.utils.UUID;
 
@@ -202,6 +203,8 @@ public class ActiveMQMessage implements javax.jms.Message {
    private boolean individualAck;
 
    private boolean clientAck;
+
+   private boolean enable1xPrefixes;
 
    private long jmsDeliveryTime;
 
@@ -401,6 +404,17 @@ public class ActiveMQMessage implements javax.jms.Message {
    public Destination getJMSDestination() throws JMSException {
       if (dest == null) {
          SimpleString address = message.getAddressSimpleString();
+         if (enable1xPrefixes) {
+            if (address.startsWith(PacketImpl.OLD_QUEUE_PREFIX)) {
+               address = address.subSeq(PacketImpl.OLD_QUEUE_PREFIX.length(), address.length());
+            } else if (address.startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX)) {
+               address = address.subSeq(PacketImpl.OLD_TEMP_QUEUE_PREFIX.length(), address.length());
+            } else if (address.startsWith(PacketImpl.OLD_TOPIC_PREFIX)) {
+               address = address.subSeq(PacketImpl.OLD_TOPIC_PREFIX.length(), address.length());
+            } else if (address.startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX)) {
+               address = address.subSeq(PacketImpl.OLD_TEMP_TOPIC_PREFIX.length(), address.length());
+            }
+         }
          if (address == null) {
             dest = null;
          } else if (RoutingType.ANYCAST.equals(message.getRoutingType())) {
@@ -863,6 +877,10 @@ public class ActiveMQMessage implements javax.jms.Message {
       } catch (ActiveMQException e) {
          throw JMSExceptionHelper.convertFromActiveMQException(e);
       }
+   }
+
+   public void setEnable1xPrefixes(boolean enable1xPrefixes) {
+      this.enable1xPrefixes = enable1xPrefixes;
    }
 
    @Override
