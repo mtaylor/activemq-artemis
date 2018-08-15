@@ -66,6 +66,11 @@ public class ActiveMQMessage implements javax.jms.Message {
    // Constants -----------------------------------------------------
    public static final byte TYPE = org.apache.activemq.artemis.api.core.Message.DEFAULT_TYPE;
 
+   public static final SimpleString OLD_QUEUE_QUALIFIED_PREFIX = SimpleString.toSimpleString(ActiveMQDestination.QUEUE_QUALIFIED_PREFIX + PacketImpl.OLD_QUEUE_PREFIX);
+   public static final SimpleString OLD_TEMP_QUEUE_QUALIFED_PREFIX = SimpleString.toSimpleString(ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX + PacketImpl.OLD_TEMP_QUEUE_PREFIX);
+   public static final SimpleString OLD_TOPIC_QUALIFIED_PREFIX = SimpleString.toSimpleString(ActiveMQDestination.TOPIC_QUALIFIED_PREFIX + PacketImpl.OLD_TOPIC_PREFIX);
+   public static final SimpleString OLD_TEMP_TOPIC_QUALIFED_PREFIX = SimpleString.toSimpleString(ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX + PacketImpl.OLD_TEMP_TOPIC_PREFIX);
+
    public static Map<String, Object> coreMaptoJMSMap(final Map<String, Object> coreMessage) {
       Map<String, Object> jmsMessage = new HashMap<>();
 
@@ -362,24 +367,24 @@ public class ActiveMQMessage implements javax.jms.Message {
    public Destination getJMSReplyTo() throws JMSException {
       if (replyTo == null) {
 
-         SimpleString repl = MessageUtil.getJMSReplyTo(message);
-         String actualReplyTo = repl.toString();
+         SimpleString address = MessageUtil.getJMSReplyTo(message);
+         System.out.println("Address: " + address);
+         if (address != null) {
+            String name = address.toString();
 
-         // swap the old prefixes for the new ones so the proper destination type gets created
-         if (enable1xPrefixes) {
-            if (repl.startsWith(PacketImpl.OLD_QUEUE_PREFIX)) {
-               actualReplyTo = QUEUE_QUALIFIED_PREFIX + repl.subSeq(PacketImpl.OLD_QUEUE_PREFIX.length(), repl.length()).toString();
-            } else if (repl.startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX)) {
-               actualReplyTo = TEMP_QUEUE_QUALIFED_PREFIX + repl.subSeq(PacketImpl.OLD_TEMP_QUEUE_PREFIX.length(), repl.length()).toString();
-            } else if (repl.startsWith(PacketImpl.OLD_TOPIC_PREFIX)) {
-               actualReplyTo = TOPIC_QUALIFIED_PREFIX + repl.subSeq(PacketImpl.OLD_TOPIC_PREFIX.length(), repl.length()).toString();
-            } else if (repl.startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX)) {
-               actualReplyTo = TEMP_TOPIC_QUALIFED_PREFIX + repl.subSeq(PacketImpl.OLD_TEMP_TOPIC_PREFIX.length(), repl.length()).toString();
+            // swap the old prefixes for the new ones so the proper destination type gets created
+            if (enable1xPrefixes) {
+               if (address.startsWith(OLD_QUEUE_QUALIFIED_PREFIX)) {
+                  name = address.subSeq(OLD_QUEUE_QUALIFIED_PREFIX.length(), address.length()).toString();
+               } else if (address.startsWith(OLD_TEMP_QUEUE_QUALIFED_PREFIX)) {
+                  name = address.subSeq(OLD_TEMP_QUEUE_QUALIFED_PREFIX.length(), address.length()).toString();
+               } else if (address.startsWith(OLD_TOPIC_QUALIFIED_PREFIX)) {
+                  name = address.subSeq(OLD_TOPIC_QUALIFIED_PREFIX.length(), address.length()).toString();
+               } else if (address.startsWith(OLD_TEMP_TOPIC_QUALIFED_PREFIX)) {
+                  name = address.subSeq(OLD_TEMP_TOPIC_QUALIFED_PREFIX.length(), address.length()).toString();
+               }
             }
-         }
-
-         if (repl != null) {
-            replyTo = ActiveMQDestination.fromPrefixedName(actualReplyTo);
+            replyTo = ActiveMQDestination.fromPrefixedName(address.toString(), name, true);
          }
       }
       return replyTo;
@@ -418,17 +423,20 @@ public class ActiveMQMessage implements javax.jms.Message {
    public Destination getJMSDestination() throws JMSException {
       if (dest == null) {
          SimpleString address = message.getAddressSimpleString();
-         if (enable1xPrefixes) {
+         SimpleString name = address;
+
+         if (address != null & enable1xPrefixes) {
             if (address.startsWith(PacketImpl.OLD_QUEUE_PREFIX)) {
-               address = address.subSeq(PacketImpl.OLD_QUEUE_PREFIX.length(), address.length());
+               name = address.subSeq(PacketImpl.OLD_QUEUE_PREFIX.length(), address.length());
             } else if (address.startsWith(PacketImpl.OLD_TEMP_QUEUE_PREFIX)) {
-               address = address.subSeq(PacketImpl.OLD_TEMP_QUEUE_PREFIX.length(), address.length());
+               name = address.subSeq(PacketImpl.OLD_TEMP_QUEUE_PREFIX.length(), address.length());
             } else if (address.startsWith(PacketImpl.OLD_TOPIC_PREFIX)) {
-               address = address.subSeq(PacketImpl.OLD_TOPIC_PREFIX.length(), address.length());
+               name = address.subSeq(PacketImpl.OLD_TOPIC_PREFIX.length(), address.length());
             } else if (address.startsWith(PacketImpl.OLD_TEMP_TOPIC_PREFIX)) {
-               address = address.subSeq(PacketImpl.OLD_TEMP_TOPIC_PREFIX.length(), address.length());
+               name = address.subSeq(PacketImpl.OLD_TEMP_TOPIC_PREFIX.length(), address.length());
             }
          }
+
          if (address == null) {
             dest = null;
          } else if (RoutingType.ANYCAST.equals(message.getRoutingType())) {
@@ -436,8 +444,9 @@ public class ActiveMQMessage implements javax.jms.Message {
          } else if (RoutingType.MULTICAST.equals(message.getRoutingType())) {
             dest = ActiveMQDestination.createTopic(address);
          } else {
-            dest = ActiveMQDestination.fromPrefixedName(address.toString());
+            dest = (ActiveMQDestination) ActiveMQDestination.fromPrefixedName(address.toString());
          }
+         ((ActiveMQDestination) dest).setName(name.toString());
       }
 
       return dest;

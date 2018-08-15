@@ -53,6 +53,10 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
       return input.replace("\\", "\\\\").replace(".", "\\.");
    }
 
+   protected void setName(String name) {
+      this.name = name;
+   }
+
    /**
     * Static helper method for working with destinations.
     */
@@ -84,21 +88,29 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
    }
 
    public static Destination fromPrefixedName(final String name) {
-      if (name.startsWith(ActiveMQDestination.QUEUE_QUALIFIED_PREFIX)) {
-         String address = name.substring(ActiveMQDestination.QUEUE_QUALIFIED_PREFIX.length());
-         return createQueue(address);
-      } else if (name.startsWith(ActiveMQDestination.TOPIC_QUALIFIED_PREFIX)) {
-         String address = name.substring(ActiveMQDestination.TOPIC_QUALIFIED_PREFIX.length());
-         return createTopic(address);
-      } else if (name.startsWith(ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX)) {
-         String address = name.substring(ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX.length());
-         return new ActiveMQTemporaryQueue(address, null);
-      } else if (name.startsWith(ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX)) {
-         String address = name.substring(ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX.length());
-         return new ActiveMQTemporaryTopic(address, null);
+      return fromPrefixedName(name, name, false);
+   }
+
+   public static Destination fromPrefixedName(final String addr, final String name, boolean enable1xPrefixes) {
+
+      ActiveMQDestination destination;
+      if (addr.startsWith(ActiveMQDestination.QUEUE_QUALIFIED_PREFIX)) {
+         String address = addr.substring(ActiveMQDestination.QUEUE_QUALIFIED_PREFIX.length());
+         destination = createQueue(address);
+      } else if (addr.startsWith(ActiveMQDestination.TOPIC_QUALIFIED_PREFIX)) {
+         String address = addr.substring(ActiveMQDestination.TOPIC_QUALIFIED_PREFIX.length());
+         destination = createTopic(address);
+      } else if (addr.startsWith(ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX)) {
+         String address = addr.substring(ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX.length());
+         destination = new ActiveMQTemporaryQueue(address, null);
+      } else if (addr.startsWith(ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX)) {
+         String address = addr.substring(ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX.length());
+         destination = new ActiveMQTemporaryTopic(address, null);
       } else {
-         return new ActiveMQDestination(name, TYPE.DESTINATION, null);
+         destination = new ActiveMQDestination(addr, TYPE.DESTINATION, null);
       }
+      destination.setName(name);
+      return destination;
    }
 
    public static SimpleString createQueueNameForSubscription(final boolean isDurable,
@@ -274,10 +286,6 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
    @Deprecated
    private String address;
 
-   /**
-    * The "JMS" name of the destination. Needed for serialization backwards compatibility.
-    */
-   @Deprecated
    private String name;
 
    private final boolean temporary;
@@ -301,6 +309,7 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
                                  final ActiveMQSession session) {
 
       if (address != null) {
+         System.out.println("Addr3: " + address);
          setSimpleAddress(address);
       }
 
@@ -313,7 +322,6 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
       this.queue = TYPE.isQueue(type);
    }
 
-   @Deprecated
    protected ActiveMQDestination(final String address,
                                  final String name,
                                  final TYPE type,
@@ -335,6 +343,11 @@ public class ActiveMQDestination extends JNDIStorable implements Destination, Se
 
    public void setAddress(String address) {
       setSimpleAddress(SimpleString.toSimpleString(address));
+   }
+
+   @Override
+   public String toString() {
+      return "Addr: " + simpleAddress.toString() + " Name: " + name;
    }
 
    public void setSimpleAddress(SimpleString address) {
