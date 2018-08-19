@@ -38,6 +38,7 @@ import org.apache.activemq.artemis.core.security.Role;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import org.apache.activemq.artemis.jms.server.embedded.EmbeddedJMS;
 import org.apache.activemq.artemis.junit.Wait;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.apache.activemq.artemis.utils.ReusableLatch;
@@ -102,8 +103,8 @@ public class RedeployTest extends ActiveMQTestBase {
 
    @Test
    public void testRedeployWithFailover() throws Exception {
-      EmbeddedActiveMQ live = new EmbeddedActiveMQ();
-      EmbeddedActiveMQ backup = new EmbeddedActiveMQ();
+      EmbeddedJMS live = new EmbeddedJMS();
+      EmbeddedJMS backup = new EmbeddedJMS();
 
       try {
          // set these system properties to use in the relevant broker.xml files
@@ -127,7 +128,7 @@ public class RedeployTest extends ActiveMQTestBase {
          backup.setConfigResourcePath(backupBrokerXML.toUri().toString());
          backup.start();
 
-         assertTrue(Wait.waitFor(() -> backup.getActiveMQServer().isReplicaSync(), 15000, 200));
+         Wait.waitFor(() -> backup.getActiveMQServer().isReplicaSync(), 10000, 200);
 
          final ReusableLatch liveReloadLatch = new ReusableLatch(1);
          Runnable liveTick = () -> liveReloadLatch.countDown();
@@ -161,7 +162,7 @@ public class RedeployTest extends ActiveMQTestBase {
 
          live.stop();
 
-         assertTrue(Wait.waitFor(() -> (backup.getActiveMQServer().isActive()), 5000, 100));
+         Wait.waitFor(() -> (backup.getActiveMQServer().isActive()), 5000, 100);
 
          factory = new ActiveMQConnectionFactory("tcp://127.0.0.1:61617");
          try (Connection connection = factory.createConnection()) {
@@ -279,91 +280,91 @@ public class RedeployTest extends ActiveMQTestBase {
       URL url2 = RedeployTest.class.getClassLoader().getResource("reload-changed.xml");
       Files.copy(url1.openStream(), brokerXML);
 
-      EmbeddedActiveMQ embeddedActiveMQ = new EmbeddedActiveMQ();
-      embeddedActiveMQ.setConfigResourcePath(brokerXML.toUri().toString());
-      embeddedActiveMQ.start();
+      EmbeddedJMS embeddedJMS = new EmbeddedJMS();
+      embeddedJMS.setConfigResourcePath(brokerXML.toUri().toString());
+      embeddedJMS.start();
 
       final ReusableLatch latch = new ReusableLatch(1);
 
       Runnable tick = latch::countDown;
 
-      embeddedActiveMQ.getActiveMQServer().getReloadManager().setTick(tick);
+      embeddedJMS.getActiveMQServer().getReloadManager().setTick(tick);
 
       try {
          latch.await(10, TimeUnit.SECONDS);
 
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").size(), 1);
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").iterator().next().getName(), "b");
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").size(), 1);
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").iterator().next().getName(), "b");
 
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("OriginalDLQ"));
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("OriginalExpiryQueue"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("OriginalDLQ"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("OriginalExpiryQueue"));
 
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal_no_queue"));
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal"));
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_removal"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_address_removal_no_queue"));
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_address_removal"));
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_removal"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
 
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_change"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_change").contains("config_test_queue_change_queue"));
-         Assert.assertEquals(10, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").getMaxConsumers());
-         Assert.assertEquals(false, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").isPurgeOnNoConsumers());
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_change"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_change").contains("config_test_queue_change_queue"));
+         Assert.assertEquals(10, getQueue(embeddedJMS, "config_test_queue_change_queue").getMaxConsumers());
+         Assert.assertEquals(false, getQueue(embeddedJMS, "config_test_queue_change_queue").isPurgeOnNoConsumers());
 
          Files.copy(url2.openStream(), brokerXML, StandardCopyOption.REPLACE_EXISTING);
          brokerXML.toFile().setLastModified(System.currentTimeMillis() + 1000);
          latch.setCount(1);
-         embeddedActiveMQ.getActiveMQServer().getReloadManager().setTick(tick);
+         embeddedJMS.getActiveMQServer().getReloadManager().setTick(tick);
          latch.await(10, TimeUnit.SECONDS);
 
          //Assert that the security settings change applied
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").size(), 1);
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").iterator().next().getName(), "c");
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").size(), 1);
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").iterator().next().getName(), "c");
 
          //Assert that the address settings change applied
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("NewDLQ"));
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("NewExpiryQueue"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("NewDLQ"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("NewExpiryQueue"));
 
          //Assert the address and queue changes applied
-         Assert.assertNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal_no_queue"));
-         Assert.assertNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal"));
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_removal"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
-         Assert.assertFalse(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
+         Assert.assertNull(getAddressInfo(embeddedJMS, "config_test_address_removal_no_queue"));
+         Assert.assertNull(getAddressInfo(embeddedJMS, "config_test_address_removal"));
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_removal"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
+         Assert.assertFalse(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
 
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_change"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_change").contains("config_test_queue_change_queue"));
-         Assert.assertEquals(1, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").getMaxConsumers());
-         Assert.assertEquals(true, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").isPurgeOnNoConsumers());
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_change"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_change").contains("config_test_queue_change_queue"));
+         Assert.assertEquals(1, getQueue(embeddedJMS, "config_test_queue_change_queue").getMaxConsumers());
+         Assert.assertEquals(true, getQueue(embeddedJMS, "config_test_queue_change_queue").isPurgeOnNoConsumers());
       } finally {
-         embeddedActiveMQ.stop();
+         embeddedJMS.stop();
       }
 
 
       try {
-         embeddedActiveMQ.start();
+         embeddedJMS.start();
 
          //Assert that the security settings changes persist a stop and start server (e.g. like what occurs if network health check stops the node), but JVM remains up.
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").size(), 1);
-         Assert.assertEquals(getSecurityRoles(embeddedActiveMQ, "security_address").iterator().next().getName(), "c");
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").size(), 1);
+         Assert.assertEquals(getSecurityRoles(embeddedJMS, "security_address").iterator().next().getName(), "c");
 
          //Assert that the address settings changes persist a stop and start server (e.g. like what occurs if network health check stops the node), but JVM remains up.
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("NewDLQ"));
-         Assert.assertEquals(getAddressSettings(embeddedActiveMQ, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("NewExpiryQueue"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getDeadLetterAddress(), SimpleString.toSimpleString("NewDLQ"));
+         Assert.assertEquals(getAddressSettings(embeddedJMS, "address_settings_address").getExpiryAddress(), SimpleString.toSimpleString("NewExpiryQueue"));
 
          //Assert that the address and queue changes persist a stop and start server (e.g. like what occurs if network health check stops the node), but JVM remains up.
-         Assert.assertNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal_no_queue"));
-         Assert.assertNull(getAddressInfo(embeddedActiveMQ, "config_test_address_removal"));
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_removal"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
-         Assert.assertFalse(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
+         Assert.assertNull(getAddressInfo(embeddedJMS, "config_test_address_removal_no_queue"));
+         Assert.assertNull(getAddressInfo(embeddedJMS, "config_test_address_removal"));
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_removal"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_1"));
+         Assert.assertFalse(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_removal").contains("config_test_queue_removal_queue_2"));
 
-         Assert.assertNotNull(getAddressInfo(embeddedActiveMQ, "config_test_queue_change"));
-         Assert.assertTrue(listQueuesNamesForAddress(embeddedActiveMQ, "config_test_queue_change").contains("config_test_queue_change_queue"));
-         Assert.assertEquals(1, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").getMaxConsumers());
-         Assert.assertEquals(true, getQueue(embeddedActiveMQ, "config_test_queue_change_queue").isPurgeOnNoConsumers());
+         Assert.assertNotNull(getAddressInfo(embeddedJMS, "config_test_queue_change"));
+         Assert.assertTrue(listQueuesNamesForAddress(embeddedJMS, "config_test_queue_change").contains("config_test_queue_change_queue"));
+         Assert.assertEquals(1, getQueue(embeddedJMS, "config_test_queue_change_queue").getMaxConsumers());
+         Assert.assertEquals(true, getQueue(embeddedJMS, "config_test_queue_change_queue").isPurgeOnNoConsumers());
 
       } finally {
-         embeddedActiveMQ.stop();
+         embeddedJMS.stop();
       }
    }
 
