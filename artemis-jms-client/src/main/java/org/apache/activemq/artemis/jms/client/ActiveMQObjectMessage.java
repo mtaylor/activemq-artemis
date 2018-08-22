@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
@@ -99,9 +100,10 @@ public class ActiveMQObjectMessage extends ActiveMQMessage implements ObjectMess
    public void doBeforeReceive() throws ActiveMQException {
       super.doBeforeReceive();
       try {
-         int len = message.getBodyBuffer().readInt();
+         ActiveMQBuffer buffer = message.getReadOnlyBodyBuffer();
+         int len = buffer.readInt();
          data = new byte[len];
-         message.getBodyBuffer().readBytes(data);
+         buffer.readBytes(data);
       } catch (Exception e) {
          data = null;
       }

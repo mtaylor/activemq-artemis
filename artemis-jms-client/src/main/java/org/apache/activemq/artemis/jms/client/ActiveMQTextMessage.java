@@ -109,7 +109,7 @@ public class ActiveMQTextMessage extends ActiveMQMessage implements TextMessage 
    public void doBeforeReceive() throws ActiveMQException {
       super.doBeforeReceive();
 
-      text = readBodyText(message.getBodyBuffer());
+      text = readBodyText(message.getReadOnlyBodyBuffer());
    }
 
    @Override
