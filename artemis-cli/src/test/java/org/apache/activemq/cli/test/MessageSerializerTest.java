@@ -255,6 +255,14 @@ public class MessageSerializerTest extends CliTestBase {
                    "--auto-create-address");
    }
 
+   private void createBothTypeAddress(String address) throws Exception {
+      Artemis.main("address", "create",
+                   "--user", "admin",
+                   "--password", "admin",
+                   "--name", address,
+                   "--anycast", "--multicast");
+   }
+
    @Test
    public void testSendDirectToQueue() throws Exception {
 
@@ -321,6 +329,161 @@ public class MessageSerializerTest extends CliTestBase {
       }
    }
 
+   @Test
+   public void testAnycastToMulticastTopic() throws Exception {
+      String mAddress = "testMulticast";
+      String aAddress = "testAnycast";
+      String queueM1Name = "queueM1";
+      String queueM2Name = "queueM2";
+
+      File file = createMessageFile();
+      int noMessages = 10;
+
+      createQueue("--multicast", mAddress, queueM1Name);
+      createQueue("--multicast", mAddress, queueM2Name);
+
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      connection.start();
+
+      List<Message> messages = new ArrayList<>(noMessages);
+      for (int i = 0; i < noMessages; i++) {
+         messages.add(session.createTextMessage(RandomUtil.randomString()));
+      }
+
+      sendMessages(session, aAddress, messages);
+
+      exportMessages(aAddress, noMessages, file);
+      importMessages("topic://" + mAddress, file);
+
+      List<Message> received;
+
+      received = consumeMessages(session, queueM1Name, noMessages, false);
+      for (int i = 0; i < noMessages; i++) {
+         assertEquals(((TextMessage) messages.get(i)).getText(), ((TextMessage) received.get(i)).getText());
+      }
+
+      received = consumeMessages(session, queueM2Name, noMessages, false);
+      for (int i = 0; i < noMessages; i++) {
+         assertEquals(((TextMessage) messages.get(i)).getText(), ((TextMessage) received.get(i)).getText());
+      }
+   }
+
+   @Test
+   public void testAnycastToMulticastFQQN() throws Exception {
+      String mAddress = "testMulticast";
+      String aAddress = "testAnycast";
+      String queueM1Name = "queueM1";
+      String queueM2Name = "queueM2";
+      String fqqnMulticast1 = mAddress + "::" + queueM1Name;
+      String fqqnMulticast2 = mAddress + "::" + queueM2Name;
+
+      File file = createMessageFile();
+      int noMessages = 10;
+
+      createQueue("--multicast", mAddress, queueM1Name);
+      createQueue("--multicast", mAddress, queueM2Name);
+
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      connection.start();
+
+      List<Message> messages = new ArrayList<>(noMessages);
+      for (int i = 0; i < noMessages; i++) {
+         messages.add(session.createTextMessage(RandomUtil.randomString()));
+      }
+
+      sendMessages(session, aAddress, messages);
+
+      exportMessages(aAddress, noMessages, file);
+      importMessages("fqqn://" + fqqnMulticast1, file);
+
+      List<Message> received = consumeMessages(session, fqqnMulticast1, noMessages, true);
+      for (int i = 0; i < noMessages; i++) {
+         assertEquals(((TextMessage) messages.get(i)).getText(), ((TextMessage) received.get(i)).getText());
+      }
+      MessageConsumer consumer = session.createConsumer(getDestination(fqqnMulticast2));
+      assertNull(consumer.receive(1000));
+   }
+
+   @Test
+   public void testMulticastTopicToAnycastQueueBothAddress() throws Exception {
+      String address = "testBoth";
+
+      File file = createMessageFile();
+      int noMessages = 10;
+
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      connection.start();
+
+      createBothTypeAddress(address);
+
+      Thread export = new Thread(() -> {
+         try {
+            exportMessages("topic://" + address, noMessages, file);
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      });
+
+      export.start();
+
+      List<Message> messages = new ArrayList<>(noMessages);
+      for (int i = 0; i < noMessages; i++) {
+         messages.add(session.createTextMessage(RandomUtil.randomString()));
+      }
+
+      // wait for the listener, TODO: replace sleep to waiting loop
+      TimeUnit.SECONDS.sleep(3);
+
+      sendMessages(session, getTopicDestination(address), messages);
+
+      export.join();
+
+      importMessages(address, file);
+
+      List<Message> received = consumeMessages(session, address, noMessages, false);
+      for (int i = 0; i < noMessages; i++) {
+         assertEquals(((TextMessage) messages.get(i)).getText(), ((TextMessage) received.get(i)).getText());
+      }
+   }
+
+   @Test
+   public void testAnycastQueueToMulticastTopicBothAddress() throws Exception {
+      String address = "testBoth";
+
+      File file = createMessageFile();
+      int noMessages = 10;
+
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      connection.start();
+
+      createBothTypeAddress(address);
+
+      List<Message> messages = new ArrayList<>(noMessages);
+      for (int i = 0; i < noMessages; i++) {
+         messages.add(session.createTextMessage(RandomUtil.randomString()));
+      }
+
+      sendMessages(session, getDestination(address), messages);
+
+      exportMessages(address, noMessages, file);
+
+      Thread receive = new Thread(() -> {
+         try {
+            MessageConsumer consumer = session.createConsumer(getTopicDestination(address));
+            assertNotNull(consumer.receive(3000));
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      });
+      receive.start();
+
+      // wait for the listener, TODO: replace sleep to waiting loop
+      TimeUnit.SECONDS.sleep(1);
+
+      importMessages("topic://" + address, file);
+      receive.join();
+   }
+
    //read individual lines from byteStream
    private ArrayList<String> getOutputLines(TestActionContext context, boolean errorOutput) throws IOException {
       byte[] bytes;
@@ -358,5 +521,9 @@ public class MessageSerializerTest extends CliTestBase {
 
    private Destination getDestination(String queueName) {
       return ActiveMQDestination.createDestination("queue://" + queueName, ActiveMQDestination.TYPE.QUEUE);
+   }
+
+   private Destination getTopicDestination(String queueName) {
+      return ActiveMQDestination.createDestination("topic://" + queueName, ActiveMQDestination.TYPE.TOPIC);
    }
 }
