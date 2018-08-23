@@ -171,11 +171,13 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
          try (ResultSet rs = readLargeObject.executeQuery()) {
             if (rs.next()) {
                Blob blob = rs.getBlob(1);
-               if (blob != null) {
-                  file.setWritePosition(blob.length());
-               } else {
+               if (blob == null) {
+                  blob = connection.createBlob();
                   logger.trace("No Blob found for file: " + file.getFileName() + " " + file.getId());
+                  rs.updateBlob(1, blob);
+                  rs.updateRow();
                }
+               file.setWritePosition(blob.length());
 
                if (rs.next()) {
                   logger.error("Two Files Created with the same name: " + file.getFilename());
@@ -202,7 +204,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
             connection.setAutoCommit(false);
             createFile.setString(1, file.getFileName());
             createFile.setString(2, file.getExtension());
-            createFile.setBytes(3, new byte[0]);
+            createFile.setBlob(3, connection.createBlob());
             createFile.executeUpdate();
             try (ResultSet keys = createFile.getGeneratedKeys()) {
                keys.next();
@@ -211,6 +213,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
             connection.commit();
             logger.debug("JDBC Created File: " + file.getFilename());
          } catch (SQLException e) {
+            logger.error(e);
             connection.rollback();
             throw e;
          }
