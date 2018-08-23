@@ -133,10 +133,16 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
    public long fileExists(JDBCSequentialFile file) throws SQLException {
       try {
          synchronized (connection) {
+            logger.debug("Looking for File: " + file);
             connection.setAutoCommit(false);
             selectFileByFileName.setString(1, file.getFileName());
             try (ResultSet rs = selectFileByFileName.executeQuery()) {
                final long id = rs.next() ? rs.getLong(1) : -1;
+               if (id == -1) {
+                  logger.debug("Could not locate file: " + file);
+               } else {
+                  logger.debug("File found: " + file + " ID: " + id);
+               }
                connection.commit();
                return id;
             } catch (Exception e) {
@@ -144,6 +150,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
                throw e;
             }
          }
+
       } catch (NullPointerException npe) {
          npe.printStackTrace();
          throw npe;
@@ -169,7 +176,12 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
                } else {
                   logger.trace("No Blob found for file: " + file.getFileName() + " " + file.getId());
                }
+
+               if (rs.next()) {
+                  logger.error("Two Files Created with the same name: " + file.getFilename());
+               }
             }
+            logger.debug("JDBC Loaded File: " + file.getFilename());
             connection.commit();
          } catch (SQLException e) {
             connection.rollback();
@@ -197,6 +209,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
                file.setId(keys.getLong(1));
             }
             connection.commit();
+            logger.debug("JDBC Created File: " + file.getFilename());
          } catch (SQLException e) {
             connection.rollback();
             throw e;
@@ -215,6 +228,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
       synchronized (connection) {
          try {
             connection.setAutoCommit(false);
+            logger.debug("Renaming file: " + file + " to: " + newFileName);
             renameFile.setString(1, newFileName);
             renameFile.setLong(2, file.getId());
             renameFile.executeUpdate();
@@ -236,6 +250,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
       synchronized (connection) {
          try {
             connection.setAutoCommit(false);
+            logger.debug("Deleting File: " + file);
             deleteFile.setLong(1, file.getId());
             deleteFile.executeUpdate();
             connection.commit();
@@ -270,7 +285,12 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
                rs.updateBlob(1, blob);
                rs.updateRow();
             }
+
+            if (rs.next()) {
+               logger.error("Writing to file when more than one file exists with same name: " + file);
+            }
             connection.commit();
+            logger.error("Wrote: " + bytesWritten + " bytes to file: " + file);
             return bytesWritten;
          } catch (SQLException e) {
             connection.rollback();
@@ -332,6 +352,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
       synchronized (connection) {
          try {
             connection.setAutoCommit(false);
+            logger.debug("Copying file: " + fileFrom + " to: " + fileTo);
             copyFileRecord.setLong(1, fileFrom.getId());
             copyFileRecord.setLong(2, fileTo.getId());
             copyFileRecord.executeUpdate();
@@ -349,6 +370,7 @@ public class JDBCSequentialFileFactoryDriver extends AbstractJDBCDriver {
    @Override
    public void destroy() throws SQLException {
       synchronized (connection) {
+         logger.debug("Dropping table");
          try {
             connection.setAutoCommit(false);
             try (Statement statement = connection.createStatement()) {

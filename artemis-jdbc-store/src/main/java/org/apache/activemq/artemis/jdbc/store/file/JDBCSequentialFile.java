@@ -384,4 +384,13 @@ public class JDBCSequentialFile implements SequentialFile {
    public Object getMetaData(Object key) {
       return metaData.get(key);
    }
+
+   @Override
+   public String toString() {
+      StringBuilder builder = new StringBuilder("JDBC File {");
+      builder.append("name: " + getFilename() + ", " );
+      builder.append("id: " + this.getId() + ", ");
+      builder.append("extension: " + this.getExtension() + "}");
+      return builder.toString();
+   }
 }
