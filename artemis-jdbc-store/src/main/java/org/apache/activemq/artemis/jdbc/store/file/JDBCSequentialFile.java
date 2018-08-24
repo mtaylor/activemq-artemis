@@ -147,6 +147,10 @@ public class JDBCSequentialFile implements SequentialFile {
       try {
          synchronized (writeLock) {
             if (load()) {
+               if (logger.isTraceEnabled()) {
+                  logger.trace("Deleting File: " + this);
+                  new Exception().printStackTrace();
+               }
                dbDriver.deleteFile(this);
             }
          }
