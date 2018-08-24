@@ -27,6 +27,7 @@ import org.apache.activemq.artemis.core.persistence.StorageManager.LargeMessageE
 import org.apache.activemq.artemis.core.replication.ReplicatedLargeMessage;
 import org.apache.activemq.artemis.core.server.ActiveMQServerLogger;
 import org.apache.activemq.artemis.core.server.LargeServerMessage;
+import org.apache.activemq.artemis.jdbc.store.file.JDBCSequentialFile;
 import org.jboss.logging.Logger;
 
 public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
@@ -61,7 +62,11 @@ public final class LargeServerMessageInSync implements ReplicatedLargeMessage {
                logger.trace("joinSyncedData on " + mainLM + ", currentSize on mainMessage=" + mainSeqFile.size() + ", appendFile size = " + appendFile.size());
             }
 
-            FileIOUtil.copyData(appendFile, mainSeqFile, buffer);
+            if (appendFile instanceof JDBCSequentialFile) {
+               appendFile.copyTo(mainSeqFile);
+            } else {
+               FileIOUtil.copyData(appendFile, mainSeqFile, buffer);
+            }
             deleteAppendFile();
          } else {
             if (logger.isTraceEnabled()) {
