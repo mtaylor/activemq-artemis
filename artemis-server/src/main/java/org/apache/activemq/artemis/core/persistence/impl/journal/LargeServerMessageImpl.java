@@ -230,6 +230,10 @@ public final class LargeServerMessageImpl extends CoreMessage implements LargeSe
 
    @Override
    public synchronized void deleteFile() throws Exception {
+      if (logger.isTraceEnabled()) {
+         logger.trace("Deleting large message file: " + this.getFile());
+         new Exception().printStackTrace();
+      }
       validateFile();
       releaseResources();
       storageManager.deleteLargeMessageFile(this);
