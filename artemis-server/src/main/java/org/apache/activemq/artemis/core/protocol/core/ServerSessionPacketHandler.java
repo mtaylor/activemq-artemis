@@ -160,6 +160,7 @@ public class ServerSessionPacketHandler implements ChannelHandler {
 
    private final boolean direct;
 
+   private final Object largeMessageLock = new Object();
 
    public ServerSessionPacketHandler(final ActiveMQServer server,
                                      final CoreProtocolManager manager,
@@ -196,11 +197,13 @@ public class ServerSessionPacketHandler implements ChannelHandler {
    }
 
    private void clearLargeMessage() {
-      if (currentLargeMessage != null) {
-         try {
-            currentLargeMessage.deleteFile();
-         } catch (Throwable error) {
-            ActiveMQServerLogger.LOGGER.errorDeletingLargeMessageFile(error);
+      synchronized (largeMessageLock) {
+         if (currentLargeMessage != null) {
+            try {
+               currentLargeMessage.deleteFile();
+            } catch (Throwable error) {
+               ActiveMQServerLogger.LOGGER.errorDeletingLargeMessageFile(error);
+            }
          }
       }
    }
@@ -965,18 +968,20 @@ public class ServerSessionPacketHandler implements ChannelHandler {
       // Immediately release the credits for the continuations- these don't contribute to the in-memory size
       // of the message
 
-      currentLargeMessage.addBytes(body);
+      synchronized (largeMessageLock) {
+         currentLargeMessage.addBytes(body);
 
-      if (!continues) {
-         currentLargeMessage.releaseResources();
+         if (!continues) {
+            currentLargeMessage.releaseResources();
 
-         if (messageBodySize >= 0) {
-            currentLargeMessage.putLongProperty(Message.HDR_LARGE_BODY_SIZE, messageBodySize);
+            if (messageBodySize >= 0) {
+               currentLargeMessage.putLongProperty(Message.HDR_LARGE_BODY_SIZE, messageBodySize);
+            }
+
+            session.doSend(session.getCurrentTransaction(), currentLargeMessage, null, false, false);
+
+            currentLargeMessage = null;
          }
-
-         session.doSend(session.getCurrentTransaction(), currentLargeMessage, null, false, false);
-
-         currentLargeMessage = null;
       }
    }
 
