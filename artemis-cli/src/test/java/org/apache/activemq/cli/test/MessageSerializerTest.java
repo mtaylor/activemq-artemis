@@ -16,27 +16,16 @@
  */
 package org.apache.activemq.cli.test;
 
-import javax.jms.Connection;
-import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.MapMessage;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-import javax.jms.Topic;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import javax.jms.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+//import com.sun.org.apache.xalan.internal.xsltc.dom.SimpleResultTreeImpl;
+//import junit.framework.TestListener;
+//import junit.framework.TestListener;
 import org.apache.activemq.artemis.cli.Artemis;
 import org.apache.activemq.artemis.cli.commands.Run;
 import org.apache.activemq.artemis.jlibaio.LibaioContext;
@@ -407,36 +396,62 @@ public class MessageSerializerTest extends CliTestBase {
    @Test
    public void testMulticastTopicToAnycastQueueBothAddress() throws Exception {
       String address = "testBoth";
+//      String qName = "Name";
 
       File file = createMessageFile();
       int noMessages = 10;
 
+
+      connection.setClientID("durable-client");
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-      connection.start();
-
       createBothTypeAddress(address);
+      Topic topic = session.createTopic(address);
+//      MessageProducer messageProducer = session.createProducer(topic);
+//      MessageConsumer consumer = session.createConsumer(topic);
+      TopicSubscriber subscriber = session.createDurableSubscriber(topic, "subscriber-1");
 
-      Thread export = new Thread(() -> {
-         try {
-            exportMessages("topic://" + address, noMessages, file);
-         } catch (Exception e) {
-            e.printStackTrace();
-         }
-      });
+//      consumer.
+//      TestListener l1 = new TestListener(noMessages);
+//      consumer.setMessageListener(l1);
+      connection.start();
+      subscriber.close();
+//      session.un
+//      Topic topic = session.createTopic(address);
+//      consumer.close();
 
-      export.start();
+
+//      createQueue("--multicast", address, qName);
+
+//      Thread export = new Thread(() -> {
+//         try {
+//            exportMessages("topic://" + address, noMessages, file);
+//         } catch (Exception e) {
+//            e.printStackTrace();
+//         }
+//      });
+
+//      export.start();
 
       List<Message> messages = new ArrayList<>(noMessages);
       for (int i = 0; i < noMessages; i++) {
          messages.add(session.createTextMessage(RandomUtil.randomString()));
       }
 
-      // wait for the listener, TODO: replace sleep to waiting loop
-      TimeUnit.SECONDS.sleep(3);
+//       wait for the listener, TODO: replace sleep to waiting loop
+//      TimeUnit.SECONDS.sleep(3);
 
-      sendMessages(session, getTopicDestination(address), messages);
 
-      export.join();
+//      consumer.receiveNoWait();
+
+      sendMessages(session, topic, messages);
+//      exportMessages("topic://" + address, noMessages, file);
+      System.out.println("HERE");
+      System.out.println(topic.toString());
+//      System.out.println(subscriber.getTopic().getTopicName());
+      System.out.println("-----");
+//      System.out.println(subscriber.receive());
+      exportMessages("fqqn://testBoth::durable-client.subscription-1", noMessages, file);
+//      export.join();
 
       importMessages(address, file);
 
@@ -525,5 +540,48 @@ public class MessageSerializerTest extends CliTestBase {
 
    private Destination getTopicDestination(String queueName) {
       return ActiveMQDestination.createDestination("topic://" + queueName, ActiveMQDestination.TYPE.TOPIC);
+   }
+
+   static class Wibble2 implements Serializable {
+
+      private static final long serialVersionUID = -5146179676719808756L;
+
+      String s;
+   }
+
+   static class TestListener implements MessageListener {
+
+      boolean failed;
+
+      int count;
+
+      int num;
+
+      TestListener(final int num) {
+         this.num = num;
+      }
+
+      @Override
+      public synchronized void onMessage(final Message m) {
+         ObjectMessage om = (ObjectMessage) m;
+
+         try {
+            Wibble2 w = (Wibble2) om.getObject();
+         } catch (Exception e) {
+            failed = true;
+         }
+
+         count++;
+
+         if (count == num) {
+            notify();
+         }
+      }
+
+      synchronized void waitForMessages() throws Exception {
+         while (count < num) {
+            this.wait();
+         }
+      }
    }
 }
