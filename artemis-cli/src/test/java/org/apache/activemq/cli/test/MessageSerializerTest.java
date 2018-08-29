@@ -46,6 +46,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class MessageSerializerTest extends CliTestBase {
 
+   private static final int TEST_MESSAGE_FILE_COUNT = 10;
+
    private Connection connection;
 
    @Before
@@ -216,12 +218,18 @@ public class MessageSerializerTest extends CliTestBase {
    }
 
    private void exportMessages(String address, int noMessages, File output) throws Exception {
+      exportMessages(address, noMessages, false, "test-client", output);
+   }
+
+   private void exportMessages(String address, int noMessages, boolean durable, String clientId, File output) throws Exception {
       Artemis.main("consumer",
                    "--user", "admin",
                    "--password", "admin",
                    "--destination", address,
                    "--message-count", "" + noMessages,
-                   "--data", output.getAbsolutePath());
+                   "--data", output.getAbsolutePath(),
+                   "--clientID", clientId,
+                   "--durable");
    }
 
    private void importMessages(String address, File input) throws Exception {
@@ -396,69 +404,25 @@ public class MessageSerializerTest extends CliTestBase {
    @Test
    public void testMulticastTopicToAnycastQueueBothAddress() throws Exception {
       String address = "testBoth";
-//      String qName = "Name";
+      String clientId = "test-client-id";
+
+      createBothTypeAddress(address);
 
       File file = createMessageFile();
-      int noMessages = 10;
 
+      // Will set up the relevant subscriber queues for the multicast address
+      exportMessages("topic://" + address, 0, true, clientId, file);
 
-      connection.setClientID("durable-client");
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-      createBothTypeAddress(address);
       Topic topic = session.createTopic(address);
-//      MessageProducer messageProducer = session.createProducer(topic);
-//      MessageConsumer consumer = session.createConsumer(topic);
-      TopicSubscriber subscriber = session.createDurableSubscriber(topic, "subscriber-1");
-
-//      consumer.
-//      TestListener l1 = new TestListener(noMessages);
-//      consumer.setMessageListener(l1);
       connection.start();
-      subscriber.close();
-//      session.un
-//      Topic topic = session.createTopic(address);
-//      consumer.close();
 
+      // Import 10 Messages to Both ANYCAST and MULTICAST addresses
+      importMessages("topic://" + address, new File(ClassLoader.getSystemResource("test-messages.xml").toURI()));
+      importMessages("queue://" + address, new File(ClassLoader.getSystemResource("test-messages.xml").toURI()));
 
-//      createQueue("--multicast", address, qName);
-
-//      Thread export = new Thread(() -> {
-//         try {
-//            exportMessages("topic://" + address, noMessages, file);
-//         } catch (Exception e) {
-//            e.printStackTrace();
-//         }
-//      });
-
-//      export.start();
-
-      List<Message> messages = new ArrayList<>(noMessages);
-      for (int i = 0; i < noMessages; i++) {
-         messages.add(session.createTextMessage(RandomUtil.randomString()));
-      }
-
-//       wait for the listener, TODO: replace sleep to waiting loop
-//      TimeUnit.SECONDS.sleep(3);
-
-
-//      consumer.receiveNoWait();
-
-      sendMessages(session, topic, messages);
-//      exportMessages("topic://" + address, noMessages, file);
-      System.out.println("HERE");
-      System.out.println(topic.toString());
-//      System.out.println(subscriber.getTopic().getTopicName());
-      System.out.println("-----");
-//      System.out.println(subscriber.receive());
-      exportMessages("fqqn://testBoth::durable-client.subscription-1", noMessages, file);
-//      export.join();
-
-      importMessages(address, file);
-
-      List<Message> received = consumeMessages(session, address, noMessages, false);
-      for (int i = 0; i < noMessages; i++) {
-         assertEquals(((TextMessage) messages.get(i)).getText(), ((TextMessage) received.get(i)).getText());
-      }
+      exportMessages("queue://" + address, TEST_MESSAGE_FILE_COUNT, true, clientId, file);
+      exportMessages("topic://" + address, TEST_MESSAGE_FILE_COUNT, true, clientId, file);
    }
 
    @Test
