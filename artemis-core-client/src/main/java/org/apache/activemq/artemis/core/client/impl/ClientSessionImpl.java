@@ -1009,26 +1009,24 @@ public final class ClientSessionImpl implements ClientSessionInternal, FailureLi
       // For core we could just do a straight rollback, it really depends if we want JMS style semantics or not...
 
       boolean wasStarted = started;
+      try {
+         if (wasStarted) {
+            stop();
+         }
+         // We need to make sure we don't get any inflight messages
+         for (ClientConsumerInternal consumer : cloneConsumers()) {
+            consumer.clear(waitConsumers);
+         }
 
-      if (wasStarted) {
-         stop();
+         // Acks must be flushed here *after connection is stopped and all onmessages finished executing
+         flushAcks();
+         sessionContext.simpleRollback(isLastMessageAsDelivered);
+         rollbackOnly = false;
+      } finally {
+         if (wasStarted) {
+            start();
+         }
       }
-
-      // We need to make sure we don't get any inflight messages
-      for (ClientConsumerInternal consumer : cloneConsumers()) {
-         consumer.clear(waitConsumers);
-      }
-
-      // Acks must be flushed here *after connection is stopped and all onmessages finished executing
-      flushAcks();
-
-      sessionContext.simpleRollback(isLastMessageAsDelivered);
-
-      if (wasStarted) {
-         start();
-      }
-
-      rollbackOnly = false;
    }
 
    @Override
